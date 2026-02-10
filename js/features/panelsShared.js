@@ -1,73 +1,124 @@
 // js/features/panelsShared.js
+// Funzioni condivise dai pannelli (referee / teams / corners / shots)
+// IMPORTANTISSIMO: qui vivono i setter UI + helpers + cache
 
 /* =========================
-   CACHE EVENTI / STATISTICHE
+   SETTERS UI (card content)
    ========================= */
-const __FIXTURE_EVENTS_CACHE__ = new Map(); // fixtureId -> events array
-const __FIXTURE_STATS_CACHE__ = new Map(); // fixtureId -> Map(teamId -> cornersNumber)
+function setReferee(html) {
+  const el = document.getElementById("referee");
+  if (el) el.innerHTML = html;
+}
+
+function setTeams(html) {
+  const el = document.getElementById("teamsPanel");
+  if (el) el.innerHTML = html;
+}
+
+function setCorners(html) {
+  const el = document.getElementById("cornersPanel");
+  if (el) el.innerHTML = html;
+}
+
+/* =========================
+   HELPERS BASE
+   ========================= */
+function pct(part, total) {
+  const p = Number(part) || 0;
+  const t = Number(total) || 0;
+  if (t <= 0) return 0;
+  return Math.round((p / t) * 100);
+}
+
+// Limite “safe” per non far esplodere le chiamate (puoi cambiarlo quando vuoi)
+function getLimitForTeams() {
+  const sel = document.getElementById("refHistoryCount");
+  const requested = parseInt(sel?.value || "10", 10) || 10;
+
+  // cap fisso per performance (non infinito)
+  const CAP = 15;
+  return Math.min(requested, CAP);
+}
+
+/* =========================
+   FIXTURES (last N) per team
+   ========================= */
+async function fetchTeamLastFixtures(teamId, limit) {
+  if (!teamId) return [];
+
+  const n = Math.max(1, Number(limit) || 10);
+  // Ultime N partite finite
+  const r = await apiGet(
+    `/fixtures?team=${teamId}&last=${n}&status=FT&timezone=Europe/Rome`,
+    { retries: 2, delays: [400, 900] },
+  );
+
+  if (!r.ok || r.errors || !Array.isArray(r.arr)) return [];
+  return r.arr;
+}
+
+/* =========================
+   CACHE: EVENTS per fixture
+   ========================= */
+const __EVENTS_CACHE__ = new Map(); // fixtureId -> events[]
 
 async function getFixtureEventsCached(fixtureId) {
   if (!fixtureId) return [];
-  if (__FIXTURE_EVENTS_CACHE__.has(fixtureId)) return __FIXTURE_EVENTS_CACHE__.get(fixtureId);
+  if (__EVENTS_CACHE__.has(fixtureId)) return __EVENTS_CACHE__.get(fixtureId);
 
-  const r = await apiGet(`/fixtures/events?fixture=${fixtureId}`);
-  const ev = r.ok && !r.errors ? (r.arr || []) : [];
-  __FIXTURE_EVENTS_CACHE__.set(fixtureId, ev);
-  return ev;
+  const r = await apiGet(`/fixtures/events?fixture=${fixtureId}`, {
+    retries: 2,
+    delays: [400, 900],
+  });
+
+  const arr = r.ok && !r.errors && Array.isArray(r.arr) ? r.arr : [];
+  __EVENTS_CACHE__.set(fixtureId, arr);
+  return arr;
 }
 
-function extractCornersFromStatsForTeam(statsArr, teamId) {
-  const teamBlock = (statsArr || []).find((x) => (x?.team?.id ?? null) === teamId);
-  const list = teamBlock?.statistics || [];
-  const cornerItem = list.find((s) => String(s?.type || "").toLowerCase() === "corner kicks");
-  const v = cornerItem?.value;
+/* =========================
+   CORNERS per fixture teams
+   ========================= */
+function normalizeCornersStats(statArray) {
+  // API spesso usa "Corner Kicks"
+  const lower = (s) => String(s || "").toLowerCase();
+  const map = new Map();
+  for (const s of statArray || []) map.set(lower(s?.type), s?.value);
 
-  const n = typeof v === "number" ? v : parseInt(String(v ?? "0"), 10);
-  return Number.isFinite(n) ? n : 0;
+  const pick = (...types) => {
+    for (const t of types.map(lower)) {
+      const v = map.get(t);
+      const n = Number(v);
+      if (Number.isFinite(n)) return n;
+    }
+    return 0;
+  };
+
+  return {
+    corners: pick("Corner Kicks", "Corners", "corner kicks", "corners"),
+  };
 }
 
 async function getCornersForFixtureTeams(fixtureId, homeId, awayId) {
-  if (__FIXTURE_STATS_CACHE__.has(fixtureId)) return __FIXTURE_STATS_CACHE__.get(fixtureId);
+  // ritorna Map(teamId -> corners)
+  const out = new Map();
+  out.set(homeId, 0);
+  out.set(awayId, 0);
 
-  const r = await apiGet(`/fixtures/statistics?fixture=${fixtureId}`);
-  const statsArr = r.ok && !r.errors ? (r.arr || []) : [];
+  const r = await apiGet(`/fixtures/statistics?fixture=${fixtureId}`, {
+    retries: 2,
+    delays: [500, 1000],
+  });
+  if (!r.ok || r.errors || !Array.isArray(r.arr) || r.arr.length === 0) return out;
 
-  const m = new Map();
-  m.set(homeId, extractCornersFromStatsForTeam(statsArr, homeId));
-  m.set(awayId, extractCornersFromStatsForTeam(statsArr, awayId));
+  for (const row of r.arr) {
+    const teamId = row?.team?.id ?? null;
+    if (!teamId) continue;
+    if (teamId !== homeId && teamId !== awayId) continue;
 
-  __FIXTURE_STATS_CACHE__.set(fixtureId, m);
-  return m;
+    const stats = normalizeCornersStats(row?.statistics || []);
+    out.set(teamId, stats.corners || 0);
+  }
+
+  return out;
 }
-
-/* =========================
-   UTILS COMUNI
-   ========================= */
-function getLimitForTeams() {
-  const limitEl = document.getElementById("refHistoryCount");
-  let limit = parseInt(limitEl?.value || "10", 10);
-  if (Number.isNaN(limit) || limit < 1) limit = 10;
-
-  const HARD_CAP = 20;
-  return Math.min(limit, HARD_CAP);
-}
-
-async function fetchTeamLastFixtures(teamId, limit) {
-  const r = await apiGet(`/fixtures?team=${teamId}&last=${limit}&status=FT&timezone=Europe/Rome`);
-  if (!r.ok || r.errors) return [];
-  return r.arr || [];
-}
-
-function pct(part, total) {
-  if (!total || total <= 0) return 0;
-  return Math.round((part / total) * 100);
-}
-
-/* =========================
-   EVENTI UI (pannelli)
-   ========================= */
-document.getElementById("refHistoryCount")?.addEventListener("change", () => {
-  if (selectedFixture?.referee && selectedFixture.referee !== "—") loadRefereeHistory();
-  if (selectedFixture?.home?.id && selectedFixture?.away?.id) loadTeamsForm();
-  if (selectedFixture?.home?.id && selectedFixture?.away?.id) loadTeamsCorners();
-});
