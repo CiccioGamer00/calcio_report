@@ -258,6 +258,7 @@ async function loadNextMatch() {
   await loadFixtureDetails();
   await loadTeamsCorners();
   await loadTeamsShots();
+  await loadInjuries();
 }
 
 function renderNext(f) {
