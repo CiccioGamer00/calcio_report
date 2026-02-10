@@ -25,44 +25,57 @@
     </header>
 
     <main class="container">
-      <section class="card">
-        <h2 class="card-title">Cerca squadra</h2>
+      <section class="top-grid">
+        <section class="card">
+          <h2 class="card-title">Cerca squadra</h2>
 
-        <form class="form" onsubmit="return false;">
-          <div class="field">
-            <label for="teamInput">Nome squadra</label>
-            <div class="input-row">
-              <input
-                type="text"
-                id="teamInput"
-                list="teamSuggestions"
-                placeholder="Es. Napoli, Inter, Real Madrid..."
-                autocomplete="off"
-              />
-              <button type="button" class="btn primary" onclick="showTeam()">
-                Cerca
-              </button>
+          <form class="form" onsubmit="return false;">
+            <div class="field">
+              <label for="teamInput">Nome squadra</label>
+              <div class="input-row">
+                <input
+                  type="text"
+                  id="teamInput"
+                  list="teamSuggestions"
+                  placeholder="Es. Napoli, Inter, Real Madrid..."
+                  autocomplete="off"
+                />
+                <button type="button" class="btn primary" onclick="showTeam()">
+                  Cerca
+                </button>
+              </div>
+              <datalist id="teamSuggestions"></datalist>
+              <p class="hint">
+                Suggerimenti automatici dall’API mentre scrivi (dopo 2
+                caratteri).
+              </p>
             </div>
-            <datalist id="teamSuggestions"></datalist>
-            <p class="hint">
-              Suggerimenti automatici dall’API mentre scrivi (dopo 2 caratteri).
+
+            <div class="options">
+              <div class="opt">
+                <label for="refHistoryCount">Numero Partite</label>
+                <select id="refHistoryCount">
+                  <option value="5" selected>5</option>
+                  <option value="10">10</option>
+                  <option value="15">15</option>
+                  <option value="20">20</option>
+                  <option value="30">30</option>
+                </select>
+                <span class="muted">partite</span>
+              </div>
+            </div>
+          </form>
+        </section>
+        <section class="card">
+          <h2 class="card-title">Indicatori statistici</h2>
+          <div id="indicatorsPanel" class="content">
+            <p class="muted">
+              <em>
+                Gli indicatori verranno mostrati dopo aver selezionato un match.
+              </em>
             </p>
           </div>
-
-          <div class="options">
-            <div class="opt">
-              <label for="refHistoryCount">Numero Partite</label>
-              <select id="refHistoryCount">
-                <option value="5" selected>5</option>
-                <option value="10">10</option>
-                <option value="15">15</option>
-                <option value="20">20</option>
-                <option value="30">30</option>
-              </select>
-              <span class="muted">partite</span>
-            </div>
-          </div>
-        </form>
+        </section>
       </section>
 
       <section class="grid">
