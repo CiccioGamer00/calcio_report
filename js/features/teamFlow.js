@@ -21,6 +21,10 @@ function setCorners(html) {
   const el = document.getElementById("cornersPanel");
   if (el) el.innerHTML = html;
 }
+function setShots(html) {
+  const el = document.getElementById("shotsPanel");
+  if (el) el.innerHTML = html;
+}
 
 /* =========================
    SUGGERIMENTI (datalist)
@@ -90,6 +94,7 @@ async function showTeam() {
     setReferee(`<p class="muted"><em>—</em></p>`);
     setTeams(`<p class="muted"><em>—</em></p>`);
     setCorners(`<p class="muted"><em>—</em></p>`);
+	setShots(`<p class="muted"><em>—</em></p>`);
     return;
   }
 
@@ -97,6 +102,7 @@ async function showTeam() {
   setReferee(`<p class="muted"><em>—</em></p>`);
   setTeams(`<p class="muted"><em>—</em></p>`);
   setCorners(`<p class="muted"><em>—</em></p>`);
+  setShots(`<p class="muted"><em>—</em></p>`);
 
   const r = await apiGet(`/teams?search=${encodeURIComponent(teamName)}`);
   if (!r.ok) {
@@ -193,6 +199,7 @@ async function loadNextMatch() {
   setReferee(`<p class="muted"><em>—</em></p>`);
   setTeams(`<p class="muted"><em>—</em></p>`);
   setCorners(`<p class="muted"><em>—</em></p>`);
+  setShots(`<p class="muted"><em>—</em></p>`);
 
   const next = await apiGet(
     `/fixtures?team=${selectedTeam.id}&next=1&timezone=Europe/Rome`,
@@ -250,6 +257,7 @@ async function loadNextMatch() {
   await loadTeamsForm();
   await loadFixtureDetails();
   await loadTeamsCorners();
+  await loadTeamsShots();
 }
 
 function renderNext(f) {
