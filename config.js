@@ -3,11 +3,12 @@
 
 // ✅ Opzione A (consigliata): API-SPORTS diretto (api-sports.io)
 // Header: x-apisports-key
+// config.js
 window.API_CONFIG = {
-  provider: "apisports",
-  baseUrl: "https://v3.football.api-sports.io",
+  baseUrl: "https://calcio-report-proxy.stemoro84.workers.dev",
   headers: {
-    "x-apisports-key": "f9f0ba81f595aedb334506e478bf3bae",
+    // se il Worker aggiunge lui la key, qui puoi anche lasciare vuoto
+    // altrimenti puoi ancora passare l'header dal client (ma sconsiglio)
   },
 };
 
