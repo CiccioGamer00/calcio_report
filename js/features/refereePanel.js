@@ -31,10 +31,17 @@ async function loadFixtureDetails() {
   selectedFixture.referee = referee || "—";
 
   if (!selectedFixture.referee || selectedFixture.referee === "—") {
-    // Importantissimo: non deve restare un vecchio arbitro in memoria
-    setReferee(`<p class="muted"><em>Arbitro non ancora assegnato.</em></p>`);
-    return;
-  }
+  const now = new Date().toLocaleString("it-IT");
+  setReferee(`
+    <p class="muted"><em>Arbitro non ancora assegnato (ultima verifica: ${safeHTML(now)}).</em></p>
+    <p style="margin-top:10px;">
+      <button type="button" class="btn" id="btnRefRetry">Riprova ora</button>
+    </p>
+  `);
+  const btn = document.getElementById("btnRefRetry");
+  if (btn) btn.onclick = () => loadFixtureDetails();
+  return;
+}
 
   setReferee(`
     <div class="kv">
