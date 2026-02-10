@@ -243,3 +243,26 @@ li{ margin:6px 0; }
 .skel-line.sm{ width:35%; }
 .skel-line.md{ width:60%; }
 .skel-line.lg{ width:85%; }
+
+/* ===== TOP SPLIT (Ricerca + Indicatori) ===== */
+.top-grid{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap:14px;
+}
+
+@media (min-width: 1100px){
+  .top-grid{
+    grid-template-columns: 1fr 1fr;
+    align-items: stretch;
+  }
+
+  .top-grid .card{
+    min-height: 220px;
+  }
+
+  .top-grid .card .content{
+    max-height: 240px;
+    overflow: auto;
+  }
+}
