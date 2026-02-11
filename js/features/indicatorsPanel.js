@@ -5,11 +5,13 @@ function setIndicators(html) {
   if (el) el.innerHTML = html;
 }
 
+// bus dati
 window.__IND__ = window.__IND__ || {
   teams: null,
   corners: null,
   shots: null,
   referee: null,
+  fouls: null, // <-- NUOVO
 };
 
 function clamp(n, a, b) {
@@ -23,7 +25,7 @@ function mean(a, b) {
   return (x + y) / 2;
 }
 
-// scala lineare -> 0..100
+// scala lineare -> 0..100 (indice interno)
 function scoreLinear(value, minV, maxV) {
   const v = Number(value) || 0;
   if (maxV <= minV) return 0;
@@ -31,19 +33,9 @@ function scoreLinear(value, minV, maxV) {
   return Math.round(clamp(t, 0, 1) * 100);
 }
 
-function fmt0(n) {
-  const x = Number(n);
-  return Number.isFinite(x) ? String(Math.round(x)) : "—";
-}
-
 function fmt2(n) {
   const x = Number(n);
   return Number.isFinite(x) ? x.toFixed(2) : "—";
-}
-
-function pctText(n) {
-  const x = Number(n);
-  return Number.isFinite(x) ? `${Math.round(x)}%` : "—";
 }
 
 function scoreClass(score) {
@@ -54,6 +46,7 @@ function scoreClass(score) {
   return "score-low";
 }
 
+// etichette “bookmaker style”
 function pickLabel(type, ctx) {
   if (type === "g1t") {
     const v = Number(ctx.goal1T);
@@ -62,6 +55,7 @@ function pickLabel(type, ctx) {
     if (v >= 50) return "Gol 1T: Medio";
     return "Gol 1T: Basso";
   }
+
   if (type === "g2t") {
     const v = Number(ctx.goal2T);
     if (!Number.isFinite(v)) return "Gol 2T —";
@@ -69,53 +63,66 @@ function pickLabel(type, ctx) {
     if (v >= 50) return "Gol 2T: Medio";
     return "Gol 2T: Basso";
   }
+
   if (type === "corners") {
     const tot = Number(ctx.cornersExpected);
     if (!Number.isFinite(tot)) return "Corner —";
-    if (tot >= 11.5) return "Over 10.5";
-    if (tot >= 9.5) return "Over 8.5";
-    return "Under 10.5";
+    if (tot >= 11.5) return "Corner: Over 10.5";
+    if (tot >= 9.5) return "Corner: Over 8.5";
+    return "Corner: Under 10.5";
   }
+
   if (type === "shots") {
     const tot = Number(ctx.shotsExpected);
     if (!Number.isFinite(tot)) return "Tiri —";
-    if (tot >= 28) return "Alto volume";
-    if (tot >= 22) return "Medio volume";
-    return "Basso volume";
+    if (tot >= 28) return "Tiri: Alto volume";
+    if (tot >= 22) return "Tiri: Medio volume";
+    return "Tiri: Basso volume";
   }
+
   if (type === "cards") {
     const tot = Number(ctx.cardsExpected);
     if (!Number.isFinite(tot)) return "Cartellini —";
-    if (tot >= 5.5) return "Over 4.5";
-    if (tot >= 4.5) return "Over 3.5";
-    return "Under 4.5";
+    if (tot >= 5.5) return "Cartellini: Over 4.5";
+    if (tot >= 4.5) return "Cartellini: Over 3.5";
+    return "Cartellini: Under 4.5";
   }
+
+  if (type === "fouls") {
+    const tot = Number(ctx.foulsExpected);
+    if (!Number.isFinite(tot)) return "Falli —";
+    if (tot >= 27.5) return "Falli: Over 26.5";
+    if (tot >= 24.5) return "Falli: Over 23.5";
+    return "Falli: Under 26.5";
+  }
+
   return "—";
 }
 
-function teamInline(team, valueHtml) {
+function teamChip(team) {
   const logo = team?.logo || "";
   const name = team?.name || "—";
   return `
-    <span class="ind-team">
+    <span class="teamline" style="gap:8px;">
       ${logo ? `<img class="logo" src="${safeHTML(logo)}" alt="logo" />` : ""}
-      <span class="ind-team-name">${safeHTML(name)}</span>
-      <span class="ind-val">${valueHtml || "—"}</span>
+      <strong>${safeHTML(name)}</strong>
     </span>
   `;
 }
 
-function progressBar(value0_100) {
-  const v = clamp(Number(value0_100) || 0, 0, 100);
-  return `
-    <div class="ind-bar">
-      <div class="ind-bar-fill" style="width:${v}%;"></div>
-    </div>
-  `;
-}
+function tile(opts) {
+  const {
+    icon,
+    title,
+    score,       // indice 0..100
+    label,       // bookmaker style
+    sub,         // numeri attesi
+    homeTeam,
+    awayTeam,
+    homeVal,
+    awayVal,
+  } = opts;
 
-function tileCompact(opts) {
-  const { icon, title, score, label, homeTeam, awayTeam, homeValHtml, awayValHtml } = opts;
   const cls = scoreClass(score);
 
   return `
@@ -125,25 +132,28 @@ function tileCompact(opts) {
           <span class="ind-ico">${safeHTML(icon)}</span>
           <span>${safeHTML(title)}</span>
         </div>
-        <span class="ind-score ${cls}">${score == null ? "—" : `${safeHTML(score)}%`}</span>
+        <span class="ind-score ${cls}">${score == null ? "—" : `${safeHTML(score)} / 100`}</span>
       </div>
 
-      ${score == null ? "" : progressBar(score)}
-
       <div class="ind-label">${safeHTML(label || "—")}</div>
+      ${sub ? `<div class="ind-sub">${sub}</div>` : ""}
 
-      <div class="ind-2lines">
-        ${teamInline(homeTeam, homeValHtml)}
-        ${teamInline(awayTeam, awayValHtml)}
+      <div class="ind-lines">
+        <div class="ind-line">
+          ${teamChip(homeTeam)}
+          <span class="pill">${homeVal || "—"}</span>
+        </div>
+        <div class="ind-line">
+          ${teamChip(awayTeam)}
+          <span class="pill">${awayVal || "—"}</span>
+        </div>
       </div>
     </div>
   `;
 }
 
-function summaryPill(label, score) {
-  const cls = scoreClass(score);
-  const v = score == null ? "—" : `${Math.round(score)}%`;
-  return `<span class="ind-pill ${cls}">${safeHTML(label)}: <strong>${safeHTML(v)}</strong></span>`;
+function summaryPill(title, line) {
+  return `<span class="ind-pill"><strong>${safeHTML(title)}:</strong> ${safeHTML(line)}</span>`;
 }
 
 function publishIndicatorData(key, payload) {
@@ -157,25 +167,23 @@ function renderIndicators() {
   const corners = I.corners;
   const shots = I.shots;
   const ref = I.referee;
+  const fouls = I.fouls;
 
+  // meta match (logo/nome reali)
   const fx = typeof selectedFixture !== "undefined" ? selectedFixture : null;
   const homeMeta = fx?.home || { name: "Casa", logo: "" };
   const awayMeta = fx?.away || { name: "Trasferta", logo: "" };
 
-  if (!teams && !corners && !shots && !ref) {
-    setIndicators(
-      `<p class="muted"><em>Gli indicatori verranno mostrati dopo aver selezionato un match.</em></p>`,
-    );
+  if (!teams && !corners && !shots && !ref && !fouls) {
+    setIndicators(`<p class="muted"><em>Gli indicatori verranno mostrati dopo aver selezionato un match.</em></p>`);
     return;
   }
 
   const h = teams?.home || null;
   const a = teams?.away || null;
 
-  // Gol 1T / 2T (0..100 “percentuale” già)
-  let home1T=null, away1T=null, goal1T=null;
-  let home2T=null, away2T=null, goal2T=null;
-
+  // --- GOL 1T / 2T (indice 0..100 basato su GF% + GA% avversario)
+  let goal1T=null, goal2T=null, home1T=null, away1T=null, home2T=null, away2T=null;
   if (h && a) {
     home1T = mean(h.gf1Pct, a.ga1Pct);
     away1T = mean(a.gf1Pct, h.ga1Pct);
@@ -186,23 +194,17 @@ function renderIndicators() {
     goal2T = mean(home2T, away2T);
   }
 
-  // Corner
-  let cornersHome=null, cornersAway=null, cornersExpected=null, cornersScore=null;
+  // --- CORNER (attesi)
+  let cornersExpected=null, cornersScore=null, cornersHome=null, cornersAway=null;
   if (corners?.home && corners?.away) {
     cornersHome = mean(corners.home.avgCorners, corners.away.avgCornersAgainst);
     cornersAway = mean(corners.away.avgCorners, corners.home.avgCornersAgainst);
     cornersExpected = cornersHome + cornersAway;
     cornersScore = scoreLinear(cornersExpected, 6, 14);
-
-    // percentuali “per squadra” (scala realistica per-team 2→8)
-    var cornersHomePct = scoreLinear(cornersHome, 2, 8);
-    var cornersAwayPct = scoreLinear(cornersAway, 2, 8);
   }
 
-  // Tiri (+ in porta)
-  let shotsHome=null, shotsAway=null, shotsExpected=null, shotsScore=null;
-  let otHome=null, otAway=null, otExpected=null;
-
+  // --- TIRI (attesi + in porta attesi)
+  let shotsExpected=null, shotsScore=null, shotsHome=null, shotsAway=null, otExpected=null, otHome=null, otAway=null;
   if (shots?.home && shots?.away) {
     shotsHome = mean(shots.home.avgShotsFor, shots.away.avgShotsAgainst);
     shotsAway = mean(shots.away.avgShotsFor, shots.home.avgShotsAgainst);
@@ -212,15 +214,9 @@ function renderIndicators() {
     otHome = mean(shots.home.avgOnTargetFor, shots.away.avgOnTargetAgainst);
     otAway = mean(shots.away.avgOnTargetFor, shots.home.avgOnTargetAgainst);
     otExpected = otHome + otAway;
-
-    // percentuali per squadra (tot tiri: 7→18, in porta: 2→7)
-    var shotsHomePct = scoreLinear(shotsHome, 7, 18);
-    var shotsAwayPct = scoreLinear(shotsAway, 7, 18);
-    var otHomePct = scoreLinear(otHome, 2, 7);
-    var otAwayPct = scoreLinear(otAway, 2, 7);
   }
 
-  // Cartellini
+  // --- CARTELLINI (attesi: squadre + arbitro)
   let cardsExpected=null, cardsScore=null;
   if (h && a) {
     const teamsCards = (Number(h.avgCards) + Number(a.avgCards)) || 0;
@@ -228,88 +224,103 @@ function renderIndicators() {
     cardsScore = scoreLinear(cardsExpected, 2, 7);
   }
 
-  const ctx = { goal1T, goal2T, cornersExpected, shotsExpected, cardsExpected };
+  // --- FALLI (attesi: teams only, per ora)
+  let foulsExpected=null, foulsScore=null, foulsHome=null, foulsAway=null;
+  if (fouls?.home && fouls?.away) {
+    foulsHome = mean(fouls.home.avgFoulsFor, fouls.away.avgFoulsAgainst);
+    foulsAway = mean(fouls.away.avgFoulsFor, fouls.home.avgFoulsAgainst);
+    foulsExpected = foulsHome + foulsAway;
+    foulsScore = scoreLinear(foulsExpected, 16, 32);
+  }
 
-  // Match summary (3 pill)
+  const ctx = { goal1T, goal2T, cornersExpected, shotsExpected, cardsExpected, foulsExpected };
+
+  // MATCH SUMMARY: bookmaker style + attesi (niente percentuali)
   const summary = `
     <div class="ind-summary">
-      ${summaryPill("Gol 1T", goal1T == null ? null : Math.round(goal1T))}
-      ${summaryPill("Corner", cornersScore)}
-      ${summaryPill("Cartellini", cardsScore)}
+      ${summaryPill("Gol 1T", goal1T == null ? "—" : `${pickLabel("g1t", ctx)} (${Math.round(goal1T)}/100)`)}
+      ${summaryPill("Corner", cornersExpected == null ? "—" : `${pickLabel("corners", ctx)} (attesi ${fmt2(cornersExpected)})`)}
+      ${summaryPill("Cartellini", cardsExpected == null ? "—" : `${pickLabel("cards", ctx)} (attesi ${fmt2(cardsExpected)})`)}
     </div>
   `;
 
   setIndicators(`
     ${summary}
     <div class="ind-grid">
-      ${tileCompact({
+      ${tile({
         icon: "⚽",
         title: "Gol 1° tempo",
         score: goal1T == null ? null : Math.round(goal1T),
         label: pickLabel("g1t", ctx),
+        sub: goal1T == null ? "" : `Indice match: <strong>${Math.round(goal1T)}/100</strong>`,
         homeTeam: homeMeta,
         awayTeam: awayMeta,
-        homeValHtml: home1T == null ? "—" : `${pctText(home1T)} ${progressBar(home1T)}`,
-        awayValHtml: away1T == null ? "—" : `${pctText(away1T)} ${progressBar(away1T)}`,
+        homeVal: home1T == null ? "—" : `${Math.round(home1T)}/100`,
+        awayVal: away1T == null ? "—" : `${Math.round(away1T)}/100`,
       })}
 
-      ${tileCompact({
+      ${tile({
         icon: "⏱️",
         title: "Gol 2° tempo",
         score: goal2T == null ? null : Math.round(goal2T),
         label: pickLabel("g2t", ctx),
+        sub: goal2T == null ? "" : `Indice match: <strong>${Math.round(goal2T)}/100</strong>`,
         homeTeam: homeMeta,
         awayTeam: awayMeta,
-        homeValHtml: home2T == null ? "—" : `${pctText(home2T)} ${progressBar(home2T)}`,
-        awayValHtml: away2T == null ? "—" : `${pctText(away2T)} ${progressBar(away2T)}`,
+        homeVal: home2T == null ? "—" : `${Math.round(home2T)}/100`,
+        awayVal: away2T == null ? "—" : `${Math.round(away2T)}/100`,
       })}
 
-      ${tileCompact({
+      ${tile({
         icon: "🚩",
         title: "Corner",
         score: cornersScore == null ? null : cornersScore,
-        label: cornersExpected == null ? "Corner —" : `Tot attesi ${fmt2(cornersExpected)} · ${pickLabel("corners", ctx)}`,
+        label: pickLabel("corners", ctx),
+        sub: cornersExpected == null ? "" : `Tot attesi: <strong>${fmt2(cornersExpected)}</strong>`,
         homeTeam: homeMeta,
         awayTeam: awayMeta,
-        homeValHtml: cornersHome == null ? "—" : `${pctText(cornersHomePct)} <span class="muted">(${fmt2(cornersHome)} attesi)</span> ${progressBar(cornersHomePct)}`,
-        awayValHtml: cornersAway == null ? "—" : `${pctText(cornersAwayPct)} <span class="muted">(${fmt2(cornersAway)} attesi)</span> ${progressBar(cornersAwayPct)}`,
+        homeVal: cornersHome == null ? "—" : `${fmt2(cornersHome)} attesi`,
+        awayVal: cornersAway == null ? "—" : `${fmt2(cornersAway)} attesi`,
       })}
 
-      ${tileCompact({
+      ${tile({
         icon: "🎯",
         title: "Tiri",
         score: shotsScore == null ? null : shotsScore,
-        label: shotsExpected == null ? "Tiri —" : `Tot attesi ${fmt2(shotsExpected)} · In porta attesi ${fmt2(otExpected)}`,
+        label: pickLabel("shots", ctx),
+        sub: shotsExpected == null ? "" : `Tot attesi: <strong>${fmt2(shotsExpected)}</strong> · In porta attesi: <strong>${fmt2(otExpected)}</strong>`,
         homeTeam: homeMeta,
         awayTeam: awayMeta,
-        homeValHtml: shotsHome == null ? "—" : `
-          <div class="ind-minirow">
-            <span>Tot: <strong>${pctText(shotsHomePct)}</strong></span>
-            <span>In porta: <strong>${pctText(otHomePct)}</strong></span>
-          </div>
-          ${progressBar(shotsHomePct)}
-        `,
-        awayValHtml: shotsAway == null ? "—" : `
-          <div class="ind-minirow">
-            <span>Tot: <strong>${pctText(shotsAwayPct)}</strong></span>
-            <span>In porta: <strong>${pctText(otAwayPct)}</strong></span>
-          </div>
-          ${progressBar(shotsAwayPct)}
-        `,
+        homeVal: shotsHome == null ? "—" : `${fmt2(shotsHome)} (OT ${fmt2(otHome)})`,
+        awayVal: shotsAway == null ? "—" : `${fmt2(shotsAway)} (OT ${fmt2(otAway)})`,
       })}
 
-      ${tileCompact({
+      ${tile({
         icon: "🟨",
         title: "Cartellini",
         score: cardsScore == null ? null : cardsScore,
-        label: cardsExpected == null ? "Cartellini —" : `Attesi ${fmt2(cardsExpected)} · ${pickLabel("cards", ctx)}${ref?.avgCards == null ? "" : ` · Arbitro ${fmt2(ref.avgCards)}`}`,
+        label: pickLabel("cards", ctx),
+        sub: cardsExpected == null ? "" : `Attesi: <strong>${fmt2(cardsExpected)}</strong>${ref?.avgCards == null ? "" : ` · Arbitro: <strong>${fmt2(ref.avgCards)}</strong>`}`,
         homeTeam: homeMeta,
         awayTeam: awayMeta,
-        homeValHtml: h ? `Media ${fmt2(h.avgCards)}` : "—",
-        awayValHtml: a ? `Media ${fmt2(a.avgCards)}` : "—",
+        homeVal: h ? `Media ${fmt2(h.avgCards)}` : "—",
+        awayVal: a ? `Media ${fmt2(a.avgCards)}` : "—",
+      })}
+
+      ${tile({
+        icon: "🦵",
+        title: "Falli",
+        score: foulsScore == null ? null : foulsScore,
+        label: pickLabel("fouls", ctx),
+        sub: foulsExpected == null ? "" : `Tot attesi: <strong>${fmt2(foulsExpected)}</strong>`,
+        homeTeam: homeMeta,
+        awayTeam: awayMeta,
+        homeVal: foulsHome == null ? "—" : `${fmt2(foulsHome)} attesi`,
+        awayVal: foulsAway == null ? "—" : `${fmt2(foulsAway)} attesi`,
       })}
     </div>
   `);
 }
 
+// export
 window.publishIndicatorData = publishIndicatorData;
