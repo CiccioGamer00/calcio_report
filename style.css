@@ -273,4 +273,129 @@ li{ margin:6px 0; }
   font-weight: 600;
 }
 }
+/* ===== INDICATORI (tile compatti, tutto a vista) ===== */
+
+#indicatorsPanel .ind-grid{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap:12px;
+}
+
+/* su schermi medi/grandi -> 2 colonne */
+@media (min-width: 780px){
+  #indicatorsPanel .ind-grid{
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+#indicatorsPanel .ind-tile{
+  padding: 12px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+}
+
+#indicatorsPanel .ind-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin-bottom:8px;
+}
+
+#indicatorsPanel .ind-title{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  font-weight:700;
+}
+
+#indicatorsPanel .ind-ico{
+  width:22px;
+  display:inline-flex;
+  justify-content:center;
+}
+
+#indicatorsPanel .ind-score{
+  min-width:52px;
+  text-align:center;
+  padding:6px 10px;
+  border-radius: 999px;
+  border:1px solid var(--line);
+  font-weight:800;
+}
+
+/* badge colorati */
+#indicatorsPanel .score-high{
+  background: rgba(82,255,168,0.18);
+  border-color: rgba(82,255,168,0.35);
+}
+#indicatorsPanel .score-mid{
+  background: rgba(103,163,255,0.16);
+  border-color: rgba(103,163,255,0.30);
+}
+#indicatorsPanel .score-low{
+  background: rgba(255,107,107,0.14);
+  border-color: rgba(255,107,107,0.28);
+}
+#indicatorsPanel .score-neutral{
+  background: rgba(255,255,255,0.06);
+}
+
+#indicatorsPanel .ind-label{
+  font-size:12px;
+  color: var(--muted);
+  margin-bottom:6px;
+}
+#indicatorsPanel .ind-sub{
+  font-size:12px;
+  color: rgba(255,255,255,0.78);
+  margin-bottom:10px;
+}
+
+#indicatorsPanel .ind-lines{
+  display:grid;
+  gap:8px;
+}
+
+#indicatorsPanel .ind-line{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+#indicatorsPanel .ind-team{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-width: 0;
+}
+
+#indicatorsPanel .ind-team-name{
+  font-size:12px;
+  color: rgba(255,255,255,0.90);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width: 170px;
+}
+
+#indicatorsPanel .ind-val{
+  font-size:12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.05);
+  white-space:nowrap;
+}
+
+/* ✅ NO SCROLL nella card indicatori (override della top-grid) */
+@media (min-width: 1100px){
+  #indicatorsPanel.content{
+    max-height: none !important;
+    overflow: visible !important;
+  }
+}
+
 
