@@ -71,7 +71,7 @@ function renderTeamInjuries(teamName, teamLogo, items) {
 }
 
 async function loadInjuries() {
-  if (!selectedFixture?.fixture?.id) {
+  if (!selectedFixture?.id) {
     setInjuries(`<p class="muted"><em>Seleziona una squadra per vedere gli indisponibili.</em></p>`);
     return;
   }
@@ -108,4 +108,5 @@ async function loadInjuries() {
       ${renderTeamInjuries(away?.name || "Trasferta", away?.logo || "", awayItems)}
     </div>
   `);
+
 }
