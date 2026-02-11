@@ -1,350 +1,235 @@
 // js/features/teamFlow.js
+// Gestione input + suggerimenti + selezione team + caricamento pannelli
+// Compatibile con:
+// - loadFixtureDetails()  (refereePanel.js)
+// - loadTeamsForm()       (teamsPanel.js)
+// - loadTeamsCorners()    (cornersPanel.js)
+// - loadTeamsShots()      (shotsPanel.js)
+// - loadInjuries()        (injuriesPanel.js)
 
-// Cache suggerimenti
-const __SUGGEST_CACHE__ = new Map(); // key: query -> {ts, items}
+const __SUGGEST_CACHE__ = new Map(); // q -> {ts, items:[{id,name,logo}]}
 let __SUGGEST_DEBOUNCE__ = null;
+let __LAST_SUGGEST_ITEMS__ = [];
 
 function setMatch(html) {
-  document.getElementById("match").innerHTML = html;
-}
-
-function setReferee(html) {
-  document.getElementById("referee").innerHTML = html;
-}
-
-function setTeams(html) {
-  const el = document.getElementById("teamsPanel");
+  const el = document.getElementById("match");
   if (el) el.innerHTML = html;
 }
 
-function setCorners(html) {
-  const el = document.getElementById("cornersPanel");
-  if (el) el.innerHTML = html;
-}
-function setShots(html) {
-  const el = document.getElementById("shotsPanel");
-  if (el) el.innerHTML = html;
-}
-
-/* =========================
-   SUGGERIMENTI (datalist)
-   ========================= */
-async function fetchTeamSuggestions(q) {
+function updateDatalist(items) {
+  __LAST_SUGGEST_ITEMS__ = items || [];
   const dl = document.getElementById("teamSuggestions");
   if (!dl) return;
+  dl.innerHTML = (items || [])
+  .slice(0, 15)
+  .map((x) => {
+    const label = x.country ? `${x.country} — ${x.name}` : x.name;
+    return `<option value="${safeHTML(x.name)}" label="${safeHTML(label)}"></option>`;
+  })
+  .join("");
+}
 
-  dl.innerHTML = "";
+function findSuggestedByName(name) {
+  const n = String(name || "").trim().toLowerCase();
+  if (!n) return null;
+  return (
+    __LAST_SUGGEST_ITEMS__.find(
+      (x) => String(x.name || "").trim().toLowerCase() === n,
+    ) || null
+  );
+}
 
-  const queryRaw = String(q || "").trim();
-  if (queryRaw.length < 2) return;
-
-  const query = sanitizeSearch(queryRaw);
-  if (query.length < 2) return;
-
+async function fetchSuggestions(q) {
   const now = Date.now();
-  const cached = __SUGGEST_CACHE__.get(query);
-  if (cached && now - cached.ts < 60_000) {
-    renderDatalistFromTeams(cached.items);
-    return;
-  }
+  const cached = __SUGGEST_CACHE__.get(q);
+  if (cached && now - cached.ts < 60_000) return cached.items;
 
-  const r = await apiGet(`/teams?search=${encodeURIComponent(query)}`);
-  if (!r.ok || r.errors) return;
+  const r = await apiGet(`/teams?search=${encodeURIComponent(q)}`, {
+    retries: 2,
+    delays: [250, 650],
+  });
 
-  const items = (r.arr || [])
-    .slice(0, 12)
-    .map((x) => ({
-      id: x?.team?.id ?? null,
-      name: x?.team?.name ?? "",
-      country: x?.team?.country ?? "",
-      logo: x?.team?.logo ?? "",
-    }))
+  const items = (r.ok && !r.errors ? r.arr : [])
+    .map((t) => ({
+  id: t?.team?.id ?? null,
+  name: t?.team?.name ?? "",
+  logo: t?.team?.logo ?? "",
+  country: t?.team?.country ?? t?.team?.nation ?? "",
+}))
     .filter((x) => x.id && x.name);
 
-  __SUGGEST_CACHE__.set(query, { ts: now, items });
-  renderDatalistFromTeams(items);
+  __SUGGEST_CACHE__.set(q, { ts: now, items });
+  return items;
 }
 
-function renderDatalistFromTeams(items) {
-  const dl = document.getElementById("teamSuggestions");
-  if (!dl) return;
+async function pickTeamByName(name) {
+  // 1) se è uno dei suggerimenti appena mostrati, usa quello
+  const fromSuggest = findSuggestedByName(name);
+  if (fromSuggest) return fromSuggest;
 
-  dl.innerHTML = (items || [])
-    .map((t) => {
-      const value = t.name;
-      const label = t.country ? `${t.name} (${t.country})` : t.name;
-      return `<option value="${safeHTML(value)}" label="${safeHTML(label)}"></option>`;
-    })
-    .join("");
+  // 2) altrimenti chiedi all’API e prendi il primo (o match esatto se esiste)
+  const r = await apiGet(`/teams?search=${encodeURIComponent(name)}`, {
+    retries: 2,
+    delays: [300, 700],
+  });
+  if (!r.ok || r.errors || !r.arr || r.arr.length === 0) return null;
+
+  const low = name.trim().toLowerCase();
+  const exact = r.arr.find(
+    (t) => String(t?.team?.name || "").trim().toLowerCase() === low,
+  );
+  const best = exact || r.arr[0];
+
+  return {
+    id: best?.team?.id ?? null,
+    name: best?.team?.name ?? "",
+    logo: best?.team?.logo ?? "",
+  };
 }
 
-/* =========================
-   CERCA SQUADRA (NO DOPPIA LISTA)
-   ========================= */
+async function fetchNextFixture(teamId) {
+  const r = await apiGet(
+    `/fixtures?team=${teamId}&next=1&timezone=Europe/Rome`,
+    { retries: 3, delays: [400, 900, 1600] },
+  );
+  if (!r.ok || r.errors || !r.arr || r.arr.length === 0) return null;
+  return r.arr[0];
+}
+
+function renderMatchBasic(fx) {
+  const dateISO = fx?.fixture?.date || null;
+  const when = dateISO
+    ? new Date(dateISO).toLocaleString("it-IT")
+    : "—";
+
+  const league = fx?.league?.name || "—";
+  const round = fx?.league?.round || "";
+  const venue = fx?.fixture?.venue?.name || "—";
+
+  const home = fx?.teams?.home || {};
+  const away = fx?.teams?.away || {};
+
+  return `
+    <div class="kv">
+      <div class="kv-row"><div class="k">Competizione</div><div class="v">${safeHTML(league)} ${round ? `• ${safeHTML(round)}` : ""}</div></div>
+      <div class="kv-row"><div class="k">Data/Ora</div><div class="v"><strong>${safeHTML(when)}</strong></div></div>
+      <div class="kv-row"><div class="k">Stadio</div><div class="v">${safeHTML(venue)}</div></div>
+      <div class="kv-row"><div class="k">Match</div><div class="v">
+        <span class="teamline">
+          ${home.logo ? `<img class="logo" src="${safeHTML(home.logo)}" alt="logo" />` : ""}
+          <strong>${safeHTML(home.name || "Casa")}</strong>
+          <span class="muted"> vs </span>
+          <strong>${safeHTML(away.name || "Trasferta")}</strong>
+          ${away.logo ? `<img class="logo" src="${safeHTML(away.logo)}" alt="logo" />` : ""}
+        </span>
+      </div></div>
+      <div class="kv-row"><div class="k">Fixture ID</div><div class="v"><span class="pill">${safeHTML(fx?.fixture?.id ?? "—")}</span></div></div>
+    </div>
+  `;
+}
+
+function setLoadingAll() {
+  setMatch(`<p class="muted"><em>Caricamento match...</em></p>`);
+  if (typeof setReferee === "function") setReferee(`<p class="muted"><em>Caricamento arbitro...</em></p>`);
+  if (typeof setTeams === "function") setTeams(`<p class="muted"><em>Caricamento squadre...</em></p>`);
+  if (typeof setCorners === "function") setCorners(`<p class="muted"><em>Caricamento corner...</em></p>`);
+  if (typeof setShots === "function") setShots(`<p class="muted"><em>Caricamento tiri...</em></p>`);
+  if (typeof setInjuries === "function") setInjuries(`<p class="muted"><em>Caricamento indisponibili...</em></p>`);
+}
+
 async function showTeam() {
-  const inputEl = document.getElementById("teamInput");
-  const raw = (inputEl?.value || "").trim();
-  const teamName = sanitizeSearch(raw);
+  const input = document.getElementById("teamInput");
+  const q = sanitizeSearch(input ? input.value : "");
+  if (!q || q.length < 2) return;
 
+  // reset “pulito” così la seconda ricerca riparte sempre
   selectedTeam = null;
   selectedFixture = null;
 
-  if (teamName === "") {
-    setMatch(`<p class="muted"><em>Inserisci il nome di una squadra.</em></p>`);
-    setReferee(`<p class="muted"><em>—</em></p>`);
-    setTeams(`<p class="muted"><em>—</em></p>`);
-    setCorners(`<p class="muted"><em>—</em></p>`);
-	setShots(`<p class="muted"><em>—</em></p>`);
+  setLoadingAll();
+
+  const team = await pickTeamByName(q);
+  if (!team || !team.id) {
+    setMatch(`<p class="bad"><em>Nessuna squadra trovata per "${safeHTML(q)}".</em></p>`);
+    return;
+  }
+  selectedTeam = team;
+
+  const fx = await fetchNextFixture(team.id);
+  if (!fx) {
+    setMatch(`<p class="bad"><em>Nessun prossimo match trovato per "${safeHTML(team.name)}".</em></p>`);
     return;
   }
 
-  setMatch(`<p class="muted"><em>Sto cercando la squadra...</em></p>`);
-  setReferee(`<p class="muted"><em>—</em></p>`);
-  setTeams(`<p class="muted"><em>—</em></p>`);
-  setCorners(`<p class="muted"><em>—</em></p>`);
-  setShots(`<p class="muted"><em>—</em></p>`);
+  // QUI: selectedFixture con la struttura che i pannelli già usano (home/away/id)
+selectedFixture = {
+  id: fx?.fixture?.id ?? null,
+  date: fx?.fixture?.date ?? null,
 
-  const r = await apiGet(`/teams?search=${encodeURIComponent(teamName)}`);
-  if (!r.ok) {
-    setMatch(`<p class="bad"><em>Errore API (teams): HTTP ${r.status}</em></p>`);
-    return;
-  }
-  if (r.errors) {
-    setMatch(
-      `<p class="bad"><em>Errore API (teams): ${safeHTML(JSON.stringify(r.errors))}</em></p>`,
-    );
-    return;
-  }
+  // IMPORTANTI per fallback arbitro / filtri
+  leagueId: fx?.league?.id ?? null,
+  leagueName: fx?.league?.name ?? "",
 
-  const results = r.arr || [];
-  if (results.length === 0) {
-    setMatch(
-      `<p class="muted"><em>Nessuna squadra trovata per: ${safeHTML(teamName)}</em></p>`,
-    );
-    return;
-  }
+  home: {
+    id: fx?.teams?.home?.id ?? null,
+    name: fx?.teams?.home?.name ?? "",
+    logo: fx?.teams?.home?.logo ?? "",
+  },
+  away: {
+    id: fx?.teams?.away?.id ?? null,
+    name: fx?.teams?.away?.name ?? "",
+    logo: fx?.teams?.away?.logo ?? "",
+  },
 
-  const exact = results.find(
-    (x) => String(x?.team?.name || "").toLowerCase() === teamName.toLowerCase(),
-  );
+  referee: "—",
+};
 
-  if (exact) {
-    setTeamFromResult(exact);
-    await loadNextMatch();
-    return;
-  }
-  if (results.length === 1) {
-    setTeamFromResult(results[0]);
-    await loadNextMatch();
-    return;
-  }
+  setMatch(renderMatchBasic(fx));
 
-  const top = results.slice(0, 8);
-  window.__TEAM_RESULTS__ = top;
-
-  const itemsHtml = top
-    .map((res, index) => {
-      const t = res.team || {};
-      const name = t.name ?? "—";
-      const country = t.country ?? "—";
-      const logo = t.logo ?? "";
-
-      return `
-        <li>
-          <button class="btn" style="width:100%; text-align:left;" onclick="selectTeam(${index})">
-            <span class="teamline">
-              ${logo ? `<img class="logo" src="${safeHTML(logo)}" alt="logo" />` : ""}
-              <strong>${safeHTML(name)}</strong>
-              <span class="pill">${safeHTML(country)}</span>
-            </span>
-          </button>
-        </li>
-      `;
-    })
-    .join("");
-
-  setMatch(`
-    <p class="muted"><em>Ho trovato più squadre simili. Seleziona quella giusta:</em></p>
-    <ul style="list-style:none; padding-left:0; margin-top:12px; display:grid; gap:10px;">
-      ${itemsHtml}
-    </ul>
-  `);
+  // Carica pannelli (se esistono, compatibile)
+  try { if (typeof loadFixtureDetails === "function") await loadFixtureDetails(); } catch (e) { console.error("loadFixtureDetails", e); }
+try { if (typeof loadTeamsForm === "function") await loadTeamsForm(); } catch (e) { console.error("loadTeamsForm", e); }
+try { if (typeof loadTeamsCorners === "function") await loadTeamsCorners(); } catch (e) { console.error("loadTeamsCorners", e); }
+try { if (typeof loadTeamsShots === "function") await loadTeamsShots(); } catch (e) { console.error("loadTeamsShots", e); }
+try { if (typeof loadInjuries === "function") await loadInjuries(); } catch (e) { console.error("loadInjuries", e); }
 }
 
-function setTeamFromResult(res) {
-  const t = res.team || {};
-  selectedTeam = {
-    id: t.id,
-    name: t.name,
-    country: t.country,
-    logo: t.logo || "",
-  };
-}
+// UX: suggerimenti + auto-start quando selezioni un suggerimento
+function initTeamSearchUX() {
+  const input = document.getElementById("teamInput");
+  if (!input) return;
 
-function selectTeam(index) {
-  const res = window.__TEAM_RESULTS__?.[index];
-  if (!res) return;
+  input.addEventListener("input", () => {
+    const q = sanitizeSearch(input.value);
 
-  setTeamFromResult(res);
-  loadNextMatch();
-}
+    if (!q || q.length < 2) return;
 
-/* =========================
-   PROSSIMO MATCH
-   ========================= */
-async function loadNextMatch() {
-  if (!selectedTeam?.id) return;
+    if (__SUGGEST_DEBOUNCE__) clearTimeout(__SUGGEST_DEBOUNCE__);
+    __SUGGEST_DEBOUNCE__ = setTimeout(async () => {
+      const items = await fetchSuggestions(q);
+      updateDatalist(items);
 
-  setMatch(`<p class="muted"><em>Recupero prossimo match...</em></p>`);
-  setReferee(`<p class="muted"><em>—</em></p>`);
-  setTeams(`<p class="muted"><em>—</em></p>`);
-  setCorners(`<p class="muted"><em>—</em></p>`);
-  setShots(`<p class="muted"><em>—</em></p>`);
+      // Se l’input è esattamente uno dei suggerimenti → parti subito
+      const exact = findSuggestedByName(input.value);
+      if (exact) showTeam();
+    }, 250);
+  });
 
-  const next = await apiGet(
-    `/fixtures?team=${selectedTeam.id}&next=1&timezone=Europe/Rome`,
-  );
+  input.addEventListener("change", () => {
+    // alcuni browser “sparano” change quando scegli dal datalist
+    const exact = findSuggestedByName(input.value);
+    if (exact) showTeam();
+  });
 
-  if (!next.ok) {
-    setMatch(
-      `<p class="bad"><em>Errore API (fixtures next): HTTP ${next.status}</em></p>`,
-    );
-    return;
-  }
-  if (next.errors) {
-    setMatch(
-      `<p class="bad"><em>Errore API (fixtures next): ${safeHTML(JSON.stringify(next.errors))}</em></p>`,
-    );
-    return;
-  }
-
-  if (!next.arr || next.arr.length === 0) {
-    const last = await apiGet(
-      `/fixtures?team=${selectedTeam.id}&last=1&timezone=Europe/Rome`,
-    );
-    if (last.ok && !last.errors && last.arr.length > 0) {
-      renderLast(last.arr[0]);
-      return;
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      showTeam();
     }
-    setMatch(
-      `<p class="muted"><em>Nessun match trovato (né futuro né passato recente).</em></p>`,
-    );
-    return;
-  }
-
-  const f = next.arr[0];
-  selectedFixture = {
-    id: f.fixture?.id ?? null,
-    date: f.fixture?.date ?? null,
-    leagueId: f.league?.id ?? null,
-    leagueName: f.league?.name ?? null,
-    referee: null,
-    home: {
-      id: f.teams?.home?.id ?? null,
-      name: f.teams?.home?.name ?? "—",
-      logo: f.teams?.home?.logo ?? "",
-    },
-    away: {
-      id: f.teams?.away?.id ?? null,
-      name: f.teams?.away?.name ?? "—",
-      logo: f.teams?.away?.logo ?? "",
-    },
-  };
-
-  renderNext(f);
-
-  // Queste funzioni vivranno in panels.js (le lasciamo chiamate uguali)
-  await loadTeamsForm();
-  await loadFixtureDetails();
-  await loadTeamsCorners();
-  await loadTeamsShots();
-  await loadInjuries();
+  });
 }
 
-function renderNext(f) {
-  const date = f.fixture?.date ? new Date(f.fixture.date).toLocaleString("it-IT") : "—";
-  const league = f.league?.name ?? "—";
-  const round = f.league?.round ?? "";
-  const home = f.teams?.home?.name ?? "—";
-  const away = f.teams?.away?.name ?? "—";
-  const homeLogo = f.teams?.home?.logo ?? "";
-  const awayLogo = f.teams?.away?.logo ?? "";
-  const isHome = f.teams?.home?.id === selectedTeam.id;
+initTeamSearchUX();
+window.showTeam = showTeam;
 
-  setMatch(`
-    <div class="kv">
-      <div class="kv-row">
-        <div class="k">Squadra</div>
-        <div class="v">
-          <span class="teamline">
-            ${selectedTeam.logo ? `<img class="logo" src="${safeHTML(selectedTeam.logo)}" alt="logo" />` : ""}
-            <strong>${safeHTML(selectedTeam.name)}</strong>
-            <span class="pill">${safeHTML(selectedTeam.country || "")}</span>
-          </span>
-        </div>
-      </div>
 
-      <div class="kv-row">
-        <div class="k">Data</div>
-        <div class="v">${safeHTML(date)}</div>
-      </div>
-
-      <div class="kv-row">
-        <div class="k">Competizione</div>
-        <div class="v">${safeHTML(league)} ${round ? `<span class="pill">${safeHTML(round)}</span>` : ""}</div>
-      </div>
-
-      <div class="kv-row">
-        <div class="k">Casa / Trasferta</div>
-        <div class="v">
-          <span class="teamline">
-            ${isHome ? `<span class="pill">CASA</span>` : `<span class="pill">TRASFERTA</span>`}
-            ${homeLogo ? `<img class="logo" src="${safeHTML(homeLogo)}" alt="home" />` : ""}
-            <strong>${safeHTML(home)}</strong>
-            <span class="muted">vs</span>
-            ${awayLogo ? `<img class="logo" src="${safeHTML(awayLogo)}" alt="away" />` : ""}
-            <strong>${safeHTML(away)}</strong>
-          </span>
-        </div>
-      </div>
-    </div>
-  `);
-}
-
-function renderLast(f) {
-  const date = f.fixture?.date ? new Date(f.fixture.date).toLocaleString("it-IT") : "—";
-  const league = f.league?.name ?? "—";
-  const home = f.teams?.home?.name ?? "—";
-  const away = f.teams?.away?.name ?? "—";
-  const goalsHome = f.goals?.home ?? "—";
-  const goalsAway = f.goals?.away ?? "—";
-
-  setMatch(`
-    <p class="muted"><em>Nessun match futuro disponibile. Ultimo match giocato:</em></p>
-    <div class="kv">
-      <div class="kv-row"><div class="k">Data</div><div class="v">${safeHTML(date)}</div></div>
-      <div class="kv-row"><div class="k">Competizione</div><div class="v">${safeHTML(league)}</div></div>
-      <div class="kv-row"><div class="k">Risultato</div><div class="v"><strong>${safeHTML(home)}</strong> ${safeHTML(goalsHome)} - ${safeHTML(goalsAway)} <strong>${safeHTML(away)}</strong></div></div>
-    </div>
-  `);
-
-  setReferee(
-    `<p class="muted"><em>Arbitro/storico non disponibile per match passato in questa vista.</em></p>`,
-  );
-}
-
-/* =========================
-   EVENTI UI (solo teamInput)
-   ========================= */
-document.getElementById("teamInput")?.addEventListener("input", () => {
-  const q = document.getElementById("teamInput").value;
-  clearTimeout(__SUGGEST_DEBOUNCE__);
-  __SUGGEST_DEBOUNCE__ = setTimeout(() => fetchTeamSuggestions(q), 260);
-});
-
-// Quando scegli un suggerimento (datalist), parte subito la ricerca
-document.getElementById("teamInput")?.addEventListener("change", () => {
-  // evita di sparare richieste mentre stai ancora digitando:
-  // "change" scatta quando selezioni un suggerimento o esci dal campo
-  showTeam();
-});
