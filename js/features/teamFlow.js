@@ -192,6 +192,7 @@ try { if (typeof loadTeamsForm === "function") await loadTeamsForm(); } catch (e
 try { if (typeof loadTeamsCorners === "function") await loadTeamsCorners(); } catch (e) { console.error("loadTeamsCorners", e); }
 try { if (typeof loadTeamsShots === "function") await loadTeamsShots(); } catch (e) { console.error("loadTeamsShots", e); }
 try { if (typeof loadInjuries === "function") await loadInjuries(); } catch (e) { console.error("loadInjuries", e); }
+  try { if (typeof loadTeamsFouls === "function") await loadTeamsFouls(); } catch (e) { console.error("loadTeamsFouls", e); }
 }
 
 // UX: suggerimenti + auto-start quando selezioni un suggerimento
@@ -231,5 +232,6 @@ function initTeamSearchUX() {
 
 initTeamSearchUX();
 window.showTeam = showTeam;
+
 
 
