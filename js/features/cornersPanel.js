@@ -232,4 +232,21 @@ async function loadTeamsCorners() {
       ${renderTeamCornersPerMatch(awayC)}
     `;
   }
+   try {
+  if (window.publishIndicatorData) {
+    window.publishIndicatorData("corners", {
+      home: {
+        avgCorners: Number(homeC.avgCorners),
+        avgCornersAgainst: Number(homeC.avgCornersAgainst),
+      },
+      away: {
+        avgCorners: Number(awayC.avgCorners),
+        avgCornersAgainst: Number(awayC.avgCornersAgainst),
+      },
+    });
+  }
+} catch (e) {
+  console.error("publish indicators corners", e);
+}
+
 }
