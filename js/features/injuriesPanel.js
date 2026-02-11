@@ -32,21 +32,27 @@ function normalizeStatus(obj) {
 }
 
 function renderTeamInjuries(teamName, teamLogo, items) {
-  const rows = (items || [])
-    .map((it) => {
-      const name = it?.player?.name || "—";
-      const reason = normalizeReason(it);
-      const status = normalizeStatus(it);
+const rows = (items || [])
+  .map((it) => {
+    const name = it?.player?.name || "—";
 
-      return `
-        <li>
-          <strong>${safeHTML(name)}</strong>
-          — ${safeHTML(reason)}
-          ${status ? ` <span class="muted">(${safeHTML(status)})</span>` : ""}
-        </li>
-      `;
-    })
-    .join("");
+    // RUOLO: se l'API lo fornisce lo mostriamo, altrimenti "—"
+    const rawPos =
+      it?.player?.position ||
+      it?.player?.pos ||
+      it?.player?.role ||
+      "";
+
+    const posLabel = rawPos ? (normalizePositionIT(rawPos) || rawPos) : "—";
+
+    return `
+      <li>
+        <strong>${safeHTML(name)}</strong>
+        — <span class="muted">${safeHTML(posLabel)}</span>
+      </li>
+    `;
+  })
+  .join("");
 
   return `
     <div class="kv-row">
@@ -117,3 +123,4 @@ async function loadInjuries() {
     </div>
   `);
 }
+
