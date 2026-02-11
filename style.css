@@ -265,4 +265,12 @@ li{ margin:6px 0; }
     max-height: 240px;
     overflow: auto;
   }
+  /* Indicatori: un filo più “pro” */
+#indicatorsPanel .kv-row{
+  background: rgba(255,255,255,0.045);
 }
+#indicatorsPanel .pill{
+  font-weight: 600;
+}
+}
+
