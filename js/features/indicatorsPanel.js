@@ -132,7 +132,7 @@ function tile(opts) {
           <span class="ind-ico">${safeHTML(icon)}</span>
           <span>${safeHTML(title)}</span>
         </div>
-        <span class="ind-score ${cls}">${score == null ? "—" : `${safeHTML(score)} / 100`}</span>
+        <span class="ind-score ${cls}">${score == null ? "—" : `${safeHTML(score)}%`}</span>
       </div>
 
       <div class="ind-label">${safeHTML(label || "—")}</div>
