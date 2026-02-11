@@ -209,6 +209,29 @@ async function loadTeamsForm() {
     <div id="teamCardsDetail" style="display:${showCardsDetail ? "block" : "none"};"></div>
   `);
 
+   try {
+  if (window.publishIndicatorData) {
+    window.publishIndicatorData("teams", {
+      home: {
+        avgCards: Number(homeForm.avgCards),
+        gf1Pct: Number(homeForm.gf1Pct),
+        gf2Pct: Number(homeForm.gf2Pct),
+        ga1Pct: Number(homeForm.ga1Pct),
+        ga2Pct: Number(homeForm.ga2Pct),
+      },
+      away: {
+        avgCards: Number(awayForm.avgCards),
+        gf1Pct: Number(awayForm.gf1Pct),
+        gf2Pct: Number(awayForm.gf2Pct),
+        ga1Pct: Number(awayForm.ga1Pct),
+        ga2Pct: Number(awayForm.ga2Pct),
+      },
+    });
+  }
+} catch (e) {
+  console.error("publish indicators teams", e);
+}
+
   const btnList = document.getElementById("btnToggleTeamList");
   const btnCards = document.getElementById("btnToggleTeamCards");
   const divList = document.getElementById("teamList");
@@ -307,4 +330,5 @@ function renderTeamCardsList(form) {
     <p><strong>${safeHTML(t.name)}</strong></p>
     <ul>${items || `<li class="muted">Nessun dato</li>`}</ul>
   `;
+
 }
