@@ -182,6 +182,26 @@ function renderIndicators() {
   const h = teams?.home || null;
   const a = teams?.away || null;
 
+    // --- GOL MATCH (attesi) per Under/Over 2.5
+  let goalsHome=null, goalsAway=null, goalsExpected=null;
+
+  if (h && a) {
+    // Home goals attesi = media(GF home, GA away)
+    goalsHome = mean(h.avgGF, a.avgGA);
+    // Away goals attesi = media(GF away, GA home)
+    goalsAway = mean(a.avgGF, h.avgGA);
+    goalsExpected = goalsHome + goalsAway;
+  }
+
+  function goalsBettingLine(x) {
+    const v = Number(x);
+    if (!Number.isFinite(v)) return "Gol: —";
+    // linea base bookmaker
+    if (v >= 2.7) return "Gol: Over 2.5";
+    if (v <= 2.3) return "Gol: Under 2.5";
+    return "Gol: Borderline 2.5";
+  }
+
   // --- GOL 1T / 2T (indice 0..100 basato su GF% + GA% avversario)
   let goal1T=null, goal2T=null, home1T=null, away1T=null, home2T=null, away2T=null;
   if (h && a) {
