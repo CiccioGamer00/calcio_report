@@ -317,4 +317,24 @@ async function loadTeamsShots() {
       ${renderTeamShotsPerMatch(awayS)}
     `;
   }
+try {
+  if (window.publishIndicatorData) {
+    window.publishIndicatorData("shots", {
+      home: {
+        avgShotsFor: Number(homeS.avgShotsFor),
+        avgShotsAgainst: Number(homeS.avgShotsAgainst),
+        avgOnTargetFor: Number(homeS.avgOnTargetFor),
+        avgOnTargetAgainst: Number(homeS.avgOnTargetAgainst),
+      },
+      away: {
+        avgShotsFor: Number(awayS.avgShotsFor),
+        avgShotsAgainst: Number(awayS.avgShotsAgainst),
+        avgOnTargetFor: Number(awayS.avgOnTargetFor),
+        avgOnTargetAgainst: Number(awayS.avgOnTargetAgainst),
+      },
+    });
+  }
+} catch (e) {
+  console.error("publish indicators shots", e);
+}
 }
