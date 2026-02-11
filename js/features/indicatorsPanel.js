@@ -256,11 +256,12 @@ function renderIndicators() {
   const ctx = { goal1T, goal2T, cornersExpected, shotsExpected, cardsExpected, foulsExpected };
 
   // MATCH SUMMARY: bookmaker style + attesi (niente percentuali)
-  const summary = `
+   const summary = `
     <div class="ind-summary">
-      ${summaryPill("Gol 1T", goal1T == null ? "—" : `${pickLabel("g1t", ctx)} (${Math.round(goal1T)}/100)`)}
+      ${summaryPill("Gol", goalsExpected == null ? "—" : `${goalsBettingLine(goalsExpected)} (attesi ${fmt2(goalsExpected)})`)}
       ${summaryPill("Corner", cornersExpected == null ? "—" : `${pickLabel("corners", ctx)} (attesi ${fmt2(cornersExpected)})`)}
       ${summaryPill("Cartellini", cardsExpected == null ? "—" : `${pickLabel("cards", ctx)} (attesi ${fmt2(cardsExpected)})`)}
+      ${summaryPill("Falli", foulsExpected == null ? "—" : `${pickLabel("fouls", ctx)} (attesi ${fmt2(foulsExpected)})`)}
     </div>
   `;
 
