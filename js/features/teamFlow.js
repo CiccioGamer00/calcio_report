@@ -185,11 +185,11 @@ async function showTeam() {
   setMatch(renderMatchBasic(fx));
 
   // Carica pannelli (se esistono, compatibile)
-  if (typeof loadFixtureDetails === "function") await loadFixtureDetails();
-  if (typeof loadTeamsForm === "function") await loadTeamsForm();
-  if (typeof loadTeamsCorners === "function") await loadTeamsCorners();
-  if (typeof loadTeamsShots === "function") await loadTeamsShots();
-  if (typeof loadInjuries === "function") await loadInjuries();
+  try { if (typeof loadFixtureDetails === "function") await loadFixtureDetails(); } catch (e) { console.error("loadFixtureDetails", e); }
+try { if (typeof loadTeamsForm === "function") await loadTeamsForm(); } catch (e) { console.error("loadTeamsForm", e); }
+try { if (typeof loadTeamsCorners === "function") await loadTeamsCorners(); } catch (e) { console.error("loadTeamsCorners", e); }
+try { if (typeof loadTeamsShots === "function") await loadTeamsShots(); } catch (e) { console.error("loadTeamsShots", e); }
+try { if (typeof loadInjuries === "function") await loadInjuries(); } catch (e) { console.error("loadInjuries", e); }
 }
 
 // UX: suggerimenti + auto-start quando selezioni un suggerimento
@@ -229,4 +229,5 @@ function initTeamSearchUX() {
 
 initTeamSearchUX();
 window.showTeam = showTeam;
+
 
