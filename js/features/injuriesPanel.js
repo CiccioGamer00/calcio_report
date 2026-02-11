@@ -71,17 +71,25 @@ function renderTeamInjuries(teamName, teamLogo, items) {
 }
 
 async function loadInjuries() {
-  if (!selectedFixture?.id) {
-    setInjuries(`<p class="muted"><em>Seleziona una squadra per vedere gli indisponibili.</em></p>`);
+  // “snapshot” per evitare che selectedFixture cambi durante gli await
+  const fx = selectedFixture;
+
+  if (!fx?.id) {
+    setInjuries(
+      `<p class="muted"><em>Seleziona una squadra per vedere gli indisponibili.</em></p>`,
+    );
     return;
   }
 
   setInjuries(`<p class="muted"><em>Recupero indisponibili...</em></p>`);
 
-  const fixtureId = selectedFixture.fixture.id;
+  const fixtureId = fx.id;
 
   // endpoint: injuries per fixture
-  const r = await apiGet(`/injuries?fixture=${fixtureId}`);
+  const r = await apiGet(`/injuries?fixture=${fixtureId}`, {
+    retries: 3,
+    delays: [500, 1000, 1800],
+  });
 
   if (!r.ok || r.errors) {
     setInjuries(`
@@ -95,18 +103,17 @@ async function loadInjuries() {
 
   const all = Array.isArray(r.arr) ? r.arr : [];
 
-  // raggruppo per teamId
-  const home = selectedFixture.home;
-  const away = selectedFixture.away;
+  // uso SEMPRE fx (snapshot), NON selectedFixture globale
+  const home = fx.home || {};
+  const away = fx.away || {};
 
-  const homeItems = all.filter((x) => x?.team?.id === home?.id);
-  const awayItems = all.filter((x) => x?.team?.id === away?.id);
+  const homeItems = all.filter((x) => x?.team?.id === home.id);
+  const awayItems = all.filter((x) => x?.team?.id === away.id);
 
   setInjuries(`
     <div class="kv">
-      ${renderTeamInjuries(home?.name || "Casa", home?.logo || "", homeItems)}
-      ${renderTeamInjuries(away?.name || "Trasferta", away?.logo || "", awayItems)}
+      ${renderTeamInjuries(home.name || "Casa", home.logo || "", homeItems)}
+      ${renderTeamInjuries(away.name || "Trasferta", away.logo || "", awayItems)}
     </div>
   `);
-
 }
