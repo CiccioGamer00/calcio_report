@@ -162,21 +162,25 @@ async function showTeam() {
   }
 
   // QUI: selectedFixture con la struttura che i pannelli già usano (home/away/id)
-  selectedFixture = {
-    id: fx?.fixture?.id ?? null,
-    date: fx?.fixture?.date ?? null,
-    home: {
-      id: fx?.teams?.home?.id ?? null,
-      name: fx?.teams?.home?.name ?? "",
-      logo: fx?.teams?.home?.logo ?? "",
-    },
-    away: {
-      id: fx?.teams?.away?.id ?? null,
-      name: fx?.teams?.away?.name ?? "",
-      logo: fx?.teams?.away?.logo ?? "",
-    },
-    referee: "—",
-  };
+ selectedFixture = {
+  id: fx?.fixture?.id ?? null,
+  date: fx?.fixture?.date ?? null,
+
+  leagueId: fx?.league?.id ?? null,
+  leagueName: fx?.league?.name ?? "",
+
+  home: {
+    id: fx?.teams?.home?.id ?? null,
+    name: fx?.teams?.home?.name ?? "",
+    logo: fx?.teams?.home?.logo ?? "",
+  },
+  away: {
+    id: fx?.teams?.away?.id ?? null,
+    name: fx?.teams?.away?.name ?? "",
+    logo: fx?.teams?.away?.logo ?? "",
+  },
+  referee: "—",
+};
 
   setMatch(renderMatchBasic(fx));
 
@@ -225,3 +229,4 @@ function initTeamSearchUX() {
 
 initTeamSearchUX();
 window.showTeam = showTeam;
+
