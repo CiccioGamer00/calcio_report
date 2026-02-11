@@ -213,6 +213,8 @@ async function loadTeamsForm() {
   if (window.publishIndicatorData) {
     window.publishIndicatorData("teams", {
       home: {
+         avgGF: Number(homeForm.avgGF),
+    avgGA: Number(homeForm.avgGA),
         avgCards: Number(homeForm.avgCards),
         gf1Pct: Number(homeForm.gf1Pct),
         gf2Pct: Number(homeForm.gf2Pct),
@@ -220,6 +222,8 @@ async function loadTeamsForm() {
         ga2Pct: Number(homeForm.ga2Pct),
       },
       away: {
+         avgGF: Number(awayForm.avgGF),
+    avgGA: Number(awayForm.avgGA),
         avgCards: Number(awayForm.avgCards),
         gf1Pct: Number(awayForm.gf1Pct),
         gf2Pct: Number(awayForm.gf2Pct),
@@ -332,3 +336,4 @@ function renderTeamCardsList(form) {
   `;
 
 }
+
