@@ -268,6 +268,13 @@ async function loadRefereeHistory() {
     }
 
     const avgTotal = (sumTotal / lastN.length).toFixed(2);
+     try {
+  if (window.publishIndicatorData) {
+    window.publishIndicatorData("referee", { avgCards: Number(avgTotal) });
+  }
+} catch (e) {
+  console.error("publish indicators referee", e);
+}
 
     const groups = {};
     for (const f of lastN) {
@@ -394,3 +401,4 @@ async function loadRefereeHistory() {
     refDiv.innerHTML = `<p class="bad"><em>Errore storico arbitro: ${safeHTML(String(err.message || err))}</em></p>`;
   }
 }
+
