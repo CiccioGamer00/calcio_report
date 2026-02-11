@@ -390,12 +390,13 @@ li{ margin:6px 0; }
   white-space:nowrap;
 }
 
-/* ✅ NO SCROLL nella card indicatori (override della top-grid) */
+/* ✅ NO SCROLL nella card indicatori (override della top-grid)
 @media (min-width: 1100px){
   #indicatorsPanel.content{
     max-height: none !important;
     overflow: visible !important;
   }
-}
+}*/
+
 
 
