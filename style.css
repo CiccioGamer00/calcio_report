@@ -389,7 +389,55 @@ li{ margin:6px 0; }
   background: rgba(255,255,255,0.05);
   white-space:nowrap;
 }
+/* ===== INDICATORI: progress + summary ===== */
 
+#indicatorsPanel .ind-summary{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin: 2px 0 12px;
+}
+
+#indicatorsPanel .ind-pill{
+  display:inline-flex;
+  gap:6px;
+  align-items:center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border:1px solid var(--line);
+  background: rgba(255,255,255,0.05);
+  font-size:12px;
+  color: rgba(255,255,255,0.90);
+}
+
+#indicatorsPanel .ind-bar{
+  height: 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.06);
+  overflow:hidden;
+  margin: 8px 0 8px;
+}
+#indicatorsPanel .ind-bar-fill{
+  height: 100%;
+  background: linear-gradient(90deg, rgba(82,255,168,0.55), rgba(103,163,255,0.55));
+  width: 0%;
+}
+
+#indicatorsPanel .ind-minirow{
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+  font-size:12px;
+}
+
+/* Indicatori: un pelo più aria, ma senza diventare gigantesco */
+@media (min-width: 1100px){
+  .top-grid #indicatorsPanel.content{
+    max-height: 320px; /* prima era 240 */
+  }
+}
 /* ✅ NO SCROLL nella card indicatori (override della top-grid)
 @media (min-width: 1100px){
   #indicatorsPanel.content{
@@ -397,6 +445,7 @@ li{ margin:6px 0; }
     overflow: visible !important;
   }
 }*/
+
 
 
 
