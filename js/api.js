@@ -18,7 +18,10 @@ function shouldRetry({ ok, status, errors, arr }, pathWithQuery) {
   // caso specifico che ti sta dando fastidio:
   // /fixtures/statistics a volte arriva "vuoto" anche se i dati esistono
   // quindi se è statistics e response è vuota, ritentiamo
-  if (pathWithQuery.includes("/fixtures/statistics") && (!arr || arr.length === 0)) {
+  if (
+    pathWithQuery.includes("/fixtures/statistics") &&
+    (!arr || arr.length === 0)
+  ) {
     return true;
   }
 
@@ -36,6 +39,11 @@ async function apiGet(pathWithQuery, opts = {}) {
   const url = `${baseUrl}${pathWithQuery}`;
 
   let last = null;
+  const h = new Headers(headers || {});
+  const token = localStorage.getItem("CR_TOKEN");
+  if (token) h.set("Authorization", `Bearer ${token}`);
+
+  const res = await fetch(url, { method: "GET", headers: h });
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
@@ -50,7 +58,6 @@ async function apiGet(pathWithQuery, opts = {}) {
 
       // se va bene e non è vuoto “strano”, stop
       if (!shouldRetry(out, pathWithQuery)) return out;
-
     } catch (e) {
       last = {
         ok: false,
@@ -69,12 +76,14 @@ async function apiGet(pathWithQuery, opts = {}) {
     }
   }
 
-  return last || {
-    ok: false,
-    status: 0,
-    json: {},
-    arr: [],
-    errors: { network: "unknown" },
-    url,
-  };
+  return (
+    last || {
+      ok: false,
+      status: 0,
+      json: {},
+      arr: [],
+      errors: { network: "unknown" },
+      url,
+    }
+  );
 }
