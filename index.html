@@ -17,8 +17,7 @@
         <div>
           <h1 class="title">Calcio Report</h1>
           <p class="subtitle">
-            Report del prossimo match basato su dati storici reali (no
-            predizioni).
+            Report del prossimo match basato su dati storici reali.
           </p>
         </div>
       </div>
@@ -30,39 +29,41 @@
           <h2 class="card-title">Cerca squadra</h2>
 
           <form class="form" onsubmit="return false;">
-            <div class="field">
-              <label for="teamInput">Nome squadra</label>
-              <div class="input-row">
+            <div class="searchRow">
+              <div class="searchGrow">
+                <label for="teamSearchInput">Nome squadra</label>
                 <input
+                  id="teamSearchInput"
                   type="text"
-                  id="teamInput"
-                  list="teamSuggestions"
-                  placeholder="Es. Napoli, Inter, Real Madrid..."
+                  list="teamsList"
+                  placeholder="Es. Napoli"
                   autocomplete="off"
                 />
-                <button type="button" class="btn primary" onclick="showTeam()">
-                  Cerca
-                </button>
+                <datalist id="teamsList"></datalist>
               </div>
-              <datalist id="teamSuggestions"></datalist>
-              <p class="hint">
-                Suggerimenti automatici dall’API mentre scrivi (dopo 2
-                caratteri).
-              </p>
-            </div>
 
-            <div class="options">
-              <div class="opt">
-                <label for="refHistoryCount">Numero Partite</label>
+              <button id="btnSearch" type="button" class="btn primary">
+                Cerca
+              </button>
+
+              <div class="gamesPick">
+                <label for="refHistoryCount">Partite</label>
                 <select id="refHistoryCount">
                   <option value="5" selected>5</option>
                   <option value="10">10</option>
                   <option value="15">15</option>
                   <option value="20">20</option>
-                  <option value="30">30</option>
                 </select>
-                <span class="muted">partite</span>
               </div>
+            </div>
+
+            <hr />
+
+            <h2 class="card-title">Predizione</h2>
+            <div id="predictionPanel" class="content">
+              <p class="muted">
+                <em>Seleziona una squadra per vedere la stima.</em>
+              </p>
             </div>
           </form>
         </section>
@@ -143,32 +144,29 @@
       </section>
       <footer class="footer">
         <span class="muted"
-          >Dati via API-Football (API-SPORTS). Nessuna predizione: solo
-          dati.</span
+          >Nessuna garanzia sul risultato. Solo stime statistiche.</span
         >
       </footer>
     </main>
 
-   <script src="config.js?v=6"></script>
-<script src="js/state.js?v=2"></script>
-<script src="js/utils.js?v=2"></script>
-<script src="js/api.js?v=2"></script>
+    <script src="config.js?v=6"></script>
+    <script src="js/state.js?v=2"></script>
+    <script src="js/utils.js?v=2"></script>
+    <script src="js/api.js?v=2"></script>
 
-<script src="js/features/panelsShared.js?v=3"></script>
+    <script src="js/features/panelsShared.js?v=3"></script>
     <script src="js/features/indicatorsPanel.js?v=1"></script>
     <script src="js/features/foulsPanel.js?v=1"></script>
-<script src="js/features/refereePanel.js?v=3"></script>
-<script src="js/features/teamsPanel.js?v=3"></script>
-<script src="js/features/cornersPanel.js?v=3"></script>
-<script src="js/features/shotsPanel.js?v=3"></script>
-<script src="js/features/injuriesPanel.js?v=3"></script>
+    <script src="js/features/refereePanel.js?v=3"></script>
+    <script src="js/features/teamsPanel.js?v=3"></script>
+    <script src="js/features/cornersPanel.js?v=3"></script>
+    <script src="js/features/shotsPanel.js?v=3"></script>
+    <script src="js/features/injuriesPanel.js?v=3"></script>
+    <script src="js/features/predictionPanel.js?v=1"></script>
 
-<!-- teamFlow per ultimo tra i features -->
-<script src="js/features/teamFlow.js?v=3"></script>
+    <!-- teamFlow per ultimo tra i features -->
+    <script src="js/features/teamFlow.js?v=3"></script>
 
-<script src="app.js?v=7"></script>
+    <script src="app.js?v=7"></script>
   </body>
 </html>
-
-
-
