@@ -11,6 +11,19 @@ const __SUGGEST_CACHE__ = new Map(); // q -> {ts, items:[{id,name,logo}]}
 let __SUGGEST_DEBOUNCE__ = null;
 let __LAST_SUGGEST_ITEMS__ = [];
 
+function getTeamInputEl() {
+  return (
+    document.getElementById("teamInput") ||
+    document.getElementById("teamSearchInput")
+  );
+}
+
+function getTeamDatalistEl() {
+  return (
+    document.getElementById("teamSuggestions") ||
+    document.getElementById("teamsList")
+  );
+}
 function setMatch(html) {
   const el = document.getElementById("match");
   if (el) el.innerHTML = html;
@@ -18,15 +31,16 @@ function setMatch(html) {
 
 function updateDatalist(items) {
   __LAST_SUGGEST_ITEMS__ = items || [];
-  const dl = document.getElementById("teamSuggestions");
+  const dl = getTeamDatalistEl();
   if (!dl) return;
+
   dl.innerHTML = (items || [])
-  .slice(0, 15)
-  .map((x) => {
-    const label = x.country ? `${x.country} — ${x.name}` : x.name;
-    return `<option value="${safeHTML(x.name)}" label="${safeHTML(label)}"></option>`;
-  })
-  .join("");
+    .slice(0, 15)
+    .map((x) => {
+      const label = x.country ? `${x.country} — ${x.name}` : x.name;
+      return `<option value="${safeHTML(x.name)}" label="${safeHTML(label)}"></option>`;
+    })
+    .join("");
 }
 
 function findSuggestedByName(name) {
@@ -136,7 +150,7 @@ function setLoadingAll() {
 }
 
 async function showTeam() {
-  const input = document.getElementById("teamInput");
+  const input = getTeamInputEl();
   const q = sanitizeSearch(input ? input.value : "");
   if (!q || q.length < 2) return;
 
@@ -244,11 +258,12 @@ try { if (typeof loadTeamsCorners === "function") await loadTeamsCorners(); } ca
 try { if (typeof loadTeamsShots === "function") await loadTeamsShots(); } catch (e) { console.error("loadTeamsShots", e); }
 try { if (typeof loadInjuries === "function") await loadInjuries(); } catch (e) { console.error("loadInjuries", e); }
   try { if (typeof loadTeamsFouls === "function") await loadTeamsFouls(); } catch (e) { console.error("loadTeamsFouls", e); }
+  try { if (typeof loadPrediction === "function") await loadPrediction(); } catch (e) { console.error("loadPrediction", e); }
 }
 
 // UX: suggerimenti stabili + NO riapertura dopo selezione
 function initTeamSearchUX() {
-  const input = document.getElementById("teamInput");
+  const input = getTeamInputEl();
   if (!input) return;
 
   let suppressSuggest = false;
