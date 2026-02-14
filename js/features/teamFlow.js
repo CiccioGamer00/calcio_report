@@ -210,16 +210,24 @@ try { if (typeof loadInjuries === "function") await loadInjuries(); } catch (e) 
   try { if (typeof loadTeamsFouls === "function") await loadTeamsFouls(); } catch (e) { console.error("loadTeamsFouls", e); }
 }
 
-// UX: suggerimenti + avvio SOLO su Enter / click / selezione dal datalist
+// UX: suggerimenti stabili + NO riapertura dopo selezione
 function initTeamSearchUX() {
   const input = document.getElementById("teamInput");
   if (!input) return;
 
   let suppressSuggest = false;
+  let suggestReqId = 0; // token per ignorare risposte vecchie
 
-  function suppress(ms = 400) {
+  function suppress(ms = 600) {
     suppressSuggest = true;
     setTimeout(() => (suppressSuggest = false), ms);
+  }
+
+  function cancelDebounce() {
+    if (__SUGGEST_DEBOUNCE__) {
+      clearTimeout(__SUGGEST_DEBOUNCE__);
+      __SUGGEST_DEBOUNCE__ = null;
+    }
   }
 
   input.addEventListener("input", () => {
@@ -227,37 +235,47 @@ function initTeamSearchUX() {
 
     const q = sanitizeSearch(input.value);
 
-    // se troppo corto, pulisco suggerimenti
     if (!q || q.length < 2) {
+      cancelDebounce();
       updateDatalist([]);
       return;
     }
 
-    if (__SUGGEST_DEBOUNCE__) clearTimeout(__SUGGEST_DEBOUNCE__);
+    cancelDebounce();
 
-    // memorizzo il valore "attuale" per evitare race (risposte vecchie)
-    const expected = q;
+    const myReq = ++suggestReqId; // “versione” di questa richiesta
 
     __SUGGEST_DEBOUNCE__ = setTimeout(async () => {
-      const items = await fetchSuggestions(expected);
+      const items = await fetchSuggestions(q);
 
-      // se nel frattempo l'utente ha cambiato testo, ignoro questa risposta
+      // se nel frattempo è partita un'altra richiesta, ignoro
+      if (myReq !== suggestReqId) return;
+
+      // se siamo in modalità soppressa (dopo selezione), ignoro
+      if (suppressSuggest) return;
+
+      // se il testo è cambiato, ignoro
       const nowQ = sanitizeSearch(input.value);
-      if (nowQ !== expected) return;
+      if (nowQ !== q) return;
 
       updateDatalist(items);
-
-      // ❌ NO auto-start qui (risolve punto 1)
     }, 250);
   });
 
   input.addEventListener("change", () => {
-    // su alcuni browser scatta quando scegli dal datalist
+    // selezione da datalist
     const exact = findSuggestedByName(input.value);
     if (exact) {
-      // evito riaperture immediate del datalist (risolve punto 2/3)
-      suppress(450);
+      // blocco TUTTO quello che può ripopolare
+      suppress(700);
+      cancelDebounce();
+      suggestReqId++; // invalida richieste in volo
       updateDatalist([]);
+
+      // (opzionale ma utile): chiude la UI del datalist su alcuni browser
+      input.blur();
+      setTimeout(() => input.focus(), 0);
+
       showTeam();
     }
   });
@@ -265,6 +283,9 @@ function initTeamSearchUX() {
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
+      suppress(400);
+      cancelDebounce();
+      suggestReqId++;
       updateDatalist([]);
       showTeam();
     }
