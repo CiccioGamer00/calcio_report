@@ -87,13 +87,13 @@ async function pickTeamByName(name) {
   };
 }
 
-async function fetchNextFixture(teamId) {
+async function fetchNextFixtures(teamId, count = 2) {
   const r = await apiGet(
-    `/fixtures?team=${teamId}&next=1&timezone=Europe/Rome`,
+    `/fixtures?team=${teamId}&next=${count}&timezone=Europe/Rome`,
     { retries: 3, delays: [400, 900, 1600] },
   );
-  if (!r.ok || r.errors || !r.arr || r.arr.length === 0) return null;
-  return r.arr[0];
+  if (!r.ok || r.errors || !r.arr || r.arr.length === 0) return [];
+  return r.arr;
 }
 
 function renderMatchBasic(fx) {
@@ -123,8 +123,6 @@ function renderMatchBasic(fx) {
           ${away.logo ? `<img class="logo" src="${safeHTML(away.logo)}" alt="logo" />` : ""}
         </span>
       </div></div>
-      <div class="kv-row"><div class="k">Fixture ID</div><div class="v"><span class="pill">${safeHTML(fx?.fixture?.id ?? "—")}</span></div></div>
-    </div>
   `;
 }
 
@@ -155,7 +153,9 @@ async function showTeam() {
   }
   selectedTeam = team;
 
-  const fx = await fetchNextFixture(team.id);
+  const nextFx = await fetchNextFixtures(team.id, 2);
+const fx = nextFx[0] || null;
+const fx2 = nextFx[1] || null;
   if (!fx) {
     setMatch(`<p class="bad"><em>Nessun prossimo match trovato per "${safeHTML(team.name)}".</em></p>`);
     return;
@@ -188,6 +188,21 @@ selectedFixture = {
 
   // Carica pannelli (se esistono, compatibile)
   try { if (typeof loadFixtureDetails === "function") await loadFixtureDetails(); } catch (e) { console.error("loadFixtureDetails", e); }
+  if (fx2) {
+  const when2 = fx2?.fixture?.date ? new Date(fx2.fixture.date).toLocaleString("it-IT") : "—";
+  const h2 = fx2?.teams?.home?.name || "—";
+  const a2 = fx2?.teams?.away?.name || "—";
+  const comp2 = fx2?.league?.name || "—";
+
+  const matchEl = document.getElementById("match");
+  if (matchEl) {
+    matchEl.innerHTML += `
+      <hr />
+      <p class="muted"><strong>Incontro successivo</strong></p>
+      <p class="muted">${safeHTML(when2)} — ${safeHTML(h2)} vs ${safeHTML(a2)} <em>(${safeHTML(comp2)})</em></p>
+    `;
+  }
+}
 try { if (typeof loadTeamsForm === "function") await loadTeamsForm(); } catch (e) { console.error("loadTeamsForm", e); }
 try { if (typeof loadTeamsCorners === "function") await loadTeamsCorners(); } catch (e) { console.error("loadTeamsCorners", e); }
 try { if (typeof loadTeamsShots === "function") await loadTeamsShots(); } catch (e) { console.error("loadTeamsShots", e); }
@@ -195,36 +210,62 @@ try { if (typeof loadInjuries === "function") await loadInjuries(); } catch (e) 
   try { if (typeof loadTeamsFouls === "function") await loadTeamsFouls(); } catch (e) { console.error("loadTeamsFouls", e); }
 }
 
-// UX: suggerimenti + auto-start quando selezioni un suggerimento
+// UX: suggerimenti + avvio SOLO su Enter / click / selezione dal datalist
 function initTeamSearchUX() {
   const input = document.getElementById("teamInput");
   if (!input) return;
 
+  let suppressSuggest = false;
+
+  function suppress(ms = 400) {
+    suppressSuggest = true;
+    setTimeout(() => (suppressSuggest = false), ms);
+  }
+
   input.addEventListener("input", () => {
+    if (suppressSuggest) return;
+
     const q = sanitizeSearch(input.value);
 
-    if (!q || q.length < 2) return;
+    // se troppo corto, pulisco suggerimenti
+    if (!q || q.length < 2) {
+      updateDatalist([]);
+      return;
+    }
 
     if (__SUGGEST_DEBOUNCE__) clearTimeout(__SUGGEST_DEBOUNCE__);
+
+    // memorizzo il valore "attuale" per evitare race (risposte vecchie)
+    const expected = q;
+
     __SUGGEST_DEBOUNCE__ = setTimeout(async () => {
-      const items = await fetchSuggestions(q);
+      const items = await fetchSuggestions(expected);
+
+      // se nel frattempo l'utente ha cambiato testo, ignoro questa risposta
+      const nowQ = sanitizeSearch(input.value);
+      if (nowQ !== expected) return;
+
       updateDatalist(items);
 
-      // Se l’input è esattamente uno dei suggerimenti → parti subito
-      const exact = findSuggestedByName(input.value);
-      if (exact) showTeam();
+      // ❌ NO auto-start qui (risolve punto 1)
     }, 250);
   });
 
   input.addEventListener("change", () => {
-    // alcuni browser “sparano” change quando scegli dal datalist
+    // su alcuni browser scatta quando scegli dal datalist
     const exact = findSuggestedByName(input.value);
-    if (exact) showTeam();
+    if (exact) {
+      // evito riaperture immediate del datalist (risolve punto 2/3)
+      suppress(450);
+      updateDatalist([]);
+      showTeam();
+    }
   });
 
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
+      updateDatalist([]);
       showTeam();
     }
   });
@@ -232,6 +273,5 @@ function initTeamSearchUX() {
 
 initTeamSearchUX();
 window.showTeam = showTeam;
-
 
 
