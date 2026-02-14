@@ -464,8 +464,78 @@ li{ margin:6px 0; }
     overflow: visible !important;
   }
 }*/
+/* ===== Bookmaker style box ===== */
+/* ===== Bookmaker compact ===== */
+.bet-box {
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 12px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
 
+.bet-head2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+}
 
+.bet-row2 {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr 0.7fr;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 0;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.bet-row2:first-of-type { border-top: none; }
+
+.bet-market {
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.bet-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 6px 8px;
+}
+
+.bet-avg {
+  justify-content: center;
+}
+
+.bet-logo {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+}
+
+.bet-num {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+
+.bet-pct {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.bet-frac {
+  font-size: 11px;
+  opacity: 0.75;
+}
+.bet-details { margin-top: 8px; }
+.bet-summary { cursor: pointer; font-weight: 700; opacity: .85; }
+.bet-select { font-size: 12px; padding: 2px 6px; border-radius: 8px; }
 
 
 
