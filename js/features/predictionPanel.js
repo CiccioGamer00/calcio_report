@@ -74,6 +74,15 @@ async function loadPrediction() {
   const top = data.topScorelines || [];
   const extras = data.extras || {};
   const drivers = data.drivers || [];
+    const conf = data.confidence || null;
+
+  function fmtConf(c) {
+    if (!c || !Number.isFinite(Number(c.score))) return "—";
+    const score = `${Math.round(Number(c.score))}/100`;
+    const level = c.level ? ` · ${safeHTML(c.level)}` : "";
+    const risk = c.risk ? ` · Rischio ${safeHTML(c.risk)}` : "";
+    return `${safeHTML(score)}${level}${risk}`;
+  }
 
   setPrediction(`
     <div class="kv">
@@ -83,6 +92,13 @@ async function loadPrediction() {
           <span class="pill">Casa ${safeHTML(pct1(p.homeWin))}</span>
           <span class="pill">X ${safeHTML(pct1(p.draw))}</span>
           <span class="pill">Trasferta ${safeHTML(pct1(p.awayWin))}</span>
+        </div>
+      </div>
+            <div class="kv-row">
+        <div class="k">Affidabilità</div>
+        <div class="v">
+          <span class="pill">${fmtConf(conf)}</span>
+          ${conf?.note ? `<div class="muted" style="margin-top:6px">${safeHTML(conf.note)}</div>` : ""}
         </div>
       </div>
 
