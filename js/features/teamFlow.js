@@ -156,6 +156,25 @@ async function showTeam() {
   const nextFx = await fetchNextFixtures(team.id, 2);
 const fx = nextFx[0] || null;
 const fx2 = nextFx[1] || null;
+// Prossimo impegno dell'altra squadra (dopo questo match)
+const homeId = fx?.teams?.home?.id ?? null;
+const awayId = fx?.teams?.away?.id ?? null;
+const myTeamId = team.id;
+
+const oppTeamId = myTeamId === homeId ? awayId : homeId;
+
+let oppNextAfter = null;
+
+if (oppTeamId) {
+  const oppNext = await fetchNextFixtures(oppTeamId, 2);
+
+  // se il primo è lo stesso match (fixture id uguale), allora il "dopo" è il secondo
+  if ((oppNext[0]?.fixture?.id ?? null) === (fx?.fixture?.id ?? null)) {
+    oppNextAfter = oppNext[1] || null;
+  } else {
+    oppNextAfter = oppNext[0] || null;
+  }
+}
   if (!fx) {
     setMatch(`<p class="bad"><em>Nessun prossimo match trovato per "${safeHTML(team.name)}".</em></p>`);
     return;
@@ -200,6 +219,23 @@ selectedFixture = {
       <hr />
       <p class="muted"><strong>Incontro successivo</strong></p>
       <p class="muted">${safeHTML(when2)} — ${safeHTML(h2)} vs ${safeHTML(a2)} <em>(${safeHTML(comp2)})</em></p>
+    `;
+  }
+}
+if (oppNextAfter) {
+  const whenO = oppNextAfter?.fixture?.date
+    ? new Date(oppNextAfter.fixture.date).toLocaleString("it-IT")
+    : "—";
+  const hO = oppNextAfter?.teams?.home?.name || "—";
+  const aO = oppNextAfter?.teams?.away?.name || "—";
+  const compO = oppNextAfter?.league?.name || "—";
+
+  const matchEl = document.getElementById("match");
+  if (matchEl) {
+    matchEl.innerHTML += `
+      <hr />
+      <p class="muted"><strong>Prossimo impegno dell’altra squadra (dopo questo match)</strong></p>
+      <p class="muted">${safeHTML(whenO)} — ${safeHTML(hO)} vs ${safeHTML(aO)} <em>(${safeHTML(compO)})</em></p>
     `;
   }
 }
