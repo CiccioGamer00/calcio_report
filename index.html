@@ -12,6 +12,7 @@
     <div class="bg"></div>
 
     <header class="header">
+
       <div class="brand">
         <div class="brand-badge">⚽</div>
         <div>
@@ -20,7 +21,11 @@
             Report del prossimo match basato su dati storici reali.
           </p>
         </div>
+             <div id="topBar">
+  <button id="btnOpenAuth">Login</button>
+</div>
       </div>
+ 
     </header>
 
     <main class="container">
@@ -168,5 +173,27 @@
     <script src="js/features/teamFlow.js?v=3"></script>
 
     <script src="app.js?v=7"></script>
+    <div id="authModal" class="modal hidden">
+  <div class="modal-content">
+    <span id="closeAuth" class="close">&times;</span>
+
+    <h2>Accesso</h2>
+
+    <input id="authEmail" type="email" placeholder="Email">
+    <input id="authPass" type="password" placeholder="Password (min 6)">
+
+    <div class="auth-buttons">
+      <button id="btnLogin">Login</button>
+      <button id="btnRegister">Registrati</button>
+    </div>
+
+    <hr>
+
+    <input id="redeemCode" type="text" placeholder="Codice attivazione">
+    <button id="btnRedeem">Attiva 30 giorni</button>
+
+    <div id="authMsg"></div>
+  </div>
+</div>
   </body>
 </html>
