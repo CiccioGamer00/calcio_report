@@ -5,7 +5,10 @@ function setupAuthModal() {
 
   if (!modal || !openBtn || !closeBtn) return;
 
-  openBtn.addEventListener("click", () => modal.classList.remove("hidden"));
+  openBtn.addEventListener("click", async () => {
+  modal.classList.remove("hidden");
+  await showRemainingInPopup();   // << aggiungi questa riga
+});
   closeBtn.addEventListener("click", () => modal.classList.add("hidden"));
 
   window.addEventListener("click", (e) => {
@@ -17,7 +20,8 @@ function daysLeft(ts) {
   const now = Date.now();
   const diff = Number(ts || 0) - now;
   if (diff <= 0) return 0;
-  return Math.ceil(diff / (24 * 60 * 60 * 1000));
+  // Mostra 7 appena creato, senza fare 8 per colpa dei millisecondi
+  return Math.max(1, Math.floor(diff / (24 * 60 * 60 * 1000)));
 }
 
 async function fetchMe() {
@@ -85,7 +89,10 @@ function setAuthMsg(msg) {
 
 async function showRemainingInPopup() {
   const { json } = await fetchMe();
-  if (!json?.ok) return;
+  if (!json?.ok) {
+    setAuthMsg("Accedi o registrati per iniziare la prova gratuita di 7 giorni.");
+    return;
+  }
 
   const now = Number(json.now || Date.now());
   const trialEndsAt = Number(json.trialEndsAt || 0);
@@ -118,6 +125,7 @@ function setupAuthActions() {
       setAuthMsg("Login effettuato.");
       await refreshTopAuthButton();
       await showRemainingInPopup();
+      document.getElementById("authModal")?.classList.add("hidden");
     } else {
       setAuthMsg(res.json?.message || "Errore login.");
     }
@@ -130,13 +138,19 @@ function setupAuthActions() {
     const res = await authPost("/auth/register", { email, password });
 
     if (res.ok && res.json?.token) {
-      localStorage.setItem("CR_TOKEN", res.json.token);
-      setAuthMsg("Registrazione completata.");
-      await refreshTopAuthButton();
-      await showRemainingInPopup();
-    } else {
-      setAuthMsg(res.json?.message || "Errore registrazione.");
-    }
+  localStorage.setItem("CR_TOKEN", res.json.token);
+
+  await refreshTopAuthButton();
+
+  // Messaggio PRO: iniziato trial + giorni
+  const { json } = await fetchMe();
+  const d = json?.trialEndsAt ? daysLeft(json.trialEndsAt) : 7;
+  setAuthMsg(`INIZIATO IL PERIODO DI PROVA: ${d} giorni rimanenti.`);
+
+  document.getElementById("authModal")?.classList.add("hidden");
+} else {
+  setAuthMsg(res.json?.message || "Errore registrazione.");
+}
   });
 
   redeemBtn.addEventListener("click", async () => {
@@ -163,6 +177,7 @@ function setupAuthActions() {
       setAuthMsg("Abbonamento attivato per 30 giorni.");
       await refreshTopAuthButton();
       await showRemainingInPopup();
+      document.getElementById("authModal")?.classList.add("hidden");
     } else {
       setAuthMsg(data.message || "Codice non valido.");
     }
