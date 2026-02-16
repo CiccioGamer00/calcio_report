@@ -55,6 +55,20 @@ async function loadPrediction() {
 
   const r = await apiGet(`/predict?fixture=${selectedFixture.id}&n=${n}`);
   if (!r.ok || r.errors) {
+    // Trial / non-pro: mostra lock cordiale
+    if (r.status === 401) {
+      setPrediction(
+        `<p class="bad"><em>Per vedere la predizione devi fare login.</em></p>`,
+      );
+      return;
+    }
+    if (r.status === 402) {
+      const msg = r.json?.message || "Funzione PRO: attiva l’abbonamento per sbloccare.";
+      setPrediction(
+        `<div class="kv"><div class="kv-row"><div class="k">Predizione</div><div class="v"><p class="muted"><em>${safeHTML(msg)}</em></p></div></div></div>`,
+      );
+      return;
+    }
     setPrediction(
       `<p class="bad"><em>Errore predizione: HTTP ${safeHTML(r.status)}.</em></p>`,
     );
@@ -74,15 +88,6 @@ async function loadPrediction() {
   const top = data.topScorelines || [];
   const extras = data.extras || {};
   const drivers = data.drivers || [];
-    const conf = data.confidence || null;
-
-  function fmtConf(c) {
-    if (!c || !Number.isFinite(Number(c.score))) return "—";
-    const score = `${Math.round(Number(c.score))}/100`;
-    const level = c.level ? ` · ${safeHTML(c.level)}` : "";
-    const risk = c.risk ? ` · Rischio ${safeHTML(c.risk)}` : "";
-    return `${safeHTML(score)}${level}${risk}`;
-  }
 
   setPrediction(`
     <div class="kv">
@@ -92,13 +97,6 @@ async function loadPrediction() {
           <span class="pill">Casa ${safeHTML(pct1(p.homeWin))}</span>
           <span class="pill">X ${safeHTML(pct1(p.draw))}</span>
           <span class="pill">Trasferta ${safeHTML(pct1(p.awayWin))}</span>
-        </div>
-      </div>
-            <div class="kv-row">
-        <div class="k">Affidabilità</div>
-        <div class="v">
-          <span class="pill">${fmtConf(conf)}</span>
-          ${conf?.note ? `<div class="muted" style="margin-top:6px">${safeHTML(conf.note)}</div>` : ""}
         </div>
       </div>
 
