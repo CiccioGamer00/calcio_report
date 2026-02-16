@@ -35,6 +35,39 @@ async function fetchMe() {
   return { ok: res.ok, json: j };
 }
 
+function fmtTrialStatus(json) {
+  if (!json?.ok) return "Login per cercare";
+
+  const now = Number(json.now || Date.now());
+  const trialEndsAt = Number(json.trialEndsAt || 0);
+  const paidUntil = Number(json.paidUntil || 0);
+
+  if (now < paidUntil) return `PRO <span class="pill">attivo</span>`;
+
+  if (now < trialEndsAt) {
+    const limTotal = Number(json?.trial?.limits?.total || 20);
+    const limDaily = Number(json?.trial?.limits?.daily || 3);
+    const usedTotal = Number(json?.trial?.used?.total || 0);
+    const usedDaily = Number(json?.trial?.used?.daily || 0);
+
+    const remTotal = Math.max(0, limTotal - usedTotal);
+    const remDaily = Math.max(0, limDaily - usedDaily);
+
+    return `Trial: <span class="pill">${remTotal}/${limTotal}</span> • Oggi: <span class="pill">${remDaily}/${limDaily}</span>`;
+  }
+
+  return `SCADUTO <span class="pill">PRO</span>`;
+}
+
+async function refreshTrialStatus() {
+  const el = document.getElementById("trialStatus");
+  if (!el) return;
+  const { json } = await fetchMe();
+  el.innerHTML = fmtTrialStatus(json);
+}
+
+window.refreshTrialStatus = refreshTrialStatus;
+
 // ✅ come vuoi tu: bottone senza giorni, giorni nel popup (messaggio)
 async function refreshTopAuthButton() {
   const btn = document.getElementById("btnOpenAuth");
@@ -101,7 +134,17 @@ async function showRemainingInPopup() {
   if (now < paidUntil) {
     setAuthMsg(`PRO attivo: ${daysLeft(paidUntil)} giorni rimanenti.`);
   } else if (now < trialEndsAt) {
-    setAuthMsg(`TRIAL attivo: ${daysLeft(trialEndsAt)} giorni rimanenti.`);
+    const limTotal = Number(json?.trial?.limits?.total || 20);
+    const limDaily = Number(json?.trial?.limits?.daily || 3);
+    const usedTotal = Number(json?.trial?.used?.total || 0);
+    const usedDaily = Number(json?.trial?.used?.daily || 0);
+
+    const remTotal = Math.max(0, limTotal - usedTotal);
+    const remDaily = Math.max(0, limDaily - usedDaily);
+
+    setAuthMsg(
+      `TRIAL attivo: ${daysLeft(trialEndsAt)} giorni rimanenti. Ricerche: ${remTotal}/${limTotal} • Oggi: ${remDaily}/${limDaily}.`,
+    );
   } else {
     setAuthMsg("Prova scaduta: inserisci codice o contattami per attivazione.");
   }
@@ -124,6 +167,7 @@ function setupAuthActions() {
       localStorage.setItem("CR_TOKEN", res.json.token);
       setAuthMsg("Login effettuato.");
       await refreshTopAuthButton();
+      await refreshTrialStatus();
       await showRemainingInPopup();
       document.getElementById("authModal")?.classList.add("hidden");
     } else {
@@ -141,6 +185,7 @@ function setupAuthActions() {
   localStorage.setItem("CR_TOKEN", res.json.token);
 
   await refreshTopAuthButton();
+  await refreshTrialStatus();
 
   // Messaggio PRO: iniziato trial + giorni
   const { json } = await fetchMe();
@@ -176,6 +221,7 @@ function setupAuthActions() {
     if (res.ok && data.ok) {
       setAuthMsg("Abbonamento attivato per 30 giorni.");
       await refreshTopAuthButton();
+      await refreshTrialStatus();
       await showRemainingInPopup();
       document.getElementById("authModal")?.classList.add("hidden");
     } else {
@@ -188,4 +234,5 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupAuthModal();
   setupAuthActions();
   await refreshTopAuthButton();
+  await refreshTrialStatus();
 });
