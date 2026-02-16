@@ -27,17 +27,19 @@ function shouldRetry({ ok, status, errors, arr }, pathWithQuery) {
 
 async function apiGet(pathWithQuery, opts = {}) {
   const baseUrl = window.API_CONFIG?.baseUrl;
-  // Headers dinamici: aggiunge sempre il Bearer token se presente
-  const headers = new Headers(window.API_CONFIG?.headers || {});
-  const token = localStorage.getItem("CR_TOKEN");
-  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const baseHeaders = window.API_CONFIG?.headers || {};
 
-  // extra headers per singola chiamata (es. intent trial)
-  if (opts && typeof opts === "object" && opts.extraHeaders) {
-    for (const [k, v] of Object.entries(opts.extraHeaders)) {
-      if (v !== undefined && v !== null) headers.set(k, String(v));
-    }
-  }
+  // Token salvato dal modal login
+  const token = localStorage.getItem("CR_TOKEN");
+
+  // Header extra (es. trial intents)
+  const extraHeaders = opts.extraHeaders || {};
+
+  const headers = {
+    ...baseHeaders,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...extraHeaders,
+  };
 
   // retry “moderato”: aspetta e riprova poche volte (non infinito)
   const retries = Number.isFinite(opts.retries) ? opts.retries : 3;
