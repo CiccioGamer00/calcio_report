@@ -578,11 +578,45 @@ li{ margin:6px 0; }
   }
   .gamesPick{ width:100%; min-width:0; }
 }
-#topBar {
-  display: flex;
-  justify-content: flex-end;
+/* ===== TOP BAR (badge + login/logout) ===== */
+#topBar{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:10px;
   padding: 10px 20px;
+  margin-left: auto;
 }
+
+.statusBadge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(255,255,255,0.06);
+}
+
+.statusBadge.trial{
+  border-color: rgba(255,200,0,0.35);
+  background: rgba(255,200,0,0.10);
+}
+
+.statusBadge.pro{
+  border-color: rgba(0,255,136,0.35);
+  background: rgba(0,255,136,0.10);
+}
+
+.statusBadge.expired{
+  border-color: rgba(255,0,0,0.35);
+  background: rgba(255,0,0,0.10);
+}
+
+.hidden{ display:none; }
 
 #btnOpenAuth {
   padding: 8px 14px;
@@ -635,3 +669,28 @@ li{ margin:6px 0; }
 #btnOpenAuth.pro-active { border: 1px solid rgba(0,255,0,0.4); }
 #btnOpenAuth.trial-active { border: 1px solid rgba(255,200,0,0.5); }
 #btnOpenAuth.expired { border: 1px solid rgba(255,0,0,0.5); }
+
+/* ===== PRO LOCK (blur + badge) ===== */
+.pro-locked{
+  position: relative;
+  filter: blur(3px);
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.85;
+}
+
+.pro-locked::after{
+  content: "SOLO ABBONAMENTO";
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .3px;
+  background: rgba(0,0,0,0.55);
+  border: 1px solid rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.92);
+  filter: none;
+}
