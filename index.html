@@ -12,7 +12,6 @@
     <div class="bg"></div>
 
     <header class="header">
-
       <div class="brand">
         <div class="brand-badge">⚽</div>
         <div>
@@ -21,11 +20,13 @@
             Report del prossimo match basato su dati storici reali.
           </p>
         </div>
-             <div id="topBar">
-  <button id="btnOpenAuth">Login</button>
-</div>
+
+        <!-- TOP RIGHT: badge + login/logout -->
+        <div id="topBar">
+          <span id="statusBadge" class="statusBadge hidden"></span>
+          <button id="btnOpenAuth">Login</button>
+        </div>
       </div>
- 
     </header>
 
     <main class="container">
@@ -65,29 +66,32 @@
             <hr />
 
             <h2 class="card-title">Predizione</h2>
-            <div id="predictionPanel" class="content">
+            <div id="predictionPanel" class="content" data-pro-only="1">
               <p class="muted">
                 <em>Seleziona una squadra per vedere la stima.</em>
               </p>
             </div>
           </form>
         </section>
+
         <section class="card">
           <h2 class="card-title">Indicatori statistici</h2>
-          <div id="indicatorsPanel" class="content">
+          <div id="indicatorsPanel" class="content" data-pro-only="1">
             <p class="muted">
-              <em>
-                Gli indicatori verranno mostrati dopo aver selezionato un match.
-              </em>
+              <em
+                >Gli indicatori verranno mostrati dopo aver selezionato un
+                match.</em
+              >
             </p>
           </div>
         </section>
       </section>
 
+      <!-- resto della pagina invariato -->
       <section class="grid">
         <section class="card">
           <h2 class="card-title">Match</h2>
-          <div id="match" class="content">
+          <div id="matchPanel" class="content">
             <p class="muted">
               <em>Seleziona una squadra per vedere il prossimo match.</em>
             </p>
@@ -96,12 +100,13 @@
 
         <section class="card">
           <h2 class="card-title">Arbitro</h2>
-          <div id="referee" class="content">
+          <div id="refereePanel" class="content">
             <p class="muted">
               <em>Qui verranno mostrati arbitro e storico (se disponibile).</em>
             </p>
           </div>
         </section>
+
         <section class="card">
           <h2 class="card-title">Squadre</h2>
           <div id="teamsPanel" class="content">
@@ -113,6 +118,7 @@
             </p>
           </div>
         </section>
+
         <section class="card">
           <h2 class="card-title">Corner</h2>
           <div id="cornersPanel" class="content">
@@ -136,6 +142,7 @@
             </p>
           </div>
         </section>
+
         <section class="card">
           <h2 class="card-title">Indisponibili</h2>
           <div id="injuriesPanel" class="content">
@@ -147,14 +154,37 @@
           </div>
         </section>
       </section>
-      <footer class="footer">
-        <span class="muted"
-          >Nessuna garanzia sul risultato. Solo stime statistiche.</span
-        >
-      </footer>
     </main>
 
+    <!-- MODAL AUTH (invariato: se già lo hai, lascialo com’è nel tuo file) -->
+    <div id="authModal" class="modal hidden">
+      <div class="modal-content">
+        <span class="close" id="btnCloseAuth">&times;</span>
+
+        <h3>Login / Registrazione</h3>
+        <div id="authMsg" style="min-height: 18px; opacity: 0.9"></div>
+
+        <input id="authEmail" type="email" placeholder="Email" />
+        <input id="authPass" type="password" placeholder="Password (min 6)" />
+
+        <div class="auth-buttons">
+          <button id="btnLogin">Login</button>
+          <button id="btnRegister">Registrati</button>
+        </div>
+
+        <hr style="border-color: #333; width: 100%" />
+
+        <input
+          id="redeemCode"
+          type="text"
+          placeholder="Codice attivazione (30 giorni)"
+        />
+        <button id="btnRedeem">Attiva codice</button>
+      </div>
+    </div>
+
     <script src="config.js?v=6"></script>
+
     <script src="js/state.js?v=2"></script>
     <script src="js/utils.js?v=2"></script>
     <script src="js/api.js?v=2"></script>
@@ -171,29 +201,6 @@
 
     <!-- teamFlow per ultimo tra i features -->
     <script src="js/features/teamFlow.js?v=3"></script>
-
     <script src="app.js?v=7"></script>
-    <div id="authModal" class="modal hidden">
-  <div class="modal-content">
-    <span id="closeAuth" class="close">&times;</span>
-
-    <h2>Accesso</h2>
-
-    <input id="authEmail" type="email" placeholder="Email">
-    <input id="authPass" type="password" placeholder="Password (min 6)">
-
-    <div class="auth-buttons">
-      <button id="btnLogin">Login</button>
-      <button id="btnRegister">Registrati</button>
-    </div>
-
-    <hr>
-
-    <input id="redeemCode" type="text" placeholder="Codice attivazione">
-    <button id="btnRedeem">Attiva 30 giorni</button>
-
-    <div id="authMsg"></div>
-  </div>
-</div>
   </body>
 </html>
