@@ -545,6 +545,22 @@ li{ margin:6px 0; }
   align-items:flex-end;
 }
 
+.trialStatus{
+  min-width: 170px;
+  text-align: right;
+  font-size: 12px;
+  line-height: 1.2;
+  opacity: .85;
+}
+
+.trialStatus .pill{
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.14);
+}
+
 .searchGrow{
   flex:1;
   min-width: 260px;
