@@ -18,7 +18,10 @@ function shouldRetry({ ok, status, errors, arr }, pathWithQuery) {
   // caso specifico che ti sta dando fastidio:
   // /fixtures/statistics a volte arriva "vuoto" anche se i dati esistono
   // quindi se è statistics e response è vuota, ritentiamo
-  if (pathWithQuery.includes("/fixtures/statistics") && (!arr || arr.length === 0)) {
+  if (
+    pathWithQuery.includes("/fixtures/statistics") &&
+    (!arr || arr.length === 0)
+  ) {
     return true;
   }
 
@@ -27,31 +30,23 @@ function shouldRetry({ ok, status, errors, arr }, pathWithQuery) {
 
 async function apiGet(pathWithQuery, opts = {}) {
   const baseUrl = window.API_CONFIG?.baseUrl;
-  const baseHeaders = window.API_CONFIG?.headers || {};
+  const baseHeaders = window.API_CONFIG?.headers;
 
-  // Token salvato dal modal login
-  const token = localStorage.getItem("CR_TOKEN");
-
-  // Header extra (es. trial intents)
-  const extraHeaders = opts.extraHeaders || {};
-
-  const headers = {
-    ...baseHeaders,
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...extraHeaders,
-  };
-
-  // retry “moderato”: aspetta e riprova poche volte (non infinito)
   const retries = Number.isFinite(opts.retries) ? opts.retries : 3;
   const delays = Array.isArray(opts.delays) ? opts.delays : [400, 900, 1600];
 
   const url = `${baseUrl}${pathWithQuery}`;
 
+  // ✅ Headers una volta sola, con token
+  const h = new Headers(baseHeaders || {});
+  const token = localStorage.getItem("CR_TOKEN");
+  if (token) h.set("Authorization", `Bearer ${token}`);
+
   let last = null;
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const res = await fetch(url, { method: "GET", headers });
+      const res = await fetch(url, { method: "GET", headers: h });
       const json = await res.json().catch(() => ({}));
       const arr = Array.isArray(json.response) ? json.response : [];
       const errors =
@@ -60,9 +55,7 @@ async function apiGet(pathWithQuery, opts = {}) {
       const out = { ok: res.ok, status: res.status, json, arr, errors, url };
       last = out;
 
-      // se va bene e non è vuoto “strano”, stop
       if (!shouldRetry(out, pathWithQuery)) return out;
-
     } catch (e) {
       last = {
         ok: false,
@@ -74,19 +67,20 @@ async function apiGet(pathWithQuery, opts = {}) {
       };
     }
 
-    // se non è l'ultimo tentativo, aspetta e riprova
     if (attempt < retries) {
       const wait = delays[Math.min(attempt, delays.length - 1)] ?? 800;
       await sleep(wait);
     }
   }
 
-  return last || {
-    ok: false,
-    status: 0,
-    json: {},
-    arr: [],
-    errors: { network: "unknown" },
-    url,
-  };
+  return (
+    last || {
+      ok: false,
+      status: 0,
+      json: {},
+      arr: [],
+      errors: { network: "unknown" },
+      url,
+    }
+  );
 }
