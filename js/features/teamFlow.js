@@ -11,62 +11,32 @@ const __SUGGEST_CACHE__ = new Map(); // q -> {ts, items:[{id,name,logo}]}
 let __SUGGEST_DEBOUNCE__ = null;
 let __LAST_SUGGEST_ITEMS__ = [];
 
-// Cache leggerissima dello stato login (evita spam /auth/me)
-let __ME_CACHE__ = { ts: 0, json: null };
-
-async function fetchMeCached() {
-  const now = Date.now();
-  if (__ME_CACHE__.json && now - __ME_CACHE__.ts < 25_000) return __ME_CACHE__.json;
-
-  const token = localStorage.getItem("CR_TOKEN");
-  if (!token) {
-    __ME_CACHE__ = { ts: now, json: { ok: false } };
-    return __ME_CACHE__.json;
-  }
-
-  const baseUrl = window.API_CONFIG?.baseUrl;
-  const res = await fetch(baseUrl + "/auth/me", {
-    method: "GET",
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const j = await res.json().catch(() => ({ ok: false }));
-  __ME_CACHE__ = { ts: now, json: j };
-  return j;
-}
+// Trial leagues (policy): Serie A + Premier
+const TRIAL_ALLOWED_LEAGUES = [135, 39];
+const TRIAL_SEASON = 2024;
 
 function openAuthModal(msg) {
   const modal = document.getElementById("authModal");
   if (modal) modal.classList.remove("hidden");
-  const el = document.getElementById("authMsg");
-  if (el && msg) el.textContent = msg;
+  if (typeof setAuthMsg === "function") {
+    setAuthMsg(msg || "Per usare 'Cerca' devi prima fare il login (o registrarti)." );
+  }
 }
 
-async function ensureLoggedForSearch() {
+async function isLoggedIn() {
+  const baseUrl = window.API_CONFIG?.baseUrl;
   const token = localStorage.getItem("CR_TOKEN");
-  if (!token) {
-    openAuthModal("Per usare 'Cerca' devi prima fare il login (o registrarti)." );
+  if (!baseUrl || !token) return false;
+  try {
+    const res = await fetch(baseUrl + "/auth/me", {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const j = await res.json().catch(() => ({}));
+    return !!j?.ok;
+  } catch {
     return false;
   }
-  const me = await fetchMeCached();
-  if (!me?.ok) {
-    openAuthModal("Sessione non valida: fai login per continuare.");
-    return false;
-  }
-  return true;
-}
-
-async function getAllowedLeaguesForTrial() {
-  const me = await fetchMeCached();
-  const now = Number(me?.now || Date.now());
-  const paidUntil = Number(me?.paidUntil || 0);
-  const trialEndsAt = Number(me?.trialEndsAt || 0);
-
-  const isPaid = now < paidUntil;
-  const isTrial = now < trialEndsAt;
-  if (isPaid) return null;
-  if (!isTrial) return null;
-
-  return Array.isArray(me?.allowedLeagues) ? me.allowedLeagues : [135, 39];
 }
 
 function getTeamInputEl() {
@@ -116,76 +86,61 @@ async function fetchSuggestions(q) {
   const cached = __SUGGEST_CACHE__.get(q);
   if (cached && now - cached.ts < 60_000) return cached.items;
 
-  const allowed = await getAllowedLeaguesForTrial();
-  let arr = [];
+  // Suggerimenti: NON consumano trial. Li limitiamo già a Serie A + Premier.
+  const qs = encodeURIComponent(q);
+  const calls = TRIAL_ALLOWED_LEAGUES.map((lg) =>
+    apiGet(`/teams?league=${lg}&season=${TRIAL_SEASON}&search=${qs}`,
+      {
+        retries: 2,
+        delays: [250, 650],
+        extraHeaders: { "x-cr-intent": "suggest" },
+      },
+    ),
+  );
 
-  if (!allowed) {
-    const r = await apiGet(`/teams?search=${encodeURIComponent(q)}`, {
-      retries: 2,
-      delays: [250, 650],
-      extraHeaders: { "x-cr-intent": "suggest" },
-    });
-    arr = r.ok && !r.errors ? r.arr : [];
-  } else {
-    const season = 2024;
-    const calls = await Promise.all(
-      allowed.map((lg) =>
-        apiGet(
-          `/teams?league=${lg}&season=${season}&search=${encodeURIComponent(q)}`,
-          { retries: 2, delays: [250, 650], extraHeaders: { "x-cr-intent": "suggest" } },
-        ),
-      ),
-    );
-    arr = calls.flatMap((x) => (x.ok && !x.errors ? x.arr : []));
-  }
+  const results = await Promise.all(calls);
+  const raw = results.flatMap((r) => (r.ok && !r.errors ? r.arr : []));
 
-  const items = (arr || [])
+  const seen = new Set();
+  const items = raw
     .map((t) => ({
       id: t?.team?.id ?? null,
       name: t?.team?.name ?? "",
       logo: t?.team?.logo ?? "",
       country: t?.team?.country ?? t?.team?.nation ?? "",
     }))
-    .filter((x) => x.id && x.name);
+    .filter((x) => x.id && x.name)
+    .filter((x) => {
+      const k = String(x.id);
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
 
   __SUGGEST_CACHE__.set(q, { ts: now, items });
   return items;
 }
 
-async function pickTeamByName(name, searchId) {
+async function pickTeamByName(name) {
   // 1) se è uno dei suggerimenti appena mostrati, usa quello
   const fromSuggest = findSuggestedByName(name);
   if (fromSuggest) return fromSuggest;
 
-  // 2) altrimenti chiedi all’API e prendi il primo (o match esatto se esiste)
-  const allowed = await getAllowedLeaguesForTrial();
-  let arr = [];
-
-  if (!allowed) {
-    const r = await apiGet(`/teams?search=${encodeURIComponent(name)}`, {
-      retries: 2,
-      delays: [300, 700],
-      extraHeaders: { "x-cr-intent": "search", "x-cr-search-id": searchId || "" },
-    });
-    if (!r.ok || r.errors || !r.arr || r.arr.length === 0) return null;
-    arr = r.arr;
-  } else {
-    const season = 2024;
-    const calls = await Promise.all(
-      allowed.map((lg) =>
-        apiGet(
-          `/teams?league=${lg}&season=${season}&search=${encodeURIComponent(name)}`,
-          {
-            retries: 2,
-            delays: [300, 700],
-            extraHeaders: { "x-cr-intent": "search", "x-cr-search-id": searchId || "" },
-          },
-        ),
-      ),
-    );
-    arr = calls.flatMap((x) => (x.ok && !x.errors ? x.arr : []));
-    if (!arr.length) return null;
-  }
+  // 2) altrimenti: ricerca vera (consuma 1 ricerca trial)
+  const searchId = (crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()));
+  const qs = encodeURIComponent(name);
+  const calls = TRIAL_ALLOWED_LEAGUES.map((lg) =>
+    apiGet(`/teams?league=${lg}&season=${TRIAL_SEASON}&search=${qs}`,
+      {
+        retries: 2,
+        delays: [300, 700],
+        extraHeaders: { "x-cr-intent": "search", "x-cr-search-id": searchId },
+      },
+    ),
+  );
+  const results = await Promise.all(calls);
+  const arr = results.flatMap((r) => (r.ok && !r.errors ? r.arr : []));
+  if (!arr.length) return null;
 
   const low = name.trim().toLowerCase();
   const exact = arr.find(
@@ -249,13 +204,16 @@ function setLoadingAll() {
 }
 
 async function showTeam() {
+  // Se non loggato: blocca e apri modal
+  const logged = await isLoggedIn();
+  if (!logged) {
+    openAuthModal("Per usare 'Cerca' devi prima fare il login (o registrarti)." );
+    return;
+  }
+
   const input = getTeamInputEl();
   const q = sanitizeSearch(input ? input.value : "");
   if (!q || q.length < 2) return;
-
-  // ✅ blocco cordiale: cerca solo se loggato
-  const okLogin = await ensureLoggedForSearch();
-  if (!okLogin) return;
 
   // reset “pulito” così la seconda ricerca riparte sempre
   selectedTeam = null;
@@ -263,10 +221,9 @@ async function showTeam() {
 
   setLoadingAll();
 
-  const searchId = (crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()));
-  const team = await pickTeamByName(q, searchId);
+  const team = await pickTeamByName(q);
   if (!team || !team.id) {
-    setMatch(`<p class="bad"><em>Nessuna squadra trovata per "${safeHTML(q)}".</em></p>`);
+    setMatch(`<p class="bad"><em>Nessuna squadra trovata (oppure prova esaurita) per "${safeHTML(q)}".</em></p>`);
     return;
   }
   selectedTeam = team;
@@ -323,11 +280,6 @@ selectedFixture = {
 
   setMatch(renderMatchBasic(fx));
 
-  // aggiorna UI trial (se presente)
-  if (typeof window.refreshTrialStatus === "function") {
-    window.refreshTrialStatus();
-  }
-
   // Carica pannelli (se esistono, compatibile)
   try { if (typeof loadFixtureDetails === "function") await loadFixtureDetails(); } catch (e) { console.error("loadFixtureDetails", e); }
   if (fx2) {
@@ -375,13 +327,12 @@ function initTeamSearchUX() {
   const input = getTeamInputEl();
   if (!input) return;
 
-  // Bottone Cerca
-  const btn = document.getElementById("btnSearch");
+  const btn = document.getElementById("btnSearch") || document.getElementById("btnTeamSearch");
   if (btn) {
-    btn.addEventListener("click", () => {
-      // chiude suggerimenti e fa partire la ricerca
+    btn.addEventListener("click", async () => {
+      // click su Cerca
       updateDatalist([]);
-      showTeam();
+      await showTeam();
     });
   }
 
