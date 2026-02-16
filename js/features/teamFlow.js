@@ -11,34 +11,6 @@ const __SUGGEST_CACHE__ = new Map(); // q -> {ts, items:[{id,name,logo}]}
 let __SUGGEST_DEBOUNCE__ = null;
 let __LAST_SUGGEST_ITEMS__ = [];
 
-// Trial leagues (policy): Serie A + Premier
-const TRIAL_ALLOWED_LEAGUES = [135, 39];
-const TRIAL_SEASON = 2024;
-
-function openAuthModal(msg) {
-  const modal = document.getElementById("authModal");
-  if (modal) modal.classList.remove("hidden");
-  if (typeof setAuthMsg === "function") {
-    setAuthMsg(msg || "Per usare 'Cerca' devi prima fare il login (o registrarti)." );
-  }
-}
-
-async function isLoggedIn() {
-  const baseUrl = window.API_CONFIG?.baseUrl;
-  const token = localStorage.getItem("CR_TOKEN");
-  if (!baseUrl || !token) return false;
-  try {
-    const res = await fetch(baseUrl + "/auth/me", {
-      method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const j = await res.json().catch(() => ({}));
-    return !!j?.ok;
-  } catch {
-    return false;
-  }
-}
-
 function getTeamInputEl() {
   return (
     document.getElementById("teamInput") ||
@@ -86,36 +58,19 @@ async function fetchSuggestions(q) {
   const cached = __SUGGEST_CACHE__.get(q);
   if (cached && now - cached.ts < 60_000) return cached.items;
 
-  // Suggerimenti: NON consumano trial. Li limitiamo già a Serie A + Premier.
-  const qs = encodeURIComponent(q);
-  const calls = TRIAL_ALLOWED_LEAGUES.map((lg) =>
-    apiGet(`/teams?league=${lg}&season=${TRIAL_SEASON}&search=${qs}`,
-      {
-        retries: 2,
-        delays: [250, 650],
-        extraHeaders: { "x-cr-intent": "suggest" },
-      },
-    ),
-  );
+  const r = await apiGet(`/teams?search=${encodeURIComponent(q)}`, {
+    retries: 2,
+    delays: [250, 650],
+  });
 
-  const results = await Promise.all(calls);
-  const raw = results.flatMap((r) => (r.ok && !r.errors ? r.arr : []));
-
-  const seen = new Set();
-  const items = raw
+  const items = (r.ok && !r.errors ? r.arr : [])
     .map((t) => ({
-      id: t?.team?.id ?? null,
-      name: t?.team?.name ?? "",
-      logo: t?.team?.logo ?? "",
-      country: t?.team?.country ?? t?.team?.nation ?? "",
-    }))
-    .filter((x) => x.id && x.name)
-    .filter((x) => {
-      const k = String(x.id);
-      if (seen.has(k)) return false;
-      seen.add(k);
-      return true;
-    });
+  id: t?.team?.id ?? null,
+  name: t?.team?.name ?? "",
+  logo: t?.team?.logo ?? "",
+  country: t?.team?.country ?? t?.team?.nation ?? "",
+}))
+    .filter((x) => x.id && x.name);
 
   __SUGGEST_CACHE__.set(q, { ts: now, items });
   return items;
@@ -126,27 +81,18 @@ async function pickTeamByName(name) {
   const fromSuggest = findSuggestedByName(name);
   if (fromSuggest) return fromSuggest;
 
-  // 2) altrimenti: ricerca vera (consuma 1 ricerca trial)
-  const searchId = (crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()));
-  const qs = encodeURIComponent(name);
-  const calls = TRIAL_ALLOWED_LEAGUES.map((lg) =>
-    apiGet(`/teams?league=${lg}&season=${TRIAL_SEASON}&search=${qs}`,
-      {
-        retries: 2,
-        delays: [300, 700],
-        extraHeaders: { "x-cr-intent": "search", "x-cr-search-id": searchId },
-      },
-    ),
-  );
-  const results = await Promise.all(calls);
-  const arr = results.flatMap((r) => (r.ok && !r.errors ? r.arr : []));
-  if (!arr.length) return null;
+  // 2) altrimenti chiedi all’API e prendi il primo (o match esatto se esiste)
+  const r = await apiGet(`/teams?search=${encodeURIComponent(name)}`, {
+    retries: 2,
+    delays: [300, 700],
+  });
+  if (!r.ok || r.errors || !r.arr || r.arr.length === 0) return null;
 
   const low = name.trim().toLowerCase();
-  const exact = arr.find(
+  const exact = r.arr.find(
     (t) => String(t?.team?.name || "").trim().toLowerCase() === low,
   );
-  const best = exact || arr[0];
+  const best = exact || r.arr[0];
 
   return {
     id: best?.team?.id ?? null,
@@ -204,13 +150,6 @@ function setLoadingAll() {
 }
 
 async function showTeam() {
-  // Se non loggato: blocca e apri modal
-  const logged = await isLoggedIn();
-  if (!logged) {
-    openAuthModal("Per usare 'Cerca' devi prima fare il login (o registrarti)." );
-    return;
-  }
-
   const input = getTeamInputEl();
   const q = sanitizeSearch(input ? input.value : "");
   if (!q || q.length < 2) return;
@@ -223,7 +162,7 @@ async function showTeam() {
 
   const team = await pickTeamByName(q);
   if (!team || !team.id) {
-    setMatch(`<p class="bad"><em>Nessuna squadra trovata (oppure prova esaurita) per "${safeHTML(q)}".</em></p>`);
+    setMatch(`<p class="bad"><em>Nessuna squadra trovata per "${safeHTML(q)}".</em></p>`);
     return;
   }
   selectedTeam = team;
@@ -326,15 +265,6 @@ try { if (typeof loadInjuries === "function") await loadInjuries(); } catch (e) 
 function initTeamSearchUX() {
   const input = getTeamInputEl();
   if (!input) return;
-
-  const btn = document.getElementById("btnSearch") || document.getElementById("btnTeamSearch");
-  if (btn) {
-    btn.addEventListener("click", async () => {
-      // click su Cerca
-      updateDatalist([]);
-      await showTeam();
-    });
-  }
 
   let suppressSuggest = false;
   let suggestReqId = 0; // token per ignorare risposte vecchie
