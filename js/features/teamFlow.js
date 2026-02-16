@@ -11,6 +11,64 @@ const __SUGGEST_CACHE__ = new Map(); // q -> {ts, items:[{id,name,logo}]}
 let __SUGGEST_DEBOUNCE__ = null;
 let __LAST_SUGGEST_ITEMS__ = [];
 
+// Cache leggerissima dello stato login (evita spam /auth/me)
+let __ME_CACHE__ = { ts: 0, json: null };
+
+async function fetchMeCached() {
+  const now = Date.now();
+  if (__ME_CACHE__.json && now - __ME_CACHE__.ts < 25_000) return __ME_CACHE__.json;
+
+  const token = localStorage.getItem("CR_TOKEN");
+  if (!token) {
+    __ME_CACHE__ = { ts: now, json: { ok: false } };
+    return __ME_CACHE__.json;
+  }
+
+  const baseUrl = window.API_CONFIG?.baseUrl;
+  const res = await fetch(baseUrl + "/auth/me", {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const j = await res.json().catch(() => ({ ok: false }));
+  __ME_CACHE__ = { ts: now, json: j };
+  return j;
+}
+
+function openAuthModal(msg) {
+  const modal = document.getElementById("authModal");
+  if (modal) modal.classList.remove("hidden");
+  const el = document.getElementById("authMsg");
+  if (el && msg) el.textContent = msg;
+}
+
+async function ensureLoggedForSearch() {
+  const token = localStorage.getItem("CR_TOKEN");
+  if (!token) {
+    openAuthModal("Per usare 'Cerca' devi prima fare il login (o registrarti)." );
+    return false;
+  }
+  const me = await fetchMeCached();
+  if (!me?.ok) {
+    openAuthModal("Sessione non valida: fai login per continuare.");
+    return false;
+  }
+  return true;
+}
+
+async function getAllowedLeaguesForTrial() {
+  const me = await fetchMeCached();
+  const now = Number(me?.now || Date.now());
+  const paidUntil = Number(me?.paidUntil || 0);
+  const trialEndsAt = Number(me?.trialEndsAt || 0);
+
+  const isPaid = now < paidUntil;
+  const isTrial = now < trialEndsAt;
+  if (isPaid) return null;
+  if (!isTrial) return null;
+
+  return Array.isArray(me?.allowedLeagues) ? me.allowedLeagues : [135, 39];
+}
+
 function getTeamInputEl() {
   return (
     document.getElementById("teamInput") ||
@@ -58,41 +116,82 @@ async function fetchSuggestions(q) {
   const cached = __SUGGEST_CACHE__.get(q);
   if (cached && now - cached.ts < 60_000) return cached.items;
 
-  const r = await apiGet(`/teams?search=${encodeURIComponent(q)}`, {
-    retries: 2,
-    delays: [250, 650],
-  });
+  const allowed = await getAllowedLeaguesForTrial();
+  let arr = [];
 
-  const items = (r.ok && !r.errors ? r.arr : [])
+  if (!allowed) {
+    const r = await apiGet(`/teams?search=${encodeURIComponent(q)}`, {
+      retries: 2,
+      delays: [250, 650],
+      extraHeaders: { "x-cr-intent": "suggest" },
+    });
+    arr = r.ok && !r.errors ? r.arr : [];
+  } else {
+    const season = 2024;
+    const calls = await Promise.all(
+      allowed.map((lg) =>
+        apiGet(
+          `/teams?league=${lg}&season=${season}&search=${encodeURIComponent(q)}`,
+          { retries: 2, delays: [250, 650], extraHeaders: { "x-cr-intent": "suggest" } },
+        ),
+      ),
+    );
+    arr = calls.flatMap((x) => (x.ok && !x.errors ? x.arr : []));
+  }
+
+  const items = (arr || [])
     .map((t) => ({
-  id: t?.team?.id ?? null,
-  name: t?.team?.name ?? "",
-  logo: t?.team?.logo ?? "",
-  country: t?.team?.country ?? t?.team?.nation ?? "",
-}))
+      id: t?.team?.id ?? null,
+      name: t?.team?.name ?? "",
+      logo: t?.team?.logo ?? "",
+      country: t?.team?.country ?? t?.team?.nation ?? "",
+    }))
     .filter((x) => x.id && x.name);
 
   __SUGGEST_CACHE__.set(q, { ts: now, items });
   return items;
 }
 
-async function pickTeamByName(name) {
+async function pickTeamByName(name, searchId) {
   // 1) se è uno dei suggerimenti appena mostrati, usa quello
   const fromSuggest = findSuggestedByName(name);
   if (fromSuggest) return fromSuggest;
 
   // 2) altrimenti chiedi all’API e prendi il primo (o match esatto se esiste)
-  const r = await apiGet(`/teams?search=${encodeURIComponent(name)}`, {
-    retries: 2,
-    delays: [300, 700],
-  });
-  if (!r.ok || r.errors || !r.arr || r.arr.length === 0) return null;
+  const allowed = await getAllowedLeaguesForTrial();
+  let arr = [];
+
+  if (!allowed) {
+    const r = await apiGet(`/teams?search=${encodeURIComponent(name)}`, {
+      retries: 2,
+      delays: [300, 700],
+      extraHeaders: { "x-cr-intent": "search", "x-cr-search-id": searchId || "" },
+    });
+    if (!r.ok || r.errors || !r.arr || r.arr.length === 0) return null;
+    arr = r.arr;
+  } else {
+    const season = 2024;
+    const calls = await Promise.all(
+      allowed.map((lg) =>
+        apiGet(
+          `/teams?league=${lg}&season=${season}&search=${encodeURIComponent(name)}`,
+          {
+            retries: 2,
+            delays: [300, 700],
+            extraHeaders: { "x-cr-intent": "search", "x-cr-search-id": searchId || "" },
+          },
+        ),
+      ),
+    );
+    arr = calls.flatMap((x) => (x.ok && !x.errors ? x.arr : []));
+    if (!arr.length) return null;
+  }
 
   const low = name.trim().toLowerCase();
-  const exact = r.arr.find(
+  const exact = arr.find(
     (t) => String(t?.team?.name || "").trim().toLowerCase() === low,
   );
-  const best = exact || r.arr[0];
+  const best = exact || arr[0];
 
   return {
     id: best?.team?.id ?? null,
@@ -154,13 +253,18 @@ async function showTeam() {
   const q = sanitizeSearch(input ? input.value : "");
   if (!q || q.length < 2) return;
 
+  // ✅ blocco cordiale: cerca solo se loggato
+  const okLogin = await ensureLoggedForSearch();
+  if (!okLogin) return;
+
   // reset “pulito” così la seconda ricerca riparte sempre
   selectedTeam = null;
   selectedFixture = null;
 
   setLoadingAll();
 
-  const team = await pickTeamByName(q);
+  const searchId = (crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()));
+  const team = await pickTeamByName(q, searchId);
   if (!team || !team.id) {
     setMatch(`<p class="bad"><em>Nessuna squadra trovata per "${safeHTML(q)}".</em></p>`);
     return;
@@ -219,6 +323,11 @@ selectedFixture = {
 
   setMatch(renderMatchBasic(fx));
 
+  // aggiorna UI trial (se presente)
+  if (typeof window.refreshTrialStatus === "function") {
+    window.refreshTrialStatus();
+  }
+
   // Carica pannelli (se esistono, compatibile)
   try { if (typeof loadFixtureDetails === "function") await loadFixtureDetails(); } catch (e) { console.error("loadFixtureDetails", e); }
   if (fx2) {
@@ -265,6 +374,16 @@ try { if (typeof loadInjuries === "function") await loadInjuries(); } catch (e) 
 function initTeamSearchUX() {
   const input = getTeamInputEl();
   if (!input) return;
+
+  // Bottone Cerca
+  const btn = document.getElementById("btnSearch");
+  if (btn) {
+    btn.addEventListener("click", () => {
+      // chiude suggerimenti e fa partire la ricerca
+      updateDatalist([]);
+      showTeam();
+    });
+  }
 
   let suppressSuggest = false;
   let suggestReqId = 0; // token per ignorare risposte vecchie
