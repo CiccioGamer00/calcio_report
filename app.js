@@ -205,16 +205,7 @@ function setupAuthActions() {
       localStorage.setItem(LS_LOGIN_TS, String(Date.now()));
 
       setAuthMsg("Login effettuato.");
-	  window.addEventListener("cr:auth", () => {
-  setAuthMsg("Devi fare login per continuare.");
-  openAuthModal();
-});
 
-window.addEventListener("cr:paywall", (e) => {
-  const msg = e?.detail?.json?.message || "Prova scaduta: inserisci un codice o contattami.";
-  setAuthMsg(msg);
-  openAuthModal();
-});
       await refreshTopAuthUI();
 
       const me = await fetchMe();
@@ -236,7 +227,6 @@ window.addEventListener("cr:paywall", (e) => {
       localStorage.setItem(LS_TOKEN, res.json.token);
       localStorage.setItem(LS_LOGIN_TS, String(Date.now()));
 
-      // prendi /me per giorni rimanenti e stato
       const me = await fetchMe();
       const json = me?.json;
 
@@ -280,7 +270,6 @@ window.addEventListener("cr:paywall", (e) => {
     const data = await res.json().catch(() => ({}));
 
     if (res.ok && data.ok) {
-      // “reset” sessione
       localStorage.setItem(LS_LOGIN_TS, String(Date.now()));
 
       setAuthMsg("Abbonamento attivato per 30 giorni.");
@@ -307,6 +296,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupTopButton();
   setupAuthActions();
   setupModalClose();
+
+  // ✅ LISTENER GLOBALI (una sola volta)
+  window.addEventListener("cr:auth", () => {
+    setAuthMsg("Devi fare login per continuare.");
+    openAuthModal();
+  });
+
+  window.addEventListener("cr:paywall", (e) => {
+    const msg =
+      e?.detail?.json?.message ||
+      "Prova scaduta: inserisci un codice o contattami.";
+    setAuthMsg(msg);
+    openAuthModal();
+  });
 
   await refreshTopAuthUI();
 
