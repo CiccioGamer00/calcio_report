@@ -205,6 +205,16 @@ function setupAuthActions() {
       localStorage.setItem(LS_LOGIN_TS, String(Date.now()));
 
       setAuthMsg("Login effettuato.");
+	  window.addEventListener("cr:auth", () => {
+  setAuthMsg("Devi fare login per continuare.");
+  openAuthModal();
+});
+
+window.addEventListener("cr:paywall", (e) => {
+  const msg = e?.detail?.json?.message || "Prova scaduta: inserisci un codice o contattami.";
+  setAuthMsg(msg);
+  openAuthModal();
+});
       await refreshTopAuthUI();
 
       const me = await fetchMe();
