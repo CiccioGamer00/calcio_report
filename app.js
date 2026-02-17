@@ -79,6 +79,7 @@ function applyProLocks(meJson) {
   proBlocks.forEach((el) => {
     if (isPro) {
       el.classList.remove("pro-locked");
+	  detachProLockObserver(el);
 
       // unwrap se presente (senza :scope)
       const first = el.firstElementChild;
@@ -90,21 +91,58 @@ function applyProLocks(meJson) {
     }
 
     // LOCK
-    el.classList.add("pro-locked");
+el.classList.add("pro-locked");
 
-    // crea wrapper se non esiste (senza :scope)
-    const first = el.firstElementChild;
-    const hasWrap = first && first.classList.contains("pro-lock-blur");
+// crea wrapper se non esiste (senza :scope)
+const first = el.firstElementChild;
+const hasWrap = first && first.classList.contains("pro-lock-blur");
 
-    if (!hasWrap) {
-      const wrap = document.createElement("div");
-      wrap.className = "pro-lock-blur";
+if (!hasWrap) {
+  const wrap = document.createElement("div");
+  wrap.className = "pro-lock-blur";
 
-      // sposta dentro al wrapper tutti i figli attuali
-      while (el.firstChild) wrap.appendChild(el.firstChild);
-      el.appendChild(wrap);
-    }
+  // sposta dentro al wrapper tutti i figli attuali
+  while (el.firstChild) wrap.appendChild(el.firstChild);
+  el.appendChild(wrap);
+}
+
+// safety + observer (dopo)
+ensureProBlurWrapper(el);
+attachProLockObserver(el);
   });
+}
+// ===== PRO LOCK auto-fix: se un pannello viene riscritto (innerHTML), rimette il blur =====
+const __PRO_LOCK_OBS__ = new WeakMap();
+
+function ensureProBlurWrapper(el) {
+  if (!el || !el.classList.contains("pro-locked")) return;
+
+  const first = el.firstElementChild;
+  const hasWrap = first && first.classList.contains("pro-lock-blur");
+  if (hasWrap) return;
+
+  const wrap = document.createElement("div");
+  wrap.className = "pro-lock-blur";
+  while (el.firstChild) wrap.appendChild(el.firstChild);
+  el.appendChild(wrap);
+}
+
+function attachProLockObserver(el) {
+  if (__PRO_LOCK_OBS__.has(el)) return;
+
+  const obs = new MutationObserver(() => {
+    // se qualcuno ha riscritto il pannello, rimetti wrapper blur
+    ensureProBlurWrapper(el);
+  });
+
+  obs.observe(el, { childList: true, subtree: false });
+  __PRO_LOCK_OBS__.set(el, obs);
+}
+
+function detachProLockObserver(el) {
+  const obs = __PRO_LOCK_OBS__.get(el);
+  if (obs) obs.disconnect();
+  __PRO_LOCK_OBS__.delete(el);
 }
 
 async function refreshTopAuthUI() {
