@@ -5,19 +5,17 @@ function sleep(ms) {
 }
 
 function shouldRetry({ ok, status, errors, arr }, pathWithQuery) {
+  // ❌ NON retryare su auth/paywall
+  if (!ok && (status === 401 || status === 402 || status === 403)) return false;
+
   // retry su problemi classici
   if (!ok) return true;
 
-  // retry su rate limit o errori server temporanei
   if (status === 429) return true;
   if (status >= 500) return true;
 
-  // retry se l'API segnala errors
   if (errors) return true;
 
-  // caso specifico che ti sta dando fastidio:
-  // /fixtures/statistics a volte arriva "vuoto" anche se i dati esistono
-  // quindi se è statistics e response è vuota, ritentiamo
   if (
     pathWithQuery.includes("/fixtures/statistics") &&
     (!arr || arr.length === 0)
@@ -49,11 +47,26 @@ async function apiGet(pathWithQuery, opts = {}) {
       const res = await fetch(url, { method: "GET", headers: h });
       const json = await res.json().catch(() => ({}));
       const arr = Array.isArray(json.response) ? json.response : [];
+
+      // ✅ errori Worker (AUTH_REQUIRED / PAYWALL ecc.)
+      const workerErr = json?.error
+        ? { worker: json.error, message: json.message }
+        : null;
+
       const errors =
-        json.errors && Object.keys(json.errors).length > 0 ? json.errors : null;
+        workerErr ||
+        (json.errors && Object.keys(json.errors).length > 0 ? json.errors : null);
 
       const out = { ok: res.ok, status: res.status, json, arr, errors, url };
       last = out;
+
+      // ✅ eventi per UI login/paywall
+      if (res.status === 401) {
+        window.dispatchEvent(new CustomEvent("cr:auth", { detail: out }));
+      }
+      if (res.status === 402) {
+        window.dispatchEvent(new CustomEvent("cr:paywall", { detail: out }));
+      }
 
       if (!shouldRetry(out, pathWithQuery)) return out;
     } catch (e) {
