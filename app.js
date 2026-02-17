@@ -78,13 +78,13 @@ function applyProLocks(meJson) {
 
   proBlocks.forEach((el) => {
     if (isPro) {
-      // UNLOCK: rimuovi classe + unwrap se presente
       el.classList.remove("pro-locked");
 
-      const wrap = el.querySelector(":scope > .pro-lock-blur");
-      if (wrap) {
-        while (wrap.firstChild) el.appendChild(wrap.firstChild);
-        wrap.remove();
+      // unwrap se presente (senza :scope)
+      const first = el.firstElementChild;
+      if (first && first.classList.contains("pro-lock-blur")) {
+        while (first.firstChild) el.insertBefore(first.firstChild, first);
+        first.remove();
       }
       return;
     }
@@ -92,13 +92,15 @@ function applyProLocks(meJson) {
     // LOCK
     el.classList.add("pro-locked");
 
-    // se non esiste wrapper, crealo e sposta dentro TUTTO il contenuto
-    let wrap = el.querySelector(":scope > .pro-lock-blur");
-    if (!wrap) {
-      wrap = document.createElement("div");
+    // crea wrapper se non esiste (senza :scope)
+    const first = el.firstElementChild;
+    const hasWrap = first && first.classList.contains("pro-lock-blur");
+
+    if (!hasWrap) {
+      const wrap = document.createElement("div");
       wrap.className = "pro-lock-blur";
 
-      // sposta i figli dentro il wrapper
+      // sposta dentro al wrapper tutti i figli attuali
       while (el.firstChild) wrap.appendChild(el.firstChild);
       el.appendChild(wrap);
     }
