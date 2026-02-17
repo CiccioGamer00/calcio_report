@@ -75,9 +75,33 @@ function applyProLocks(meJson) {
   const isPro = now < paidUntil;
 
   const proBlocks = document.querySelectorAll("[data-pro-only='1']");
+
   proBlocks.forEach((el) => {
-    if (isPro) el.classList.remove("pro-locked");
-    else el.classList.add("pro-locked");
+    if (isPro) {
+      // UNLOCK: rimuovi classe + unwrap se presente
+      el.classList.remove("pro-locked");
+
+      const wrap = el.querySelector(":scope > .pro-lock-blur");
+      if (wrap) {
+        while (wrap.firstChild) el.appendChild(wrap.firstChild);
+        wrap.remove();
+      }
+      return;
+    }
+
+    // LOCK
+    el.classList.add("pro-locked");
+
+    // se non esiste wrapper, crealo e sposta dentro TUTTO il contenuto
+    let wrap = el.querySelector(":scope > .pro-lock-blur");
+    if (!wrap) {
+      wrap = document.createElement("div");
+      wrap.className = "pro-lock-blur";
+
+      // sposta i figli dentro il wrapper
+      while (el.firstChild) wrap.appendChild(el.firstChild);
+      el.appendChild(wrap);
+    }
   });
 }
 
