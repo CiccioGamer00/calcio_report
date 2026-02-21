@@ -142,11 +142,78 @@ function renderMatchBasic(fx) {
 
 function setLoadingAll() {
   setMatch(`<p class="muted"><em>Caricamento match...</em></p>`);
-  if (typeof setReferee === "function") setReferee(`<p class="muted"><em>Caricamento arbitro...</em></p>`);
-  if (typeof setTeams === "function") setTeams(`<p class="muted"><em>Caricamento squadre...</em></p>`);
-  if (typeof setCorners === "function") setCorners(`<p class="muted"><em>Caricamento corner...</em></p>`);
-  if (typeof setShots === "function") setShots(`<p class="muted"><em>Caricamento tiri...</em></p>`);
-  if (typeof setInjuries === "function") setInjuries(`<p class="muted"><em>Caricamento indisponibili...</em></p>`);
+  // Le altre schede le mettiamo “on-demand” (pulsante), per risparmiare chiamate.
+  const hint = `<p class="muted"><em>Seleziona una squadra, poi carica i dati quando ti servono.</em></p>`;
+  if (typeof setReferee === "function") setReferee(hint);
+  if (typeof setTeams === "function") setTeams(hint);
+  if (typeof setCorners === "function") setCorners(hint);
+  if (typeof setShots === "function") setShots(hint);
+  if (typeof setInjuries === "function") setInjuries(hint);
+  if (typeof setIndicators === "function") setIndicators(hint);
+}
+
+function setPanelById(id, html) {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = html;
+}
+
+function renderLoadButton(panelId, label, onClick) {
+  const btnId = `btnLoad_${panelId}`;
+  setPanelById(
+    panelId,
+    `
+      <div class="loadBox">
+        <p class="muted"><em>${safeHTML(label)}</em></p>
+        <button class="btn primary" id="${btnId}" type="button">Carica dati</button>
+      </div>
+    `,
+  );
+
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+
+  btn.onclick = async () => {
+    btn.disabled = true;
+    btn.textContent = "Caricamento...";
+    try {
+      await onClick();
+    } catch (e) {
+      console.error("deferred load", panelId, e);
+      setPanelById(
+        panelId,
+        `<p class="bad"><em>Errore nel caricamento. Riprova tra poco.</em></p>`,
+      );
+    }
+  };
+}
+
+async function loadIndicatorsBundle() {
+  // Carico solo ciò che serve agli indicatori (in sequenza, sempre await)
+  try {
+    if (typeof loadTeamsForm === "function") await loadTeamsForm();
+  } catch (e) {
+    console.error("loadTeamsForm", e);
+  }
+  try {
+    if (typeof loadTeamsCorners === "function") await loadTeamsCorners();
+  } catch (e) {
+    console.error("loadTeamsCorners", e);
+  }
+  try {
+    if (typeof loadTeamsShots === "function") await loadTeamsShots();
+  } catch (e) {
+    console.error("loadTeamsShots", e);
+  }
+  try {
+    if (typeof loadTeamsFouls === "function") await loadTeamsFouls();
+  } catch (e) {
+    console.error("loadTeamsFouls", e);
+  }
+  try {
+    if (typeof loadFixtureDetails === "function") await loadFixtureDetails();
+  } catch (e) {
+    console.error("loadFixtureDetails", e);
+  }
 }
 
 async function showTeam() {
@@ -219,8 +286,40 @@ selectedFixture = {
 
   setMatch(renderMatchBasic(fx));
 
-  // Carica pannelli (se esistono, compatibile)
-  try { if (typeof loadFixtureDetails === "function") await loadFixtureDetails(); } catch (e) { console.error("loadFixtureDetails", e); }
+  // ===== Schede ON-DEMAND =====
+  // (così non bruciamo chiamate se l'utente sta solo esplorando)
+  renderLoadButton("referee", "Arbitro + storico (se disponibile)", async () => {
+    if (typeof loadFixtureDetails === "function") await loadFixtureDetails();
+  });
+
+  renderLoadButton("teamsPanel", "Forma / statistiche squadre (ultime partite)", async () => {
+    if (typeof loadTeamsForm === "function") await loadTeamsForm();
+  });
+
+  renderLoadButton("cornersPanel", "Corner (ultime partite)", async () => {
+    if (typeof loadTeamsCorners === "function") await loadTeamsCorners();
+  });
+
+  renderLoadButton("shotsPanel", "Tiri (ultime partite)", async () => {
+    if (typeof loadTeamsShots === "function") await loadTeamsShots();
+  });
+
+  renderLoadButton("injuriesPanel", "Indisponibili (se disponibili)", async () => {
+    if (typeof loadInjuries === "function") await loadInjuries();
+  });
+
+  renderLoadButton(
+    "indicatorsPanel",
+    "Indicatori bookmaker (più pesante: meglio calcolarlo quando ti serve)",
+    async () => {
+      await loadIndicatorsBundle();
+    },
+  );
+
+  // Predizione: la teniamo on-demand (e già PRO-only in HTML)
+  renderLoadButton("predictionPanel", "Predizione (PRO)", async () => {
+    if (typeof loadPrediction === "function") await loadPrediction();
+  });
   if (fx2) {
   const when2 = fx2?.fixture?.date ? new Date(fx2.fixture.date).toLocaleString("it-IT") : "—";
   const h2 = fx2?.teams?.home?.name || "—";
@@ -253,12 +352,7 @@ if (oppNextAfter) {
     `;
   }
 }
-try { if (typeof loadTeamsForm === "function") await loadTeamsForm(); } catch (e) { console.error("loadTeamsForm", e); }
-try { if (typeof loadTeamsCorners === "function") await loadTeamsCorners(); } catch (e) { console.error("loadTeamsCorners", e); }
-try { if (typeof loadTeamsShots === "function") await loadTeamsShots(); } catch (e) { console.error("loadTeamsShots", e); }
-try { if (typeof loadInjuries === "function") await loadInjuries(); } catch (e) { console.error("loadInjuries", e); }
-  try { if (typeof loadTeamsFouls === "function") await loadTeamsFouls(); } catch (e) { console.error("loadTeamsFouls", e); }
-  try { if (typeof loadPrediction === "function") await loadPrediction(); } catch (e) { console.error("loadPrediction", e); }
+  // NB: niente auto-load delle altre schede (ora è tutto a richiesta)
 }
 
 // UX: suggerimenti stabili + NO riapertura dopo selezione
