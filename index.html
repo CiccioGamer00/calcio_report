@@ -21,6 +21,9 @@
           </p>
         </div>
 
+        <!-- CTA Telegram (centro header) -->
+        <a id="btnTelegramHeader" class="tg-cta" href="#" rel="noopener">📣 Unisciti su Telegram</a>
+
         <!-- TOP RIGHT: badge + login/logout -->
         <div id="topBar">
           <span id="statusBadge" class="statusBadge hidden"></span>
@@ -156,21 +159,6 @@
       </section>
     </main>
 
-    <footer class="footer">
-      <div class="footer-inner">
-        <div class="footer-left">
-          <span class="muted">Supporto:</span>
-          <a id="supportEmailLink" href="#" class="footer-link">(imposta email)</a>
-        </div>
-
-        <div class="footer-right">
-          <button id="btnTelegram" type="button" class="btn">
-            Telegram
-          </button>
-        </div>
-      </div>
-    </footer>
-
     <!-- MODAL AUTH (invariato: se già lo hai, lascialo com’è nel tuo file) -->
     <div id="authModal" class="modal hidden">
       <div class="modal-content">
@@ -187,6 +175,10 @@
           <button id="btnRegister">Registrati</button>
         </div>
 
+        <div class="auth-buttons" style="margin-top:10px">
+          <button id="btnPayPal" class="btn paypal">💳 Abbonati con PayPal</button>
+        </div>
+
         <hr style="border-color: #333; width: 100%" />
 
         <input
@@ -197,6 +189,13 @@
         <button id="btnRedeem">Attiva codice</button>
       </div>
     </div>
+
+    <footer class="footer">
+      <div>
+        <span class="muted">Supporto:</span>
+        <a id="supportEmailLink" href="#">(imposta email)</a>
+      </div>
+    </footer>
 
     <script src="config.js?v=6"></script>
 
