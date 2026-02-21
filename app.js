@@ -292,41 +292,76 @@ function setupModalClose() {
   });
 }
 
-function setupFooterContacts() {
-  const tgBtn = document.getElementById("btnTelegram");
-  if (tgBtn) {
-    tgBtn.addEventListener("click", () => {
-      const url = String(window.API_CONFIG?.telegramUrl || "").trim();
-      if (!url) {
-        alert("Link Telegram non configurato. Impostalo in config.js (telegramUrl).\n\nEsempio: https://t.me/tuo_canale");
-        return;
-      }
-      window.open(url, "_blank", "noopener,noreferrer");
-    });
+function goToPayment() {
+  const url =
+    window.API_CONFIG?.paypalUrl ||
+    window.API_CONFIG?.paymentUrl ||
+    "";
+
+  if (url) {
+    window.open(url, "_blank", "noopener");
+    return;
   }
 
-  const emailLink = document.getElementById("supportEmailLink");
-  if (emailLink) {
-    const mail = String(window.API_CONFIG?.supportEmail || "").trim();
-    if (!mail) {
-      emailLink.textContent = "(imposta email)";
-      emailLink.href = "#";
-      emailLink.addEventListener("click", (e) => {
-        e.preventDefault();
-        alert("Email di supporto non configurata. Impostala in config.js (supportEmail).\n\nEsempio: support@tuodominio.it");
-      });
-    } else {
-      emailLink.textContent = mail;
-      emailLink.href = `mailto:${mail}`;
+  // fallback: se non configurato, apri login
+  openAuthModal();
+}
+
+function setupProLockCTA() {
+  // Clic su una sezione PRO bloccata -> pagamento (se configurato) oppure login
+  document.addEventListener("click", (e) => {
+    const locked = e.target?.closest?.(".pro-locked");
+    if (!locked) return;
+    e.preventDefault();
+    e.stopPropagation();
+    goToPayment();
+  });
+}
+
+function setupTelegramHeader() {
+  const a = document.getElementById("btnTelegramHeader");
+  if (!a) return;
+  a.addEventListener("click", (e) => {
+    e.preventDefault();
+    const url = window.API_CONFIG?.telegramUrl || "";
+    if (!url) {
+      alert("Link Telegram non configurato in config.js");
+      return;
     }
+    window.open(url, "_blank", "noopener");
+  });
+}
+
+function setupSupportEmailFooter() {
+  const a = document.getElementById("supportEmailLink");
+  if (!a) return;
+  const mail = window.API_CONFIG?.supportEmail || "";
+  if (!mail) {
+    a.textContent = "(imposta email)";
+    a.href = "#";
+    return;
   }
+  a.textContent = mail;
+  a.href = `mailto:${mail}`;
+}
+
+function setupPayPalButton() {
+  const btn = document.getElementById("btnPayPal");
+  if (!btn) return;
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    goToPayment();
+  });
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
   setupTopButton();
   setupAuthActions();
   setupModalClose();
-  setupFooterContacts();
+  setupProLockCTA();
+  setupTelegramHeader();
+  setupSupportEmailFooter();
+  setupPayPalButton();
 
   // ✅ LISTENER GLOBALI (una sola volta)
   window.addEventListener("cr:auth", () => {
