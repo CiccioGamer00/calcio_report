@@ -704,17 +704,22 @@ li{ margin:6px 0; }
 #btnOpenAuth.trial-active { border: 1px solid rgba(255,200,0,0.5); }
 #btnOpenAuth.expired { border: 1px solid rgba(255,0,0,0.5); }
 
-/* ===== PRO LOCK (blur + badge) ===== */
+/* ===== PRO LOCK (blur contenuto + badge leggibile + tooltip) ===== */
 .pro-locked{
   position: relative;
+  opacity: 0.92;
+}
+
+/* sfoca SOLO i figli (il contenuto), non il badge */
+.pro-locked > *{
   filter: blur(3px);
   pointer-events: none;
   user-select: none;
-  opacity: 0.85;
 }
 
+/* badge visibile, non sfocato */
 .pro-locked::after{
-  content: "SOLO ABBONAMENTO";
+  content: "SOLO PRO";
   position: absolute;
   top: 12px;
   right: 12px;
@@ -726,5 +731,21 @@ li{ margin:6px 0; }
   background: rgba(0,0,0,0.55);
   border: 1px solid rgba(255,255,255,0.18);
   color: rgba(255,255,255,0.92);
-  filter: none;
+  pointer-events: none;
+}
+
+/* tooltip “carino” al passaggio del mouse */
+.pro-locked:hover::before{
+  content: "Funzione disponibile solo per utenti PRO";
+  position: absolute;
+  top: 44px;
+  right: 12px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  background: rgba(0,0,0,0.70);
+  border: 1px solid rgba(255,255,255,0.14);
+  color: rgba(255,255,255,0.95);
+  max-width: 240px;
+  z-index: 10;
 }
