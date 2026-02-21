@@ -142,79 +142,83 @@ function renderMatchBasic(fx) {
 
 function setLoadingAll() {
   setMatch(`<p class="muted"><em>Caricamento match...</em></p>`);
-  // Le altre schede le mettiamo “on-demand” (pulsante), per risparmiare chiamate.
-  const hint = `<p class="muted"><em>Seleziona una squadra, poi carica i dati quando ti servono.</em></p>`;
-  if (typeof setReferee === "function") setReferee(hint);
-  if (typeof setTeams === "function") setTeams(hint);
-  if (typeof setCorners === "function") setCorners(hint);
-  if (typeof setShots === "function") setShots(hint);
-  if (typeof setInjuries === "function") setInjuries(hint);
-  if (typeof setIndicators === "function") setIndicators(hint);
+  // Gli altri pannelli li carichiamo solo a richiesta (risparmio chiamate)
 }
 
-function setPanelById(id, html) {
-  const el = document.getElementById(id);
-  if (el) el.innerHTML = html;
+function renderLoadBtn(onclickFn, label = "Carica dati") {
+  const fn = safeHTML(onclickFn);
+  return `
+    <div style="margin-top:10px;">
+      <button type="button" class="btn primary" onclick="${fn}()">${safeHTML(label)}</button>
+    </div>
+  `;
 }
 
-function renderLoadButton(panelId, label, onClick) {
-  const btnId = `btnLoad_${panelId}`;
-  setPanelById(
-    panelId,
-    `
-      <div class="loadBox">
-        <p class="muted"><em>${safeHTML(label)}</em></p>
-        <button class="btn primary" id="${btnId}" type="button">Carica dati</button>
-      </div>
-    `,
-  );
+function setOnDemandPanelsPlaceholders() {
+  // reset indicatori: non devono autoriempirsi quando carico altre card
+  window.__IND_ACTIVE__ = false;
+  if (window.__IND__) {
+    window.__IND__.teams = null;
+    window.__IND__.corners = null;
+    window.__IND__.shots = null;
+    window.__IND__.referee = null;
+    window.__IND__.fouls = null;
+  }
 
-  const btn = document.getElementById(btnId);
-  if (!btn) return;
+  if (typeof setReferee === "function") {
+    setReferee(`<p class="muted"><em>Arbitro + storico (se disponibile)</em></p>${renderLoadBtn('loadFixtureDetails')}`);
+  }
+  if (typeof setTeams === "function") {
+    setTeams(`<p class="muted"><em>Forma / statistiche squadre (ultime partite)</em></p>${renderLoadBtn('loadTeamsForm')}`);
+  }
+  if (typeof setCorners === "function") {
+    setCorners(`<p class="muted"><em>Corner (ultime partite)</em></p>${renderLoadBtn('loadTeamsCorners')}`);
+  }
+  if (typeof setShots === "function") {
+    setShots(`<p class="muted"><em>Tiri (ultime partite)</em></p>${renderLoadBtn('loadTeamsShots')}`);
+  }
+  if (typeof setInjuries === "function") {
+    setInjuries(`<p class="muted"><em>Indisponibili</em></p>${renderLoadBtn('loadInjuries')}`);
+  }
 
-  btn.onclick = async () => {
-    btn.disabled = true;
-    btn.textContent = "Caricamento...";
+  // Predizione e indicatori hanno i loro JS, qui settiamo solo placeholder + bottone
+  if (typeof setPrediction === "function") {
+    setPrediction(`<p class="muted"><em>Predizione Poisson</em></p>${renderLoadBtn('loadPrediction')}`);
+  }
+  if (typeof setIndicators === "function") {
+    setIndicators(`<p class="muted"><em>Indicatori bookmaker</em></p>${renderLoadBtn('activateIndicatorsAndLoad', 'Carica dati')}`);
+  }
+}
+
+// bottone “Indicatori”: attiva render e lancia il caricamento (se esiste)
+window.activateIndicatorsAndLoad = async function () {
+  // 1) Se esiste il controller "ufficiale" degli indicatori, usiamo quello.
+  if (typeof window.activateIndicators === "function") {
     try {
-      await onClick();
+      await window.activateIndicators();
+      return;
     } catch (e) {
-      console.error("deferred load", panelId, e);
-      setPanelById(
-        panelId,
-        `<p class="bad"><em>Errore nel caricamento. Riprova tra poco.</em></p>`,
-      );
+      console.error("activateIndicators error", e);
     }
-  };
-}
+  }
 
-async function loadIndicatorsBundle() {
-  // Carico solo ciò che serve agli indicatori (in sequenza, sempre await)
-  try {
-    if (typeof loadTeamsForm === "function") await loadTeamsForm();
-  } catch (e) {
-    console.error("loadTeamsForm", e);
+  // 2) Fallback: attiva render e prova a caricare il bundle (se presente)
+  window.__IND_ACTIVE__ = true;
+  if (typeof window.renderIndicators === "function") {
+    try {
+      window.renderIndicators();
+    } catch (e) {
+      console.error("renderIndicators", e);
+    }
   }
-  try {
-    if (typeof loadTeamsCorners === "function") await loadTeamsCorners();
-  } catch (e) {
-    console.error("loadTeamsCorners", e);
+  if (typeof window.loadIndicators === "function") {
+    try {
+      await window.loadIndicators();
+    } catch (e) {
+      console.error("loadIndicators", e);
+    }
   }
-  try {
-    if (typeof loadTeamsShots === "function") await loadTeamsShots();
-  } catch (e) {
-    console.error("loadTeamsShots", e);
-  }
-  try {
-    if (typeof loadTeamsFouls === "function") await loadTeamsFouls();
-  } catch (e) {
-    console.error("loadTeamsFouls", e);
-  }
-  try {
-    if (typeof loadFixtureDetails === "function") await loadFixtureDetails();
-  } catch (e) {
-    console.error("loadFixtureDetails", e);
-  }
-}
+};
 
 async function showTeam() {
   const input = getTeamInputEl();
@@ -226,6 +230,7 @@ async function showTeam() {
   selectedFixture = null;
 
   setLoadingAll();
+  setOnDemandPanelsPlaceholders();
 
   const team = await pickTeamByName(q);
   if (!team || !team.id) {
@@ -286,40 +291,7 @@ selectedFixture = {
 
   setMatch(renderMatchBasic(fx));
 
-  // ===== Schede ON-DEMAND =====
-  // (così non bruciamo chiamate se l'utente sta solo esplorando)
-  renderLoadButton("referee", "Arbitro + storico (se disponibile)", async () => {
-    if (typeof loadFixtureDetails === "function") await loadFixtureDetails();
-  });
-
-  renderLoadButton("teamsPanel", "Forma / statistiche squadre (ultime partite)", async () => {
-    if (typeof loadTeamsForm === "function") await loadTeamsForm();
-  });
-
-  renderLoadButton("cornersPanel", "Corner (ultime partite)", async () => {
-    if (typeof loadTeamsCorners === "function") await loadTeamsCorners();
-  });
-
-  renderLoadButton("shotsPanel", "Tiri (ultime partite)", async () => {
-    if (typeof loadTeamsShots === "function") await loadTeamsShots();
-  });
-
-  renderLoadButton("injuriesPanel", "Indisponibili (se disponibili)", async () => {
-    if (typeof loadInjuries === "function") await loadInjuries();
-  });
-
-  renderLoadButton(
-    "indicatorsPanel",
-    "Indicatori bookmaker (più pesante: meglio calcolarlo quando ti serve)",
-    async () => {
-      await loadIndicatorsBundle();
-    },
-  );
-
-  // Predizione: la teniamo on-demand (e già PRO-only in HTML)
-  renderLoadButton("predictionPanel", "Predizione (PRO)", async () => {
-    if (typeof loadPrediction === "function") await loadPrediction();
-  });
+  // NOTA: i pannelli sotto ora sono on-demand (risparmio chiamate)
   if (fx2) {
   const when2 = fx2?.fixture?.date ? new Date(fx2.fixture.date).toLocaleString("it-IT") : "—";
   const h2 = fx2?.teams?.home?.name || "—";
@@ -352,7 +324,7 @@ if (oppNextAfter) {
     `;
   }
 }
-  // NB: niente auto-load delle altre schede (ora è tutto a richiesta)
+  // (i pannelli vengono caricati dai rispettivi bottoni)
 }
 
 // UX: suggerimenti stabili + NO riapertura dopo selezione
