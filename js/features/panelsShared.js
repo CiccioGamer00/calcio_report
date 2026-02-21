@@ -20,6 +20,16 @@ function setCorners(html) {
   if (el) el.innerHTML = html;
 }
 
+function setShots(html) {
+  const el = document.getElementById("shotsPanel");
+  if (el) el.innerHTML = html;
+}
+
+function setInjuries(html) {
+  const el = document.getElementById("injuriesPanel");
+  if (el) el.innerHTML = html;
+}
+
 /* =========================
    HELPERS BASE
    ========================= */
