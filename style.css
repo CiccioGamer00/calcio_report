@@ -53,6 +53,21 @@ body{
   align-items:center;
 }
 
+/* Telegram CTA in header */
+.tg-cta{
+  margin-left: auto;
+  margin-right: auto;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(0,0,0,0.25);
+  color: rgba(255,255,255,0.92);
+  text-decoration: none;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.tg-cta:hover{ filter: brightness(1.08); }
+
 .brand-badge{
   width:44px;height:44px;
   border-radius:14px;
@@ -129,17 +144,6 @@ input[type="text"]:focus, select:focus{
   border-color: rgba(82,255,168,0.30);
 }
 
-.btn:disabled{
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.loadBox{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-
 .hint{ margin:10px 0 0; color:var(--muted); font-size:12px; }
 .options{ display:flex; flex-wrap:wrap; gap:12px 16px; align-items:center; padding-top:4px; }
 .opt{ display:flex; gap:10px; align-items:center; }
@@ -150,29 +154,6 @@ li{ margin:6px 0; }
 
 .muted{ color:var(--muted); }
 .bad{ color:var(--danger); }
-
-/* footer */
-.footer{
-  margin-top: 18px;
-  padding: 18px 0 26px;
-}
-.footer-inner{
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 0 16px;
-  display:flex;
-  gap:12px;
-  align-items:center;
-  justify-content:space-between;
-  border-top: 1px solid var(--line);
-  padding-top: 16px;
-}
-.footer-link{
-  color: rgba(255,255,255,0.9);
-  text-decoration: none;
-  border-bottom: 1px dashed rgba(255,255,255,0.25);
-}
-.footer-link:hover{ border-bottom-color: rgba(255,255,255,0.55); }
 
 /* pills / kv */
 .pill{
@@ -695,6 +676,18 @@ li{ margin:6px 0; }
   gap: 10px;
 }
 
+/* PayPal button (modal) */
+.btn.paypal{ width:100%; }
+
+/* Footer support */
+.footer{
+  padding: 16px 18px 22px;
+  text-align: center;
+  color: var(--muted);
+}
+.footer a{ color: rgba(255,255,255,0.92); text-decoration: none; }
+.footer a:hover{ text-decoration: underline; }
+
 .close {
   cursor: pointer;
   align-self: flex-end;
@@ -704,48 +697,32 @@ li{ margin:6px 0; }
 #btnOpenAuth.trial-active { border: 1px solid rgba(255,200,0,0.5); }
 #btnOpenAuth.expired { border: 1px solid rgba(255,0,0,0.5); }
 
-/* ===== PRO LOCK (blur contenuto + badge leggibile + tooltip) ===== */
+/* ===== PRO LOCK (sfoca contenuto, CTA cliccabile) ===== */
 .pro-locked{
   position: relative;
   opacity: 0.92;
 }
 
-/* sfoca SOLO i figli (il contenuto), non il badge */
+/* sfoca SOLO il contenuto della card */
 .pro-locked > *{
   filter: blur(3px);
   pointer-events: none;
   user-select: none;
 }
 
-/* badge visibile, non sfocato */
+/* badge/CTA sempre leggibile */
 .pro-locked::after{
   content: "SOLO PRO";
   position: absolute;
   top: 12px;
   right: 12px;
-  padding: 6px 10px;
+  padding: 8px 12px;
   border-radius: 999px;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 900;
   letter-spacing: .3px;
-  background: rgba(0,0,0,0.55);
+  background: rgba(0,0,0,0.60);
   border: 1px solid rgba(255,255,255,0.18);
-  color: rgba(255,255,255,0.92);
-  pointer-events: none;
-}
-
-/* tooltip “carino” al passaggio del mouse */
-.pro-locked:hover::before{
-  content: "Funzione disponibile solo per utenti PRO";
-  position: absolute;
-  top: 44px;
-  right: 12px;
-  padding: 8px 10px;
-  border-radius: 10px;
-  font-size: 12px;
-  background: rgba(0,0,0,0.70);
-  border: 1px solid rgba(255,255,255,0.14);
-  color: rgba(255,255,255,0.95);
-  max-width: 240px;
-  z-index: 10;
+  color: rgba(255,255,255,0.94);
+  cursor: pointer;
 }
