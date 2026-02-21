@@ -75,74 +75,10 @@ function applyProLocks(meJson) {
   const isPro = now < paidUntil;
 
   const proBlocks = document.querySelectorAll("[data-pro-only='1']");
-
   proBlocks.forEach((el) => {
-    if (isPro) {
-      el.classList.remove("pro-locked");
-	  detachProLockObserver(el);
-
-      // unwrap se presente (senza :scope)
-      const first = el.firstElementChild;
-      if (first && first.classList.contains("pro-lock-blur")) {
-        while (first.firstChild) el.insertBefore(first.firstChild, first);
-        first.remove();
-      }
-      return;
-    }
-
-    // LOCK
-el.classList.add("pro-locked");
-
-// crea wrapper se non esiste (senza :scope)
-const first = el.firstElementChild;
-const hasWrap = first && first.classList.contains("pro-lock-blur");
-
-if (!hasWrap) {
-  const wrap = document.createElement("div");
-  wrap.className = "pro-lock-blur";
-
-  // sposta dentro al wrapper tutti i figli attuali
-  while (el.firstChild) wrap.appendChild(el.firstChild);
-  el.appendChild(wrap);
-}
-
-// safety + observer (dopo)
-ensureProBlurWrapper(el);
-attachProLockObserver(el);
+    if (isPro) el.classList.remove("pro-locked");
+    else el.classList.add("pro-locked");
   });
-}
-// ===== PRO LOCK auto-fix: se un pannello viene riscritto (innerHTML), rimette il blur =====
-const __PRO_LOCK_OBS__ = new WeakMap();
-
-function ensureProBlurWrapper(el) {
-  if (!el || !el.classList.contains("pro-locked")) return;
-
-  const first = el.firstElementChild;
-  const hasWrap = first && first.classList.contains("pro-lock-blur");
-  if (hasWrap) return;
-
-  const wrap = document.createElement("div");
-  wrap.className = "pro-lock-blur";
-  while (el.firstChild) wrap.appendChild(el.firstChild);
-  el.appendChild(wrap);
-}
-
-function attachProLockObserver(el) {
-  if (__PRO_LOCK_OBS__.has(el)) return;
-
-  const obs = new MutationObserver(() => {
-    // se qualcuno ha riscritto il pannello, rimetti wrapper blur
-    ensureProBlurWrapper(el);
-  });
-
-  obs.observe(el, { childList: true, subtree: false });
-  __PRO_LOCK_OBS__.set(el, obs);
-}
-
-function detachProLockObserver(el) {
-  const obs = __PRO_LOCK_OBS__.get(el);
-  if (obs) obs.disconnect();
-  __PRO_LOCK_OBS__.delete(el);
 }
 
 async function refreshTopAuthUI() {
@@ -356,10 +292,41 @@ function setupModalClose() {
   });
 }
 
+function setupFooterContacts() {
+  const tgBtn = document.getElementById("btnTelegram");
+  if (tgBtn) {
+    tgBtn.addEventListener("click", () => {
+      const url = String(window.API_CONFIG?.telegramUrl || "").trim();
+      if (!url) {
+        alert("Link Telegram non configurato. Impostalo in config.js (telegramUrl).\n\nEsempio: https://t.me/tuo_canale");
+        return;
+      }
+      window.open(url, "_blank", "noopener,noreferrer");
+    });
+  }
+
+  const emailLink = document.getElementById("supportEmailLink");
+  if (emailLink) {
+    const mail = String(window.API_CONFIG?.supportEmail || "").trim();
+    if (!mail) {
+      emailLink.textContent = "(imposta email)";
+      emailLink.href = "#";
+      emailLink.addEventListener("click", (e) => {
+        e.preventDefault();
+        alert("Email di supporto non configurata. Impostala in config.js (supportEmail).\n\nEsempio: support@tuodominio.it");
+      });
+    } else {
+      emailLink.textContent = mail;
+      emailLink.href = `mailto:${mail}`;
+    }
+  }
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   setupTopButton();
   setupAuthActions();
   setupModalClose();
+  setupFooterContacts();
 
   // ✅ LISTENER GLOBALI (una sola volta)
   window.addEventListener("cr:auth", () => {
