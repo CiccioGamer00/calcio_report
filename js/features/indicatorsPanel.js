@@ -14,6 +14,335 @@ window.__IND__ = window.__IND__ || {
   fouls: null, // <-- NUOVO
 };
 
+// Indicatori: partono SOLO su richiesta (bottone)
+window.__IND_ACTIVE__ = window.__IND_ACTIVE__ || false;
+
+/* =========================
+   INDICATORS (on-demand)
+   =========================
+   Qui calcoliamo i dati minimi per le tile "bookmaker" SENZA dipendere
+   dai pannelli sotto. Così:
+   - click su "Carica dati" negli indicatori => calcola davvero
+   - click su altre schede NON attiva gli indicatori
+*/
+
+const __FX_STATS_CACHE__ = new Map(); // fixtureId -> Map(teamId -> {corners, shots, shotsOn, fouls})
+
+function _num(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function _lower(s) {
+  return String(s || "").trim().toLowerCase();
+}
+
+function normalizeFixtureStats(statArray) {
+  const map = new Map();
+  for (const s of statArray || []) map.set(_lower(s?.type), s?.value);
+
+  const pick = (...types) => {
+    for (const t of types.map(_lower)) {
+      const v = map.get(t);
+      const n = _num(v);
+      if (n != null) return n;
+    }
+    return 0;
+  };
+
+  return {
+    corners: pick("corner kicks", "corners"),
+    shots: pick("total shots", "shots total"),
+    shotsOn: pick("shots on goal", "shots on target", "shots on"),
+    fouls: pick("fouls", "fouls committed"),
+  };
+}
+
+async function getFixtureStatsTeamsCached(fixtureId) {
+  if (!fixtureId) return new Map();
+  if (__FX_STATS_CACHE__.has(fixtureId)) return __FX_STATS_CACHE__.get(fixtureId);
+
+  const r = await apiGet(`/fixtures/statistics?fixture=${fixtureId}`, {
+    retries: 2,
+    delays: [500, 1000],
+  });
+
+  const out = new Map();
+  const rows = r.ok && !r.errors && Array.isArray(r.arr) ? r.arr : [];
+  for (const row of rows) {
+    const teamId = row?.team?.id ?? null;
+    if (!teamId) continue;
+    out.set(teamId, normalizeFixtureStats(row?.statistics || []));
+  }
+
+  __FX_STATS_CACHE__.set(fixtureId, out);
+  return out;
+}
+
+function goalsForAgainstWithHalves(teamId, fxRow) {
+  const hId = fxRow?.teams?.home?.id ?? null;
+  const aId = fxRow?.teams?.away?.id ?? null;
+
+  const isHome = Number(teamId) === Number(hId);
+  const isAway = Number(teamId) === Number(aId);
+  if (!isHome && !isAway) {
+    return {
+      gf: 0,
+      ga: 0,
+      gf1: 0,
+      ga1: 0,
+      gf2: 0,
+      ga2: 0,
+    };
+  }
+
+  // full
+  const gh = Number(fxRow?.goals?.home ?? 0);
+  const ga = Number(fxRow?.goals?.away ?? 0);
+
+  // half-time
+  const htH = _num(fxRow?.score?.halftime?.home);
+  const htA = _num(fxRow?.score?.halftime?.away);
+
+  const homeHT = htH != null ? htH : 0;
+  const awayHT = htA != null ? htA : 0;
+
+  const homeFT = Number.isFinite(gh) ? gh : 0;
+  const awayFT = Number.isFinite(ga) ? ga : 0;
+
+  const home2 = Math.max(0, homeFT - homeHT);
+  const away2 = Math.max(0, awayFT - awayHT);
+
+  if (isHome) {
+    return {
+      gf: homeFT,
+      ga: awayFT,
+      gf1: homeHT,
+      ga1: awayHT,
+      gf2: home2,
+      ga2: away2,
+    };
+  }
+  return {
+    gf: awayFT,
+    ga: homeFT,
+    gf1: awayHT,
+    ga1: homeHT,
+    gf2: away2,
+    ga2: home2,
+  };
+}
+
+function avg(arr) {
+  const a = (arr || []).map(Number).filter((x) => Number.isFinite(x));
+  if (!a.length) return 0;
+  return a.reduce((s, v) => s + v, 0) / a.length;
+}
+
+async function buildTeamPack(team, limit) {
+  const teamId = team?.id;
+  if (!teamId) {
+    return {
+      avgGF: 0,
+      avgGA: 0,
+      gf1Pct: 0,
+      gf2Pct: 0,
+      ga1Pct: 0,
+      ga2Pct: 0,
+      avgCards: 0,
+      avgCorners: 0,
+      avgCornersAgainst: 0,
+      avgShotsFor: 0,
+      avgShotsAgainst: 0,
+      avgOnTargetFor: 0,
+      avgOnTargetAgainst: 0,
+      avgFoulsFor: 0,
+      avgFoulsAgainst: 0,
+    };
+  }
+
+  const n = Math.max(5, Number(limit) || 10);
+  const last = await fetchTeamLastFixtures(teamId, n);
+
+  const gf = [];
+  const ga = [];
+  const gf1 = [];
+  const ga1 = [];
+  const gf2 = [];
+  const ga2 = [];
+
+  const teamCards = [];
+  const cornersFor = [];
+  const cornersAg = [];
+  const shotsFor = [];
+  const shotsAg = [];
+  const otFor = [];
+  const otAg = [];
+  const foulsFor = [];
+  const foulsAg = [];
+
+  for (const fx of last) {
+    const fid = fx?.fixture?.id;
+    const hId = fx?.teams?.home?.id;
+    const aId = fx?.teams?.away?.id;
+    if (!fid || !hId || !aId) continue;
+
+    const g = goalsForAgainstWithHalves(teamId, fx);
+    gf.push(g.gf);
+    ga.push(g.ga);
+    gf1.push(g.gf1 > 0 ? 1 : 0);
+    ga1.push(g.ga1 > 0 ? 1 : 0);
+    gf2.push(g.gf2 > 0 ? 1 : 0);
+    ga2.push(g.ga2 > 0 ? 1 : 0);
+
+    // cards via events
+    try {
+      const c = await countTeamCardsForFixture(fid, teamId);
+      if (Number.isFinite(c)) teamCards.push(c);
+    } catch {}
+
+    // stats via fixtures/statistics
+    const oppId = Number(teamId) === Number(hId) ? aId : hId;
+    const statsMap = await getFixtureStatsTeamsCached(fid);
+    const me = statsMap.get(teamId) || { corners: 0, shots: 0, shotsOn: 0, fouls: 0 };
+    const opp = statsMap.get(oppId) || { corners: 0, shots: 0, shotsOn: 0, fouls: 0 };
+
+    cornersFor.push(Number(me.corners) || 0);
+    cornersAg.push(Number(opp.corners) || 0);
+
+    shotsFor.push(Number(me.shots) || 0);
+    shotsAg.push(Number(opp.shots) || 0);
+
+    otFor.push(Number(me.shotsOn) || 0);
+    otAg.push(Number(opp.shotsOn) || 0);
+
+    foulsFor.push(Number(me.fouls) || 0);
+    foulsAg.push(Number(opp.fouls) || 0);
+  }
+
+  const matches = Math.max(1, gf.length);
+  const pct = (arr01) => Math.round((arr01.reduce((s, v) => s + (Number(v) || 0), 0) / matches) * 100);
+
+  return {
+    avgGF: avg(gf),
+    avgGA: avg(ga),
+    gf1Pct: pct(gf1),
+    ga1Pct: pct(ga1),
+    gf2Pct: pct(gf2),
+    ga2Pct: pct(ga2),
+    avgCards: avg(teamCards),
+
+    avgCorners: avg(cornersFor),
+    avgCornersAgainst: avg(cornersAg),
+
+    avgShotsFor: avg(shotsFor),
+    avgShotsAgainst: avg(shotsAg),
+    avgOnTargetFor: avg(otFor),
+    avgOnTargetAgainst: avg(otAg),
+
+    avgFoulsFor: avg(foulsFor),
+    avgFoulsAgainst: avg(foulsAg),
+  };
+}
+
+async function loadIndicatorsBundle() {
+  const fx = typeof selectedFixture !== "undefined" ? selectedFixture : null;
+  if (!fx?.home?.id || !fx?.away?.id) return;
+
+  const limit = typeof getLimitForTeams === "function" ? getLimitForTeams() : 10;
+
+  // reset dati (così niente "stale")
+  window.__IND__.teams = null;
+  window.__IND__.corners = null;
+  window.__IND__.shots = null;
+  window.__IND__.referee = null;
+  window.__IND__.fouls = null;
+
+  const [homePack, awayPack] = await Promise.all([
+    buildTeamPack(fx.home, limit),
+    buildTeamPack(fx.away, limit),
+  ]);
+
+  publishIndicatorData("teams", {
+    home: {
+      avgGF: homePack.avgGF,
+      avgGA: homePack.avgGA,
+      gf1Pct: homePack.gf1Pct,
+      gf2Pct: homePack.gf2Pct,
+      ga1Pct: homePack.ga1Pct,
+      ga2Pct: homePack.ga2Pct,
+      avgCards: homePack.avgCards,
+    },
+    away: {
+      avgGF: awayPack.avgGF,
+      avgGA: awayPack.avgGA,
+      gf1Pct: awayPack.gf1Pct,
+      gf2Pct: awayPack.gf2Pct,
+      ga1Pct: awayPack.ga1Pct,
+      ga2Pct: awayPack.ga2Pct,
+      avgCards: awayPack.avgCards,
+    },
+  });
+
+  publishIndicatorData("corners", {
+    home: {
+      avgCorners: homePack.avgCorners,
+      avgCornersAgainst: homePack.avgCornersAgainst,
+    },
+    away: {
+      avgCorners: awayPack.avgCorners,
+      avgCornersAgainst: awayPack.avgCornersAgainst,
+    },
+  });
+
+  publishIndicatorData("shots", {
+    home: {
+      avgShotsFor: homePack.avgShotsFor,
+      avgShotsAgainst: homePack.avgShotsAgainst,
+      avgOnTargetFor: homePack.avgOnTargetFor,
+      avgOnTargetAgainst: homePack.avgOnTargetAgainst,
+    },
+    away: {
+      avgShotsFor: awayPack.avgShotsFor,
+      avgShotsAgainst: awayPack.avgShotsAgainst,
+      avgOnTargetFor: awayPack.avgOnTargetFor,
+      avgOnTargetAgainst: awayPack.avgOnTargetAgainst,
+    },
+  });
+
+  publishIndicatorData("fouls", {
+    home: {
+      avgFoulsFor: homePack.avgFoulsFor,
+      avgFoulsAgainst: homePack.avgFoulsAgainst,
+    },
+    away: {
+      avgFoulsFor: awayPack.avgFoulsFor,
+      avgFoulsAgainst: awayPack.avgFoulsAgainst,
+    },
+  });
+}
+
+// Compatibilità: teamFlow chiama loadIndicators() se esiste
+window.loadIndicators = loadIndicatorsBundle;
+
+window.activateIndicators = async function () {
+  const fx = typeof selectedFixture !== "undefined" ? selectedFixture : null;
+  if (!fx?.id) {
+    setIndicators(`<p class="muted"><em>Seleziona un match e poi premi “Carica dati”.</em></p>`);
+    return;
+  }
+
+  window.__IND_ACTIVE__ = true;
+  setIndicators(`<p class="muted"><em>Calcolo indicatori in corso…</em></p>`);
+  try {
+    await loadIndicatorsBundle();
+    renderIndicators();
+  } catch (e) {
+    console.error("activateIndicators", e);
+    setIndicators(`<p class="bad"><em>Errore nel calcolo indicatori. Controlla console.</em></p>`);
+  }
+};
+
 /* =========================
    BOOKMAKER STYLE (hit-rate)
    ========================= */
@@ -466,7 +795,8 @@ function tile(opts) {
 
 function publishIndicatorData(key, payload) {
   window.__IND__[key] = payload;
-  renderIndicators();
+  // render SOLO se l'utente ha attivato gli indicatori
+  if (window.__IND_ACTIVE__) renderIndicators();
 }
 
 /* =========================
@@ -485,8 +815,30 @@ function renderIndicators() {
   const homeMeta = fx?.home || { name: "Casa", logo: "" };
   const awayMeta = fx?.away || { name: "Trasferta", logo: "" };
 
+  // 0) nessun match selezionato
+  if (!fx?.id) {
+    setIndicators(`<p class="muted"><em>Seleziona una squadra per vedere il prossimo match.</em></p>`);
+    return;
+  }
+
+  // 1) non attivo => bottone
+  if (!window.__IND_ACTIVE__) {
+    const anyData = teams || corners || shots || ref || fouls;
+    setIndicators(`
+      <div style="display:flex;justify-content:flex-start;gap:10px;align-items:center;margin:6px 0 14px;">
+        <button class="btn btn-primary" onclick="activateIndicators()">Carica dati</button>
+        <span class="muted"><em>Calcolo avanzato: parte solo quando ti serve.</em></span>
+      </div>
+      ${anyData
+        ? `<p class="muted"><em>Alcune schede sotto possono essere già state caricate, ma gli indicatori completi partono con “Carica dati”.</em></p>`
+        : `<p class="muted"><em>Premi “Carica dati” per calcolare gli indicatori su storico e statistiche.</em></p>`}
+    `);
+    return;
+  }
+
+  // 2) attivo ma ancora vuoto => loading
   if (!teams && !corners && !shots && !ref && !fouls) {
-    setIndicators(`<p class="muted"><em>Gli indicatori verranno mostrati dopo aver selezionato un match.</em></p>`);
+    setIndicators(`<p class="muted"><em>Calcolo indicatori in corso…</em></p>`);
     return;
   }
 
@@ -593,6 +945,10 @@ if (el) el.innerHTML = html;
   const summary = `<div id="bettingBox">${bettingHTML}</div>`;
 
   setIndicators(`
+    <div style="display:flex;justify-content:flex-end;gap:10px;align-items:center;margin:0 0 10px;">
+      <button class="btn" onclick="activateIndicators()">Aggiorna</button>
+      <button class="btn" onclick="window.__IND_ACTIVE__=false; renderIndicators();">Chiudi</button>
+    </div>
     ${summary}
     <div class="ind-grid">
       ${tile({
