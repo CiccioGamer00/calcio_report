@@ -98,6 +98,7 @@ async function refreshTopAuthUI() {
     btn.textContent = "Login";
     btn.classList.remove("pro-active", "trial-active", "expired");
     setBadge(null, "");
+    __IS_PRO__ = false;
     return;
   }
 
@@ -113,6 +114,7 @@ async function refreshTopAuthUI() {
     btn.classList.add("pro-active");
     btn.classList.remove("trial-active", "expired");
     setBadge("pro", `PRO • ${daysLeft(paidUntil)}g rim.`);
+    __IS_PRO__ = true;
     return;
   }
 
@@ -121,6 +123,7 @@ async function refreshTopAuthUI() {
     btn.classList.add("trial-active");
     btn.classList.remove("pro-active", "expired");
     setBadge("trial", `TRIAL • ${daysLeft(trialEndsAt)}g rim.`);
+    __IS_PRO__ = false;
     return;
   }
 
@@ -138,6 +141,7 @@ async function authPost(path, body) {
     body: JSON.stringify(body),
   });
   const j = await res.json().catch(() => ({}));
+ 
   return { ok: res.ok, status: res.status, json: j };
 }
 
@@ -331,6 +335,42 @@ function setupTelegramHeader() {
     window.open(url, "_blank", "noopener");
   });
 }
+function setupTabsStage() {
+  const nav = document.getElementById("panelTabs");
+  if (!nav) return;
+
+  function show(viewId) {
+    // match non è nello stage: quando clicchi "Match", chiudiamo tutto nello stage
+    document.querySelectorAll("#stage .stageView").forEach(el => el.classList.add("hidden"));
+
+    if (viewId === "match") return;
+
+    const el = document.getElementById(viewId);
+    if (el) el.classList.remove("hidden");
+  }
+
+  nav.addEventListener("click", (e) => {
+    const btn = e.target?.closest?.(".tab");
+    if (!btn) return;
+
+    const view = btn.getAttribute("data-view");
+    const isProTab = btn.getAttribute("data-pro-tab") === "1";
+
+    // gate PRO (se già hai __IS_PRO__ / goToPayment, usa quelli)
+    if (isProTab && typeof window.__IS_PRO__ !== "undefined" && !window.__IS_PRO__) {
+      if (typeof goToPayment === "function") goToPayment();
+      return;
+    }
+
+    nav.querySelectorAll(".tab").forEach(b => b.classList.remove("is-active"));
+    btn.classList.add("is-active");
+
+    show(view);
+  });
+
+  // default: Match attivo
+  show("match");
+}
 
 function setupSupportEmailFooter() {
   const a = document.getElementById("supportEmailLink");
@@ -353,7 +393,172 @@ function setupPayPalButton() {
     goToPayment();
   });
 }
+// =========================
+// UI: Tabs + Loader overlay
+// =========================
+let __LOADER_COUNT__ = 0;
+let __IS_PRO__ = false;
 
+function showLoader(msg) {
+  __LOADER_COUNT__++;
+  const el = document.getElementById("crLoader");
+  const msgEl = document.getElementById("crLoaderMsg");
+  if (!el) return;
+
+  const phrases = [
+    "Il pallone sta rotolando… ⚽",
+    "Stiamo scaldando i motori… 🔥",
+    "Recupero statistiche dal VAR… 📺",
+    "Cross in area… arriva il dato! 🎯",
+    "Contropiede in corso… 🏃‍♂️",
+    "Parata del server… quasi! 🧤",
+  ];
+
+  if (msgEl) msgEl.textContent = msg || phrases[Math.floor(Math.random() * phrases.length)];
+  el.classList.remove("hidden");
+}
+
+function hideLoader() {
+  __LOADER_COUNT__ = Math.max(0, __LOADER_COUNT__ - 1);
+  const el = document.getElementById("crLoader");
+  if (!el) return;
+  if (__LOADER_COUNT__ === 0) el.classList.add("hidden");
+}
+
+function setViewAll() {
+  document.body.dataset.viewMode = "all";
+  document.body.removeAttribute("data-view-mode");
+  document.querySelectorAll(".card.is-focus").forEach((c) => c.classList.remove("is-focus"));
+}
+
+function setViewSingleById(contentId) {
+  // contentId è l'id del DIV content (es: "match", "referee", "teamsPanel"...)
+  const content = document.getElementById(contentId);
+  const card = content?.closest?.(".card");
+  if (!card) return;
+
+  document.body.dataset.viewMode = "single";
+  document.body.setAttribute("data-view-mode", "single");
+
+  // reset focus
+  document.querySelectorAll(".card.is-focus").forEach((c) => c.classList.remove("is-focus"));
+  card.classList.add("is-focus");
+
+  // scroll carino
+  card.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function markActiveTab(btn) {
+  document.querySelectorAll("#panelTabs .tab").forEach((b) => b.classList.remove("is-active"));
+  btn.classList.add("is-active");
+}
+
+function setupTabs() {
+  const nav = document.getElementById("panelTabs");
+  if (!nav) return;
+
+  // cache: evitiamo di ricaricare sempre
+  window.__PANEL_LOADED__ = window.__PANEL_LOADED__ || {
+    referee: false,
+    teamsPanel: false,
+    cornersPanel: false,
+    shotsPanel: false,
+    injuriesPanel: false,
+    indicatorsPanel: false,
+    predictionPanel: false,
+  };
+
+  function showView(viewId) {
+    document.querySelectorAll(".stageView").forEach((el) => el.classList.add("hidden"));
+    const el = document.getElementById(viewId);
+    if (el) el.classList.remove("hidden");
+
+    document.getElementById("viewportCard")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  async function autoLoadFor(viewId) {
+    // Match: niente fetch extra qui
+    if (viewId === "matchView") return;
+
+    // PRO gate
+    const isProTab =
+      viewId === "predictionPanel" || viewId === "indicatorsPanel";
+
+    if (isProTab && !__IS_PRO__) return;
+
+    // Se non ho fixture selezionato, non carico
+    if (!selectedFixture?.id) return;
+
+    // load solo se non già caricato
+    const loaded = window.__PANEL_LOADED__[viewId];
+    if (loaded) return;
+
+    try {
+      if (viewId === "referee" && typeof loadFixtureDetails === "function") {
+        window.__PANEL_LOADED__.referee = true;
+        await loadFixtureDetails();
+      }
+      if (viewId === "teamsPanel" && typeof loadTeamsForm === "function") {
+        window.__PANEL_LOADED__.teamsPanel = true;
+        await loadTeamsForm();
+      }
+      if (viewId === "cornersPanel" && typeof loadTeamsCorners === "function") {
+        window.__PANEL_LOADED__.cornersPanel = true;
+        await loadTeamsCorners();
+      }
+      if (viewId === "shotsPanel" && typeof loadTeamsShots === "function") {
+        window.__PANEL_LOADED__.shotsPanel = true;
+        await loadTeamsShots();
+      }
+      if (viewId === "injuriesPanel" && typeof loadInjuries === "function") {
+        window.__PANEL_LOADED__.injuriesPanel = true;
+        await loadInjuries();
+      }
+
+      if (viewId === "predictionPanel" && typeof window.loadPrediction === "function") {
+        window.__PANEL_LOADED__.predictionPanel = true;
+        await window.loadPrediction();
+      }
+
+      if (viewId === "indicatorsPanel") {
+        window.__PANEL_LOADED__.indicatorsPanel = true;
+        // attiva e carica come già previsto dal tuo teamFlow
+        if (typeof window.activateIndicatorsAndLoad === "function") {
+          await window.activateIndicatorsAndLoad();
+        } else if (typeof window.loadIndicatorsBundle === "function") {
+          await window.loadIndicatorsBundle();
+        }
+      }
+    } catch (e) {
+      console.error("autoLoadFor error", viewId, e);
+      // se fallisce, permetti retry al prossimo click
+      window.__PANEL_LOADED__[viewId] = false;
+    }
+  }
+
+  nav.addEventListener("click", async (e) => {
+    const btn = e.target?.closest?.(".tab");
+    if (!btn) return;
+
+    const view = btn.getAttribute("data-view");
+    const isProTab = btn.getAttribute("data-pro-tab") === "1";
+
+    if (isProTab && !__IS_PRO__) {
+      if (typeof goToPayment === "function") goToPayment();
+      return;
+    }
+
+    nav.querySelectorAll(".tab").forEach((b) => b.classList.remove("is-active"));
+    btn.classList.add("is-active");
+
+    const viewId = (view === "match") ? "matchView" : view;
+    showView(viewId);
+    await autoLoadFor(viewId);
+  });
+
+  // default: Match
+  showView("matchView");
+}
 document.addEventListener("DOMContentLoaded", async () => {
   setupTopButton();
   setupAuthActions();
@@ -362,7 +567,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupTelegramHeader();
   setupSupportEmailFooter();
   setupPayPalButton();
+  // Tabs
+  setupTabs();
 
+  // Loader (da api.js)
+  window.addEventListener("cr:loading", (e) => {
+    const on = !!e?.detail?.on;
+    if (on) showLoader();
+    else hideLoader();
+  });
   // ✅ LISTENER GLOBALI (una sola volta)
   window.addEventListener("cr:auth", () => {
     setAuthMsg("Devi fare login per continuare.");
