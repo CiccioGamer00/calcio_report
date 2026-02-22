@@ -726,3 +726,502 @@ li{ margin:6px 0; }
   color: rgba(255,255,255,0.94);
   cursor: pointer;
 }
+/* =========================
+   TABS (sticky) + single view
+   ========================= */
+.tabs{
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  width: min(1400px, calc(100% - 28px));
+  margin: 6px auto 0;
+  padding: 10px 6px;
+  display:flex;
+  gap:10px;
+  overflow:auto;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.28);
+  backdrop-filter: blur(10px);
+}
+
+.tab{
+  flex: 0 0 auto;
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.92);
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform .06s ease, filter .15s ease, background .15s ease, border-color .15s ease;
+  white-space: nowrap;
+}
+.tab:hover{ filter: brightness(1.08); border-color: rgba(255,255,255,0.22); }
+.tab:active{ transform: translateY(1px); }
+.tab.is-active{
+  background: linear-gradient(135deg, rgba(82,255,168,0.22), rgba(103,163,255,0.18));
+  border-color: rgba(82,255,168,0.35);
+}
+
+/* Modalità: mostra SOLO una card selezionata */
+body[data-view-mode="single"] .top-grid,
+body[data-view-mode="single"] .grid{
+  grid-template-columns: 1fr !important;
+}
+
+body[data-view-mode="single"] .top-grid .card,
+body[data-view-mode="single"] .grid .card{
+  display:none;
+}
+
+/* la card selezionata torna visibile e diventa “hero” */
+body[data-view-mode="single"] .card.is-focus{
+  display:block !important;
+  padding: 16px 16px 14px;
+}
+
+/* =========================
+   LOADER overlay “pallone”
+   ========================= */
+.loader{
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: rgba(0,0,0,0.60);
+  backdrop-filter: blur(6px);
+}
+
+.loader.hidden{ display:none; }
+
+.loader-card{
+  width: min(520px, calc(100% - 32px));
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(17,17,17,0.72);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  padding: 16px;
+}
+
+.ball-track{
+  height: 48px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.ball{
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  position: absolute;
+  top: 7px;
+  left: -40px;
+  border: 1px solid rgba(255,255,255,0.22);
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255,255,255,0.85), rgba(255,255,255,0.15) 55%, rgba(0,0,0,0.35) 100%),
+    repeating-conic-gradient(from 0deg, rgba(0,0,0,0.45) 0 12deg, rgba(255,255,255,0.08) 12deg 24deg);
+  animation: ball-roll 1.15s linear infinite;
+}
+
+@keyframes ball-roll{
+  0%{ transform: rotate(0deg); left:-40px; }
+  100%{ transform: rotate(360deg); left: calc(100% + 40px); }
+}
+
+.loader-text{ margin-top: 12px; display:grid; gap:6px; }
+.loader-title{ font-weight: 900; letter-spacing: .2px; }
+.loader-sub{ color: rgba(255,255,255,0.78); font-size: 13px; }
+
+/* tabs sotto ricerca (non sticky sopra tutto) */
+.tabs-under-search{ position: relative; top:auto; margin-top: 10px; }
+
+/* hero match più “importante” */
+.card-hero{ padding: 18px; }
+
+/* stage card grande */
+.card-stage{ min-height: 380px; }
+
+/* vista a pannelli: uno alla volta */
+.stageView.hidden{ display:none; }
+
+/* box verde formazioni */
+.lineupsBox{
+  margin-top: 14px;
+  border-radius: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(82,255,168,0.25);
+  background: rgba(0, 255, 140, 0.10);
+}
+.lineupsBox.hidden{ display:none; }
+.lineupsHead{ font-weight: 900; margin-bottom: 8px; }
+
+.matchHero{
+  display:grid;
+  gap:14px;
+}
+
+.mh-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+}
+
+.mh-league{
+  font-weight:900;
+  letter-spacing:.2px;
+  font-size:14px;
+}
+
+.mh-meta{
+  margin-top:4px;
+  color: var(--muted);
+  font-size:13px;
+}
+
+.mh-main{
+  display:grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap:14px;
+  align-items:center;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.04);
+}
+
+.mh-team{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-width:0;
+}
+
+.mh-team.right{
+  justify-content:flex-end;
+  text-align:right;
+}
+
+.mh-logo{
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.06);
+}
+
+.mh-name{
+  font-size: 20px;
+  font-weight: 950;
+  letter-spacing: .2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mh-vs{
+  display:grid;
+  justify-items:center;
+  gap:6px;
+}
+
+.mh-score{
+  font-size: 22px;
+  font-weight: 950;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(82,255,168,0.28);
+  background: rgba(82,255,168,0.10);
+}
+
+.mh-sub{
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.mh-bottom{
+  font-size: 13px;
+}
+/* ===== Pitch lineups (campo) ===== */
+.pitch{
+  margin-top: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(82,255,168,0.25);
+  background: linear-gradient(180deg, rgba(0,255,140,0.14), rgba(0,255,140,0.08));
+  position: relative;
+  overflow: hidden;
+  padding: 14px;
+}
+
+.pitch-lines{
+  position:absolute;
+  inset:10px;
+  border: 2px solid rgba(255,255,255,0.16);
+  border-radius: 12px;
+  pointer-events:none;
+}
+.pitch-mid{
+  position:absolute;
+  top:10px; bottom:10px;
+  left:50%;
+  width:2px;
+  background: rgba(255,255,255,0.16);
+  transform: translateX(-1px);
+  pointer-events:none;
+}
+.pitch::after{
+  content:"";
+  position:absolute;
+  left:50%; top:50%;
+  width:120px; height:120px;
+  border-radius: 999px;
+  border: 2px solid rgba(255,255,255,0.14);
+  transform: translate(-50%,-50%);
+  pointer-events:none;
+}
+
+.pitch-side{
+  position: relative;
+  min-height: 280px;
+}
+
+.pitch-teamname{
+  font-weight: 900;
+  font-size: 12px;
+  opacity: 0.9;
+  margin-bottom: 10px;
+}
+
+.pitch-grid{
+  position: relative;
+  height: 250px;
+}
+
+/* posizionamento via CSS variables --r/--c (grid 1..6 x 1..5) */
+.pitch-player{
+  position:absolute;
+  left: calc((var(--c, 3) - 1) * 20%);
+  top:  calc((var(--r, 3) - 1) * 16%);
+  transform: translate(-10%, -10%);
+  display:grid;
+  gap:4px;
+  align-items:center;
+  justify-items:center;
+  min-width: 88px;
+}
+
+.pitch-player .pp-badge{
+  min-width: 28px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(0,0,0,0.35);
+}
+
+.pitch-player .pp-name{
+  font-size: 11px;
+  font-weight: 800;
+  text-align:center;
+  max-width: 110px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.22);
+}
+
+/* colori squadra */
+.pitch-player.home .pp-badge{ border-color: rgba(82,255,168,0.35); }
+.pitch-player.away .pp-badge{ border-color: rgba(103,163,255,0.35); }
+/* campo più visibile */
+.lineupsBox{
+  margin-top: 14px;
+  border-radius: 16px;
+  padding: 12px 14px;
+  border: 1px solid rgba(82,255,168,0.35);
+  background: rgba(0, 255, 140, 0.14);
+}
+.lineupsHead{ font-weight: 950; margin-bottom: 10px; }
+
+/* pitch */
+.pitch{
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: radial-gradient(circle at 50% 30%, rgba(255,255,255,0.06), transparent 55%),
+              linear-gradient(180deg, rgba(0,255,140,0.22), rgba(0,255,140,0.10));
+  position: relative;
+  overflow: hidden;
+  padding: 12px;
+  min-height: 360px;
+}
+.pitch--empty{ min-height: 220px; }
+
+.pitch-lines{
+  position:absolute;
+  inset:12px;
+  border: 2px solid rgba(255,255,255,0.18);
+  border-radius: 14px;
+  pointer-events:none;
+}
+.pitch-mid{
+  position:absolute;
+  top:12px; bottom:12px;
+  left:50%;
+  width:2px;
+  background: rgba(255,255,255,0.18);
+  transform: translateX(-1px);
+  pointer-events:none;
+}
+.pitch::after{
+  content:"";
+  position:absolute;
+  left:50%; top:50%;
+  width:140px; height:140px;
+  border-radius: 999px;
+  border: 2px solid rgba(255,255,255,0.16);
+  transform: translate(-50%,-50%);
+  pointer-events:none;
+}
+
+.pitch-teamname{
+  position:absolute;
+  top: 10px;
+  font-weight: 950;
+  font-size: 12px;
+  opacity: 0.95;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(0,0,0,0.22);
+}
+.pitch-teamname.left{ left: 12px; }
+.pitch-teamname.right{ right: 12px; }
+
+.pitch-grid{
+  position: relative;
+  height: 330px;
+  margin-top: 26px;
+}
+
+/* player: posizionamento a percentuale */
+.pitch-player{
+  position:absolute;
+  left: calc(var(--x, 50) * 1%);
+  top:  calc(var(--y, 50) * 1%);
+  transform: translate(-50%, -50%);
+  display:grid;
+  justify-items:center;
+  gap:6px;
+  width: 110px;
+  pointer-events:none;
+}
+
+.pp-photo{
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  object-fit: cover;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(0,0,0,0.25);
+}
+
+.pitch-player .pp-badge{
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 950;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(0,0,0,0.35);
+}
+
+.pitch-player .pp-name{
+  font-size: 11px;
+  font-weight: 800;
+  text-align:center;
+  max-width: 110px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(0,0,0,0.22);
+}
+
+/* accenti */
+.pitch-player.home .pp-badge{ border-color: rgba(82,255,168,0.45); }
+.pitch-player.away .pp-badge{ border-color: rgba(103,163,255,0.45); }
+.mh-next{
+  margin-top: 10px;
+  padding: 10px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.18);
+}
+.mh-next-title{
+  font-weight: 900;
+  font-size: 12px;
+  margin-bottom: 6px;
+  opacity: 0.9;
+}
+.next-line{ font-size: 12px; line-height: 1.25; }
+.next-muted{ font-size: 11px; opacity: 0.75; margin-top: 2px; }
+/* mini-card prossima partita */
+.nextMini{
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.18);
+  display:grid;
+  gap:8px;
+}
+.nm-top{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  align-items:baseline;
+}
+.nm-title{
+  font-weight: 950;
+  font-size: 12px;
+  letter-spacing: .2px;
+  opacity: .9;
+}
+.nm-date{
+  font-size: 12px;
+  opacity: .85;
+}
+.nm-mid{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.nm-logo{
+  width: 26px;
+  height: 26px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  object-fit: cover;
+}
+.nm-opp{
+  font-weight: 900;
+  font-size: 14px;
+}
+.nm-comp{
+  font-size: 11px;
+  opacity: .72;
+}
+.nm-muted{ font-size: 12px; opacity: .75; }
