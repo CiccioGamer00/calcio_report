@@ -22,7 +22,9 @@
         </div>
 
         <!-- CTA Telegram (centro header) -->
-        <a id="btnTelegramHeader" class="tg-cta" href="#" rel="noopener">📣 Unisciti su Telegram</a>
+        <a id="btnTelegramHeader" class="tg-cta" href="#" rel="noopener"
+          >📣 Unisciti su Telegram</a
+        >
 
         <!-- TOP RIGHT: badge + login/logout -->
         <div id="topBar">
@@ -31,134 +33,152 @@
         </div>
       </div>
     </header>
+    <!-- TAB BAR (sticky) -->
 
     <main class="container">
-      <section class="top-grid">
-        <section class="card">
-          <h2 class="card-title">Cerca squadra</h2>
+      <!-- 2) BARRA RICERCA (sempre visibile) -->
+      <section class="card">
+        <h2 class="card-title">Cerca squadra</h2>
 
-          <form class="form" onsubmit="return false;">
-            <div class="searchRow">
-              <div class="searchGrow">
-                <label for="teamSearchInput">Nome squadra</label>
-                <input
-                  id="teamSearchInput"
-                  type="text"
-                  list="teamsList"
-                  placeholder="Es. Napoli"
-                  autocomplete="off"
-                />
-                <datalist id="teamsList"></datalist>
-              </div>
-
-              <button id="btnSearch" type="button" class="btn primary">
-                Cerca
-              </button>
-
-              <div class="gamesPick">
-                <label for="refHistoryCount">Partite</label>
-                <select id="refHistoryCount">
-                  <option value="5" selected>5</option>
-                  <option value="10">10</option>
-                  <option value="15">15</option>
-                  <option value="20">20</option>
-                </select>
-              </div>
+        <form class="form" onsubmit="return false;">
+          <div class="searchRow">
+            <div class="searchGrow">
+              <label for="teamSearchInput">Nome squadra</label>
+              <input
+                id="teamSearchInput"
+                type="text"
+                list="teamsList"
+                placeholder="Es. Napoli"
+                autocomplete="off"
+              />
+              <datalist id="teamsList"></datalist>
             </div>
 
-            <hr />
+            <button id="btnSearch" type="button" class="btn primary">
+              Cerca
+            </button>
 
-            <h2 class="card-title">Predizione</h2>
-            <div id="predictionPanel" class="content" data-pro-only="1">
-              <p class="muted">
-                <em>Seleziona una squadra per vedere la stima.</em>
-              </p>
+            <div class="gamesPick">
+              <label for="refHistoryCount">Partite</label>
+              <select id="refHistoryCount">
+                <option value="5" selected>5</option>
+                <option value="10">10</option>
+                <option value="15">15</option>
+                <option value="20">20</option>
+              </select>
             </div>
-          </form>
-        </section>
-
-        <section class="card">
-          <h2 class="card-title">Indicatori statistici</h2>
-          <div id="indicatorsPanel" class="content" data-pro-only="1">
-            <p class="muted">
-              <em
-                >Gli indicatori verranno mostrati dopo aver selezionato un
-                match.</em
-              >
-            </p>
           </div>
-        </section>
+        </form>
       </section>
 
-      <!-- resto della pagina invariato -->
-      <section class="grid">
-        <section class="card">
-          <h2 class="card-title">Match</h2>
-          <div id="match" class="content">
-            <p class="muted">
-              <em>Seleziona una squadra per vedere il prossimo match.</em>
-            </p>
-          </div>
-        </section>
+      <!-- 3) TABS (sotto la ricerca) -->
+      <nav class="tabs tabs-under-search" id="panelTabs" aria-label="Sezioni">
+        <button class="tab is-active" data-view="match" type="button">
+          ⚽ Match
+        </button>
+        <button class="tab" data-view="referee" type="button">
+          🧑‍⚖️ Arbitro
+        </button>
+        <button class="tab" data-view="teamsPanel" type="button">
+          👥 Squadre
+        </button>
+        <button class="tab" data-view="cornersPanel" type="button">
+          🚩 Corner
+        </button>
+        <button class="tab" data-view="shotsPanel" type="button">
+          🎯 Tiri
+        </button>
+        <button class="tab" data-view="injuriesPanel" type="button">
+          🩹 Indisponibili
+        </button>
 
-        <section class="card">
-          <h2 class="card-title">Arbitro</h2>
-          <div id="referee" class="content">
-            <p class="muted">
-              <em>Qui verranno mostrati arbitro e storico (se disponibile).</em>
-            </p>
-          </div>
-        </section>
+        <!-- PRO -->
+        <button
+          class="tab"
+          data-view="indicatorsPanel"
+          data-pro-tab="1"
+          type="button"
+        >
+          📊 Indicatori
+        </button>
+        <button
+          class="tab"
+          data-view="predictionPanel"
+          data-pro-tab="1"
+          type="button"
+        >
+          🧠 Predizione
+        </button>
+      </nav>
 
-        <section class="card">
-          <h2 class="card-title">Squadre</h2>
-          <div id="teamsPanel" class="content">
-            <p class="muted">
-              <em
-                >Qui verrà mostrata la forma delle due squadre (ultime X
-                partite).</em
-              >
-            </p>
-          </div>
-        </section>
+      <section class="card card-viewport" id="viewportCard">
 
-        <section class="card">
-          <h2 class="card-title">Corner</h2>
-          <div id="cornersPanel" class="content">
-            <p class="muted">
-              <em
-                >Qui verranno mostrati i corner delle due squadre (ultime X
-                partite).</em
-              >
-            </p>
-          </div>
-        </section>
+  <!-- MATCH view (default) -->
+  <div id="matchView" class="content stageView">
+    <div id="match" class="content">
+      <p class="muted"><em>Seleziona una squadra per vedere il prossimo match.</em></p>
+    </div>
 
-        <section class="card">
-          <h2 class="card-title">Tiri</h2>
-          <div id="shotsPanel" class="content">
-            <p class="muted">
-              <em
-                >Qui verranno mostrati i tiri delle due squadre (ultime X
-                partite).</em
-              >
-            </p>
-          </div>
-        </section>
+    <!-- Box verde: probabili formazioni (solo se disponibili) -->
+    <div id="lineupsBox" class="lineupsBox hidden">
+      <div class="lineupsHead">Probabili formazioni</div>
+      <div id="lineupsContent" class="lineupsContent">
+        <p class="muted"><em>Formazioni non disponibili.</em></p>
+      </div>
+    </div>
+  </div>
 
-        <section class="card">
-          <h2 class="card-title">Indisponibili</h2>
-          <div id="injuriesPanel" class="content">
-            <p class="muted">
-              <em
-                >Qui verranno mostrati gli indisponibili delle due squadre.</em
-              >
-            </p>
-          </div>
-        </section>
-      </section>
+  <!-- ALTRE view (una alla volta) -->
+  <div id="referee" class="content stageView hidden">
+    <p class="muted"><em>Qui verranno mostrati arbitro e storico (se disponibile).</em></p>
+  </div>
+
+  <div id="teamsPanel" class="content stageView hidden">
+    <p class="muted"><em>Qui verrà mostrata la forma delle due squadre (ultime X partite).</em></p>
+  </div>
+
+  <div id="cornersPanel" class="content stageView hidden">
+    <p class="muted"><em>Qui verranno mostrati i corner delle due squadre (ultime X partite).</em></p>
+  </div>
+
+  <div id="shotsPanel" class="content stageView hidden">
+    <p class="muted"><em>Qui verranno mostrati i tiri delle due squadre (ultime X partite).</em></p>
+  </div>
+
+  <div id="injuriesPanel" class="content stageView hidden">
+    <p class="muted"><em>Qui verranno mostrati gli indisponibili delle due squadre.</em></p>
+  </div>
+
+  <div id="indicatorsPanel" class="content stageView hidden" data-pro-only="1">
+    <p class="muted"><em>Gli indicatori verranno mostrati dopo aver selezionato un match.</em></p>
+  </div>
+
+  <div id="predictionPanel" class="content stageView hidden" data-pro-only="1">
+    <p class="muted"><em>Seleziona una squadra per vedere la stima.</em></p>
+  </div>
+
+</section>
     </main>
-
+    
+    <!-- LOADER overlay (calcio) -->
+    <div
+      id="crLoader"
+      class="loader hidden"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div class="loader-card">
+        <div class="ball-track" aria-hidden="true">
+          <div class="ball"></div>
+        </div>
+        <div class="loader-text">
+          <div class="loader-title">Caricamento…</div>
+          <div class="loader-sub" id="crLoaderMsg">
+            Il pallone sta rotolando 🏃‍♂️⚽
+          </div>
+        </div>
+      </div>
+    </div>
     <!-- MODAL AUTH (invariato: se già lo hai, lascialo com’è nel tuo file) -->
     <div id="authModal" class="modal hidden">
       <div class="modal-content">
@@ -175,8 +195,10 @@
           <button id="btnRegister">Registrati</button>
         </div>
 
-        <div class="auth-buttons" style="margin-top:10px">
-          <button id="btnPayPal" class="btn paypal">💳 Abbonati con PayPal</button>
+        <div class="auth-buttons" style="margin-top: 10px">
+          <button id="btnPayPal" class="btn paypal">
+            💳 Abbonati con PayPal
+          </button>
         </div>
 
         <hr style="border-color: #333; width: 100%" />
