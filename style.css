@@ -1225,3 +1225,84 @@ body[data-view-mode="single"] .card.is-focus{
   opacity: .72;
 }
 .nm-muted{ font-size: 12px; opacity: .75; }
+.pitch-player{
+  pointer-events: auto !important;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+}
+
+.pp-tag{
+  font-size: 10px;
+  opacity: .78;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.18);
+}
+.pitch-badge{
+  margin-left: 8px;
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(0,0,0,0.22);
+}
+.pitch-footnote{
+  margin-top: 10px;
+  font-size: 12px;
+}
+.st-table{ margin-top:12px; display:grid; gap:8px; }
+.st-head,.st-row{
+  display:grid;
+  grid-template-columns: 46px 1fr 70px 70px 70px 70px 70px;
+  gap:10px;
+  align-items:center;
+  padding: 10px 10px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.04);
+}
+.st-head{ background: rgba(255,255,255,0.06); font-weight:900; font-size:12px; opacity:.9; }
+.st-rank{ text-align:center; font-weight:900; }
+.st-team{ display:flex; gap:10px; align-items:center; min-width:0; }
+.st-name{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:800; }
+.st-num{ text-align:center; font-variant-numeric: tabular-nums; }
+.st-row.is-focus{
+  border-color: rgba(82,255,168,0.35);
+  background: rgba(82,255,168,0.08);
+}
+@media (max-width: 900px){
+  .st-head,.st-row{ grid-template-columns: 40px 1fr 52px 52px 52px; }
+  .st-head .st-num:nth-child(n+6),
+  .st-row .st-num:nth-child(n+6){ display:none; }
+}
+
+.mh-nextInline{
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.16);
+  display:grid;
+  gap:4px;
+  max-width: 320px;
+}
+
+.mh-team.right .mh-nextInline{ margin-left:auto; }
+
+.mh-nextLabel{
+  font-size: 11px;
+  font-weight: 900;
+  opacity: .75;
+  letter-spacing: .2px;
+}
+
+.mh-nextLine{
+  font-size: 12px;
+  font-weight: 800;
+  opacity: .92;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
