@@ -466,6 +466,7 @@ function setupTabs() {
     injuriesPanel: false,
     indicatorsPanel: false,
     predictionPanel: false,
+    standingsPanel:false
   };
 
   function showView(viewId) {
@@ -479,6 +480,10 @@ function setupTabs() {
   async function autoLoadFor(viewId) {
     // Match: niente fetch extra qui
     if (viewId === "matchView") return;
+    if (viewId === "standingsPanel" && typeof loadStandings === "function") {
+  window.__PANEL_LOADED__.standingsPanel = true;
+  await loadStandings();
+}
 
     // PRO gate
     const isProTab =
