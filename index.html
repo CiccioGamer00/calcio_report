@@ -76,22 +76,6 @@
         <button class="tab is-active" data-view="match" type="button">
           ⚽ Match
         </button>
-        <button class="tab" data-view="referee" type="button">
-          🧑‍⚖️ Arbitro
-        </button>
-        <button class="tab" data-view="teamsPanel" type="button">
-          👥 Squadre
-        </button>
-        <button class="tab" data-view="cornersPanel" type="button">
-          🚩 Corner
-        </button>
-        <button class="tab" data-view="shotsPanel" type="button">
-          🎯 Tiri
-        </button>
-        <button class="tab" data-view="injuriesPanel" type="button">
-          🩹 Indisponibili
-        </button>
-
         <!-- PRO -->
         <button
           class="tab"
@@ -109,57 +93,114 @@
         >
           🧠 Predizione
         </button>
+        
+        <button class="tab" data-view="referee" type="button">
+          🧑‍⚖️ Arbitro
+        </button>
+        <button class="tab" data-view="teamsPanel" type="button">
+          👥 Squadre
+        </button>
+        <button class="tab" data-view="cornersPanel" type="button">
+          🚩 Corner
+        </button>
+        <button class="tab" data-view="shotsPanel" type="button">
+          🎯 Tiri
+        </button>
+        <button class="tab" data-view="injuriesPanel" type="button">
+          🩹 Indisponibili
+        </button>
+        <button class="tab" data-view="standingsPanel" type="button">
+          🏆 Classifica
+        </button>
       </nav>
 
       <section class="card card-viewport" id="viewportCard">
+        <!-- MATCH view (default) -->
+        <div id="matchView" class="content stageView">
+          <div id="match" class="content">
+            <p class="muted">
+              <em>Seleziona una squadra per vedere il prossimo match.</em>
+            </p>
+          </div>
+      
 
-  <!-- MATCH view (default) -->
-  <div id="matchView" class="content stageView">
-    <div id="match" class="content">
-      <p class="muted"><em>Seleziona una squadra per vedere il prossimo match.</em></p>
-    </div>
+          <!-- Box verde: probabili formazioni (solo se disponibili) -->
+          <div id="lineupsBox" class="lineupsBox hidden">
+            <div class="lineupsHead">Probabili formazioni</div>
+            <div id="lineupsContent" class="lineupsContent">
+              <p class="muted"><em>Formazioni non disponibili.</em></p>
+            </div>
+          </div>
+        </div>
 
-    <!-- Box verde: probabili formazioni (solo se disponibili) -->
-    <div id="lineupsBox" class="lineupsBox hidden">
-      <div class="lineupsHead">Probabili formazioni</div>
-      <div id="lineupsContent" class="lineupsContent">
-        <p class="muted"><em>Formazioni non disponibili.</em></p>
-      </div>
-    </div>
-  </div>
+        <!-- ALTRE view (una alla volta) -->
+             <div id="standingsPanel" class="content stageView hidden">
+  <p class="muted"><em>Apri la scheda “Classifica” per caricare i dati.</em></p>
+</div>
+        <div id="referee" class="content stageView hidden">
+          <p class="muted">
+            <em>Qui verranno mostrati arbitro e storico (se disponibile).</em>
+          </p>
+        </div>
 
-  <!-- ALTRE view (una alla volta) -->
-  <div id="referee" class="content stageView hidden">
-    <p class="muted"><em>Qui verranno mostrati arbitro e storico (se disponibile).</em></p>
-  </div>
+        <div id="teamsPanel" class="content stageView hidden">
+          <p class="muted">
+            <em
+              >Qui verrà mostrata la forma delle due squadre (ultime X
+              partite).</em
+            >
+          </p>
+        </div>
 
-  <div id="teamsPanel" class="content stageView hidden">
-    <p class="muted"><em>Qui verrà mostrata la forma delle due squadre (ultime X partite).</em></p>
-  </div>
+        <div id="cornersPanel" class="content stageView hidden">
+          <p class="muted">
+            <em
+              >Qui verranno mostrati i corner delle due squadre (ultime X
+              partite).</em
+            >
+          </p>
+        </div>
 
-  <div id="cornersPanel" class="content stageView hidden">
-    <p class="muted"><em>Qui verranno mostrati i corner delle due squadre (ultime X partite).</em></p>
-  </div>
+        <div id="shotsPanel" class="content stageView hidden">
+          <p class="muted">
+            <em
+              >Qui verranno mostrati i tiri delle due squadre (ultime X
+              partite).</em
+            >
+          </p>
+        </div>
 
-  <div id="shotsPanel" class="content stageView hidden">
-    <p class="muted"><em>Qui verranno mostrati i tiri delle due squadre (ultime X partite).</em></p>
-  </div>
+        <div id="injuriesPanel" class="content stageView hidden">
+          <p class="muted">
+            <em>Qui verranno mostrati gli indisponibili delle due squadre.</em>
+          </p>
+        </div>
 
-  <div id="injuriesPanel" class="content stageView hidden">
-    <p class="muted"><em>Qui verranno mostrati gli indisponibili delle due squadre.</em></p>
-  </div>
+        <div
+          id="indicatorsPanel"
+          class="content stageView hidden"
+          data-pro-only="1"
+        >
+          <p class="muted">
+            <em
+              >Gli indicatori verranno mostrati dopo aver selezionato un
+              match.</em
+            >
+          </p>
+        </div>
 
-  <div id="indicatorsPanel" class="content stageView hidden" data-pro-only="1">
-    <p class="muted"><em>Gli indicatori verranno mostrati dopo aver selezionato un match.</em></p>
-  </div>
-
-  <div id="predictionPanel" class="content stageView hidden" data-pro-only="1">
-    <p class="muted"><em>Seleziona una squadra per vedere la stima.</em></p>
-  </div>
-
-</section>
+        <div
+          id="predictionPanel"
+          class="content stageView hidden"
+          data-pro-only="1"
+        >
+          <p class="muted">
+            <em>Seleziona una squadra per vedere la stima.</em>
+          </p>
+        </div>
+      </section>
     </main>
-    
+
     <!-- LOADER overlay (calcio) -->
     <div
       id="crLoader"
@@ -218,7 +259,15 @@
         <a id="supportEmailLink" href="#">(imposta email)</a>
       </div>
     </footer>
-
+    <div id="playerModal" class="modal hidden">
+      <div class="modal-content" style="width: min(520px, calc(100% - 24px))">
+        <span class="close" id="btnClosePlayer">&times;</span>
+        <h3 id="playerTitle">Giocatore</h3>
+        <div id="playerBody" class="content">
+          <p class="muted"><em>Carico statistiche…</em></p>
+        </div>
+      </div>
+    </div>
     <script src="config.js?v=6"></script>
 
     <script src="js/state.js?v=2"></script>
@@ -234,6 +283,7 @@
     <script src="js/features/shotsPanel.js?v=3"></script>
     <script src="js/features/injuriesPanel.js?v=3"></script>
     <script src="js/features/predictionPanel.js?v=1"></script>
+    <script src="js/features/standingsPanel.js?v=1"></script>
 
     <!-- teamFlow per ultimo tra i features -->
     <script src="js/features/teamFlow.js?v=3"></script>
