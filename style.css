@@ -1520,6 +1520,17 @@ body[data-view-mode="single"] .card.is-focus{
 .teamTable thead th:nth-child(2){
   padding-left: 36px; /* logo(18) + gap(10) + padding base(8) */
 }
+/* quando c'è un modal aperto, blocca click su pagina sotto */
+body.modal-open main,
+body.modal-open header,
+body.modal-open footer{
+  pointer-events: none;
+}
+
+/* il modal resta cliccabile */
+body.modal-open .modal{
+  pointer-events: auto;
+}
 
 
 
