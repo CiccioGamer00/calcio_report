@@ -1643,3 +1643,19 @@ body[data-view-mode="single"] .card.is-focus{
 
 /* Allinea intestazione "Avv." con il testo delle squadre (dopo il logo) */
 .teamTable thead th:nth-child(2){ padding-left: 36px; }
+
+/* Header tabella: allineamento colonne */
+.teamTable thead th { 
+  text-align: left;
+}
+
+/* Colonne numeriche centrali */
+.teamTable thead th:nth-child(3),
+.teamTable thead th:nth-child(4){
+  text-align: center;
+}
+
+/* "Avv." parte dove parte il nome (dopo il logo) */
+.teamTable thead th:nth-child(2){
+  padding-left: 36px; /* logo(18) + gap(10) + padding base(8) */
+}
