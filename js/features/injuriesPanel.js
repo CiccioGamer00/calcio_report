@@ -74,41 +74,7 @@ async function fetchTeamPositions(teamId, season) {
   __TEAM_POS_CACHE__.set(key, map);
   return map;
 }
-
-function renderTeamInjuries(teamName, teamLogo, items, posMap) {
-  const rows = (items || [])
-    .map((it) => {
-      const name = it?.player?.name || "—";
-
-      // Ruolo: prima provo se per caso fosse già nell'injury (quasi mai),
-      // altrimenti lo cerco in posMap tramite player.id o nome
-      const rawPosDirect =
-        it?.player?.position ||
-        it?.player?.pos ||
-        it?.player?.role ||
-        "";
-
-      const pid = it?.player?.id ? String(it.player.id) : "";
-      const fullName = String(it?.player?.name || "").trim();
-const pname = fullName.toLowerCase();
-const surname = fullName.includes(".") ? fullName.split(".").slice(1).join(".").trim().toLowerCase() : "";
-
-      const rawPos =
-  rawPosDirect ||
-  (posMap ? (posMap.get(pid) || posMap.get(pname) || posMap.get(surname) || "") : "");
-
-      const posLabel = rawPos ? (normalizePositionIT(rawPos) || rawPos) : "—";
-
-      return `
-        <li>
-          <strong>${safeHTML(name)}</strong>
-          — <span class="muted">${safeHTML(posLabel)}</span>
-        </li>
-      `;
-    })
-    .join("");
 function playerChipHTML(p) {
-  // Supporta sia struttura: { player:{name,photo} } sia { name, photo }
   const name = p?.player?.name ?? p?.name ?? "—";
   const photo = p?.player?.photo ?? p?.photo ?? "";
 
@@ -121,6 +87,44 @@ function playerChipHTML(p) {
 
   return `<span class="pchip">${img}<span class="pname">${safeHTML(name)}</span></span>`;
 }
+function renderTeamInjuries(teamName, teamLogo, items, posMap) {
+  const rows = (items || [])
+    .map((it) => {
+      // Ruolo: prima provo se per caso fosse già nell'injury (quasi mai),
+      // altrimenti lo cerco in posMap tramite player.id o nome/cognome
+      const rawPosDirect =
+        it?.player?.position ||
+        it?.player?.pos ||
+        it?.player?.role ||
+        "";
+
+      const pid = it?.player?.id ? String(it.player.id) : "";
+      const fullName = String(it?.player?.name || "").trim();
+      const pname = fullName.toLowerCase();
+      const surname = fullName.includes(".")
+        ? fullName.split(".").slice(1).join(".").trim().toLowerCase()
+        : "";
+
+      const rawPos =
+        rawPosDirect ||
+        (posMap ? (posMap.get(pid) || posMap.get(pname) || posMap.get(surname) || "") : "");
+
+      const posLabel = rawPos ? (normalizePositionIT(rawPos) || rawPos) : "—";
+
+      const reason = it?.player?.reason ? String(it.player.reason) : "";
+      const meta = reason ? `${posLabel} • ${reason}` : posLabel;
+
+      return `
+        <li class="injRow">
+          ${playerChipHTML(it)}
+          <div class="injMeta">
+            <span class="muted">${safeHTML(meta)}</span>
+          </div>
+        </li>
+      `;
+    })
+    .join("");
+
   return `
     <div class="kv-row">
       <div class="k">Indisponibili: ${safeHTML(teamName)}</div>
@@ -196,4 +200,5 @@ async function loadInjuries() {
     </div>
   `);
 }
+
 
