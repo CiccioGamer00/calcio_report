@@ -55,9 +55,11 @@ function renderSuggestBox(items) {
           data-team-name="${safeHTML(x.name)}"
           data-team-logo="${safeHTML(x.logo || "")}"
         >
-          ${x.logo
-  ? `<img class="suggestLogo" src="${safeHTML(x.logo)}" alt="" onerror="this.style.display='none'; this.parentElement.querySelector('.suggestLogoFallback').classList.remove('hidden')" />`
-  : ``}
+          ${
+            x.logo
+              ? `<img class="suggestLogo" src="${safeHTML(x.logo)}" alt="" onerror="this.style.display='none'; this.parentElement.querySelector('.suggestLogoFallback').classList.remove('hidden')" />`
+              : ``
+          }
 <span class="suggestLogoFallback ${x.logo ? "hidden" : ""}">⚽</span>
           <span class="suggestText">
             <span class="suggestName">${safeHTML(x.name)}</span>
@@ -537,7 +539,7 @@ function initTeamSearchUX() {
     if (!q || q.length < 2) {
       cancelDebounce();
       updateDatalist([]);
-	  hideSuggestBox();
+      hideSuggestBox();
       return;
     }
 
@@ -559,7 +561,6 @@ function initTeamSearchUX() {
       if (nowQ !== q) return;
 
       updateDatalist(items);
-	  
     }, 250);
   });
 
@@ -572,7 +573,7 @@ function initTeamSearchUX() {
       cancelDebounce();
       suggestReqId++; // invalida richieste in volo
       updateDatalist([]);
-	  hideSuggestBox();
+      hideSuggestBox();
 
       // (opzionale ma utile): chiude la UI del datalist su alcuni browser
       input.blur();
@@ -589,7 +590,7 @@ function initTeamSearchUX() {
       cancelDebounce();
       suggestReqId++;
       updateDatalist([]);
-	  hideSuggestBox();
+      hideSuggestBox();
       showTeam();
     }
   });
@@ -711,13 +712,25 @@ async function loadLineupsPitch() {
       const num = pl?.number ?? "";
       const name = pl?.name || "—";
       const photo = pl?.photo || "";
+      const pid = pl?.id ?? "";
+
       return `
-        <div class="pitch-player ${sideClass}" style="--x:${xPct};--y:${yPct};">
-          ${photo ? `<img class="pp-photo" src="${safeHTML(photo)}" alt="" />` : ""}
-          <div class="pp-badge">${safeHTML(num)}</div>
-          <div class="pp-name">${safeHTML(name)}</div>
-        </div>
-      `;
+    <button class="pitch-player ${sideClass}" style="--x:${xPct};--y:${yPct};" type="button"
+      data-player-id="${safeHTML(pid)}"
+      data-player-name="${safeHTML(name)}"
+      ${pid ? "" : "disabled"}
+      aria-label="${safeHTML(name)}"
+    >
+      ${
+        photo
+          ? `<img class="pp-photo" src="${safeHTML(photo)}" alt="" loading="lazy" referrerpolicy="no-referrer"
+        onerror="this.style.display='none'"/>`
+          : ""
+      }
+      <div class="pp-badge">${safeHTML(num)}</div>
+      <div class="pp-name">${safeHTML(name)}</div>
+    </button>
+  `;
     }
 
     // convert y per away (specchio)
@@ -772,8 +785,15 @@ async function loadLineupsPitch() {
         <div class="pitch-lines"></div>
         <div class="pitch-mid"></div>
 
-        <div class="pitch-teamname left">${safeHTML(selectedFixture.home?.name || "Casa")}${homeFormation ? ` • ${safeHTML(homeFormation)}` : ""}</div>
-        <div class="pitch-teamname right">${safeHTML(selectedFixture.away?.name || "Trasferta")}${awayFormation ? ` • ${safeHTML(awayFormation)}` : ""}</div>
+       <div class="pitch-teamname left">
+  ${safeHTML(selectedFixture.home?.name || "Casa")}${homeFormation ? ` • ${safeHTML(homeFormation)}` : ""}
+  ${homeCoach ? ` <span class="muted" style="margin-left:8px;">(${safeHTML(homeCoach)})</span>` : ""}
+</div>
+
+<div class="pitch-teamname right">
+  ${safeHTML(selectedFixture.away?.name || "Trasferta")}${awayFormation ? ` • ${safeHTML(awayFormation)}` : ""}
+  ${awayCoach ? ` <span class="muted" style="margin-left:8px;">(${safeHTML(awayCoach)})</span>` : ""}
+</div>
 
         <div class="pitch-grid">
           ${homeDots}
@@ -797,8 +817,11 @@ async function loadLineupsPitch() {
 
   const homeDots = layoutTeamPlayers(homeXI, homeFormation, "home");
   const awayDots = layoutTeamPlayers(awayXI, awayFormation, "away");
+  const homeCoach = home?.coach?.name ? String(home.coach.name) : "";
+  const awayCoach = away?.coach?.name ? String(away.coach.name) : "";
 
   content.innerHTML = renderPitch(homeDots, awayDots);
+  wirePitchClicks();
 }
 // ====== STIMA FORMAZIONI (fallback) ======
 const __EST_LINEUP_CACHE__ = new Map(); // key -> {ts, data}
@@ -870,18 +893,18 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 8) {
   if (leagueId) {
     const fx = await apiGet(
       `/fixtures?team=${teamId}&league=${leagueId}&season=${season}&last=${limit}&status=FT&timezone=Europe/Rome`,
-      { retries: 2, delays: [450, 900] }
+      { retries: 2, delays: [450, 900] },
     );
-    fixtures = (fx.ok && !fx.errors && Array.isArray(fx.arr)) ? fx.arr : [];
+    fixtures = fx.ok && !fx.errors && Array.isArray(fx.arr) ? fx.arr : [];
   }
 
   // 2) fallback: ultime partite TUTTE le competizioni (serve per coppe/UCL ecc)
   if (!fixtures.length) {
     const fx = await apiGet(
       `/fixtures?team=${teamId}&last=${limit}&status=FT&timezone=Europe/Rome`,
-      { retries: 2, delays: [450, 900] }
+      { retries: 2, delays: [450, 900] },
     );
-    fixtures = (fx.ok && !fx.errors && Array.isArray(fx.arr)) ? fx.arr : [];
+    fixtures = fx.ok && !fx.errors && Array.isArray(fx.arr) ? fx.arr : [];
   }
 
   if (!fixtures.length) return null;
@@ -893,11 +916,14 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 8) {
     const fid = f?.fixture?.id ?? null;
     if (!fid) continue;
 
-    const lr = await apiGet(`/fixtures/lineups?fixture=${fid}`, { retries: 1, delays: [450] });
-    const arr = (lr.ok && !lr.errors && Array.isArray(lr.arr)) ? lr.arr : [];
+    const lr = await apiGet(`/fixtures/lineups?fixture=${fid}`, {
+      retries: 1,
+      delays: [450],
+    });
+    const arr = lr.ok && !lr.errors && Array.isArray(lr.arr) ? lr.arr : [];
     if (!arr.length) continue;
 
-    const block = arr.find(x => (x?.team?.id ?? null) === teamId) || null;
+    const block = arr.find((x) => (x?.team?.id ?? null) === teamId) || null;
     if (!block) continue;
 
     const formation = String(block?.formation || "").trim();
@@ -929,7 +955,7 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 8) {
   const top = Array.from(counts.values())
     .sort((a, b) => b.n - a.n)
     .slice(0, 11)
-    .map(x => x.player);
+    .map((x) => x.player);
 
   const XI = sortByRole(top);
   const form = formationMode(formations) || "4-4-2";
@@ -1071,7 +1097,7 @@ function wirePitchClicks() {
   });
 }
 async function openPlayerModal(playerId, playerName) {
-	  const auth = document.getElementById("authModal");
+  const auth = document.getElementById("authModal");
   if (auth && !auth.classList.contains("hidden")) return;
   const modal = document.getElementById("playerModal");
   const title = document.getElementById("playerTitle");
@@ -1156,4 +1182,3 @@ async function openPlayerModal(playerId, playerName) {
   body.innerHTML = html;
 }
 window.showTeam = showTeam;
-
