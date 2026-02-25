@@ -885,6 +885,19 @@ function sortByRole(players) {
   };
   return (players || []).slice().sort((a, b) => rank(a) - rank(b));
 }
+// Ordina i giocatori per ruolo così il layout sa chi è il portiere (idx 0)
+function sortByRole(players) {
+  const order = { "Goalkeeper": 1, "Defender": 2, "Midfielder": 3, "Attacker": 4 };
+  return [...players].sort((a, b) => (order[a.pos] || 5) - (order[b.pos] || 5));
+}
+
+// Trova il modulo più frequente tra quelli passati
+function formationMode(arr) {
+  if (!arr.length) return "4-4-2";
+  const map = {};
+  arr.forEach(f => map[f] = (map[f] || 0) + 1);
+  return Object.keys(map).reduce((a, b) => map[a] > map[b] ? a : b);
+}
 async function estimateLineupForTeam(teamId, leagueId, season, limit = 8) {
   if (!teamId || !season) return null;
 
@@ -1032,31 +1045,39 @@ function renderPitchFromEstimate(est) {
   }
   function layout(startXI, formationStr, side) {
     const players = startXI.map((x) => x?.player || {}).filter(Boolean);
-    if (!players.length) return "";
-    const rows = parseFormation(formationStr);
+    if (players.length < 11) return ""; 
+
+    const rows = parseFormation(formationStr); // es: [4, 3, 3]
     const gk = players[0];
-    const out = players.slice(1);
+    const outFielders = players.slice(1);
 
-    const base = [66, 48, 30, 18];
-    const yLevels = [82, ...rows.map((_, i) => base[i] ?? 18 - i * 10)];
-    const yForSide = (y) => (side === "away" ? 100 - y : y);
-
+    // Definiamo le zone Y per la metà campo (0-50%)
+    // Il GK sta vicino al fondo (5%), l'ultima riga di attacco vicino alla metà (45%)
+    const ySteps = [5, 18, 30, 42, 48]; 
+    
     let html = "";
-    html += makeDot(gk, 50, yForSide(yLevels[0]), side);
+    
+    // Funzione per invertire la Y se è la squadra Home (che sta in basso 50-100%)
+    const finalY = (y) => side === "home" ? 100 - y : y;
 
-    let idx = 0;
-    for (let rIdx = 0; rIdx < rows.length; rIdx++) {
-      const n = rows[rIdx];
-      const xs = rowXs(n);
-      const y = yForSide(yLevels[rIdx + 1] ?? 30);
-      for (let j = 0; j < n; j++) {
-        const pl = out[idx++];
-        if (!pl) break;
-        html += makeDot(pl, xs[j], y, side);
-      }
-    }
+    // 1. Posiziona Portiere
+    html += makeDot(gk, 50, finalY(ySteps[0]), side);
+
+    // 2. Posiziona le linee del modulo
+    let currentIdx = 0;
+    rows.forEach((numPlayers, rowIdx) => {
+        const xPositions = rowXs(numPlayers);
+        const yPos = finalY(ySteps[rowIdx + 1] || 45);
+        
+        for (let i = 0; i < numPlayers; i++) {
+            const pl = outFielders[currentIdx++];
+            if (pl) {
+                html += makeDot(pl, xPositions[i], yPos, side);
+            }
+        }
+    });
     return html;
-  }
+}
 
   const homeDots = layout(homeXI, homeFormation, "home");
   const awayDots = layout(awayXI, awayFormation, "away");
