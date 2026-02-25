@@ -1352,3 +1352,111 @@ body[data-view-mode="single"] .card.is-focus{
   display: grid;
   gap: 8px;
 }
+/* =========================
+   SUGGERIMENTI TEAM (custom dropdown con logo)
+   ========================= */
+.searchGrow{ position: relative; } /* serve per ancorare la tendina */
+
+.suggestBox{
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 100;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(10, 14, 24, 0.92);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 18px 50px rgba(0,0,0,0.55);
+  overflow: hidden;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.suggestItem{
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  color: rgba(255,255,255,0.92);
+  cursor: pointer;
+  text-align: left;
+}
+
+.suggestItem:hover{
+  background: rgba(255,255,255,0.06);
+}
+
+.suggestLogo{
+  width: 26px;
+  height: 26px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  object-fit: cover;
+  flex: 0 0 auto;
+}
+
+.suggestText{
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.suggestName{
+  font-weight: 900;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.suggestMeta{
+  font-size: 12px;
+  opacity: 0.75;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* scrollbar dropdown */
+.suggestBox::-webkit-scrollbar{ width: 10px; }
+.suggestBox::-webkit-scrollbar-thumb{
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 999px;
+}
+
+/* =========================
+   MOBILE: header più “smartphone friendly”
+   ========================= */
+@media (max-width: 720px){
+  .header{ padding: 16px 14px 8px; }
+
+  .brand{
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .title{ font-size: 20px; }
+  .subtitle{ font-size: 12px; }
+
+  /* CTA e topbar vanno a capo senza spaccare */
+  .tg-cta{
+    order: 3;
+    width: 100%;
+    text-align: center;
+    margin: 10px 0 0;
+  }
+
+  #topBar{
+    order: 4;
+    width: 100%;
+    justify-content: space-between;
+    padding: 10px 0 0;
+    margin-left: 0;
+  }
+}
