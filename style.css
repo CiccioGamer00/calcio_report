@@ -1203,22 +1203,14 @@ body[data-view-mode="single"] .card.is-focus{
     justify-content: center;
     text-align: center;
   }
-  .{
-    justify-items: center;
-  }
+  
   .mh-vs{
     order: 2;
   }
 }
-.{
-  display: grid;
-  justify-items: start;
-  gap: 8px;
-}
 
-.mh-team.right .{
-  justify-items: end;
-}
+
+
 
 .mh-textCol{
   display: grid;
@@ -1525,3 +1517,4 @@ body[data-view-mode="single"] .card.is-focus{
 .teamTable thead th:nth-child(2){
   padding-left: 36px; /* logo(18) + gap(10) + padding base(8) */
 }
+
