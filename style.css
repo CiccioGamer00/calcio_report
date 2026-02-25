@@ -844,13 +844,7 @@ body[data-view-mode="single"] .card.is-focus{
 .stageView.hidden{ display:none; }
 
 /* box verde formazioni */
-.lineupsBox{
-  margin-top: 14px;
-  border-radius: 14px;
-  padding: 12px 14px;
-  border: 1px solid rgba(82,255,168,0.25);
-  background: rgba(0, 255, 140, 0.10);
-}
+
 .lineupsBox.hidden{ display:none; }
 .lineupsHead{ font-weight: 900; margin-bottom: 8px; }
 
@@ -1203,21 +1197,24 @@ body[data-view-mode="single"] .card.is-focus{
     justify-content: center;
     text-align: center;
   }
-  .{
-    justify-items: center;
-  }
-  .mh-vs{
-    order: 2;
-  }
-}
-.{
+  
+
+.mh-textCol{
   display: grid;
-  justify-items: start;
   gap: 8px;
+}}
+.mh-logoCol{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
 }
 
-.mh-team.right .{
-  justify-items: end;
+.mh-team.right .mh-logoCol{
+  align-items: center; /* tiene tutto centrato come a sinistra */
 }
 
 .mh-textCol{
@@ -1525,4 +1522,5 @@ body[data-view-mode="single"] .card.is-focus{
 .teamTable thead th:nth-child(2){
   padding-left: 36px; /* logo(18) + gap(10) + padding base(8) */
 }
+
 
