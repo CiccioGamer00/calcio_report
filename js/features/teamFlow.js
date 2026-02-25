@@ -642,6 +642,7 @@ async function loadLineupsPitch() {
 
   const homeFormation = String(home?.formation || "").trim(); // es "4-3-3"
   const awayFormation = String(away?.formation || "").trim();
+  const lineupTag = "UFFICIALE";
 
   // ========== helpers ==========
   function posFromGrid(g) {
@@ -785,13 +786,15 @@ async function loadLineupsPitch() {
         <div class="pitch-lines"></div>
         <div class="pitch-mid"></div>
 
-       <div class="pitch-teamname left">
+     <div class="pitch-teamname left">
   ${safeHTML(selectedFixture.home?.name || "Casa")}${homeFormation ? ` • ${safeHTML(homeFormation)}` : ""}
+  <span class="pitch-badge pitch-badge--official">UFFICIALE</span>
   ${homeCoach ? ` <span class="muted" style="margin-left:8px;">(${safeHTML(homeCoach)})</span>` : ""}
 </div>
 
 <div class="pitch-teamname right">
   ${safeHTML(selectedFixture.away?.name || "Trasferta")}${awayFormation ? ` • ${safeHTML(awayFormation)}` : ""}
+  <span class="pitch-badge pitch-badge--official">UFFICIALE</span>
   ${awayCoach ? ` <span class="muted" style="margin-left:8px;">(${safeHTML(awayCoach)})</span>` : ""}
 </div>
 
@@ -1072,8 +1075,8 @@ function renderPitchFromEstimate(est) {
         ${awayDots}
       </div>
       <div class="pitch-footnote muted">
-        * Formazione stimata dalle ultime partite (escludendo indisponibili quando disponibili).
-      </div>
+  * Formazione stimata dalle ultime partite (escludendo indisponibili quando disponibili). Affidabilità: <strong>MEDIA</strong>.
+</div>
     </div>
   `;
 }
