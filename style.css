@@ -1495,3 +1495,149 @@ body[data-view-mode="single"] .card.is-focus{
   justify-content: center;
   flex: 0 0 auto;
 }
+/* =========================
+   TEAMS TAB (stile screenshot)
+   ========================= */
+.teamCardsWrap{
+  display: grid;
+  gap: 16px;
+}
+
+.teamCard{
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.18);
+  box-shadow: 0 18px 50px rgba(0,0,0,0.35);
+  padding: 14px;
+  overflow: hidden;
+}
+
+.teamCardHead{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.teamTitle{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.teamLogo{
+  width: 22px;
+  height: 22px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  object-fit: cover;
+}
+
+.teamName{
+  font-weight: 900;
+  font-size: 18px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.teamLastN{
+  opacity: 0.75;
+  font-size: 13px;
+}
+
+.teamChips{
+  display:flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.chip{
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.05);
+  font-size: 13px;
+}
+
+.chip-ok{ border-color: rgba(0,255,170,0.22); }
+.chip-mid{ border-color: rgba(255,255,255,0.12); opacity: .95; }
+.chip-bad{ border-color: rgba(255,70,70,0.22); }
+
+.teamTableWrap{
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding-top: 10px;
+}
+
+.teamTable{
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.teamTable th, .teamTable td{
+  padding: 10px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.teamTable thead th{
+  opacity: 0.7;
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.td-date{ opacity: 0.85; width: 110px; }
+.td-score{ width: 90px; text-align: center; }
+.td-res{ width: 70px; text-align: center; }
+.td-y, .td-r{ width: 60px; text-align:center; }
+.th-y, .th-r{ text-align:center; }
+
+.opp{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.oppLogo{
+  width: 18px;
+  height: 18px;
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  object-fit: cover;
+}
+
+.oppName{
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resBadge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  font-weight: 900;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+}
+
+.res-w{ border-color: rgba(0,255,170,0.25); }
+.res-d{ border-color: rgba(255,255,255,0.12); opacity: .9; }
+.res-l{ border-color: rgba(255,70,70,0.25); }
+
+@media (max-width: 720px){
+  .td-date{ width: auto; }
+  .td-y, .td-r{ width: 46px; }
+  .td-res{ width: 56px; }
+  .td-score{ width: 70px; }
+}
+
