@@ -234,8 +234,7 @@ async function loadTeamsCorners() {
       ? `<p class="muted"><em>Nota: per evitare rallentamenti, per i corner uso massimo ${safeHTML(limit)} partite (hai selezionato ${safeHTML(requested)}).</em></p>`
       : "";
 
-  const showList = UI_STATE.cornersList;
-  const showPerMatch = UI_STATE.cornersPerMatch;
+ 
 
   const [homeC, awayC] = await Promise.all([
     buildTeamCorners(selectedFixture.home, limit),
@@ -269,4 +268,5 @@ setCorners(`
 }
 
 }
+
 
