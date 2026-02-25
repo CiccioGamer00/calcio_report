@@ -1559,5 +1559,20 @@ body[data-view-mode="single"] .card.is-focus{
   color: var(--muted);
   font-size:.92rem;
 }
+.pitch-badge{
+  display:inline-block;
+  margin-left:8px;
+  padding:3px 8px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.3px;
+  border:1px solid var(--line);
+  background: rgba(255,255,255,.07);
+}
+
+.pitch-badge--official{
+  border-color: rgba(82,255,168,.35);
+}
 
 
