@@ -129,16 +129,18 @@ async function buildTeamForm(team, limit) {
     sumCards += cards.total;
 
     perFixture.push({
-      fixtureId,
-      date,
-      home,
-      away,
-      comp,
-      gf: g.gf,
-      ga: g.ga,
-      goalHalves,
-      cards,
-    });
+  fixtureId,
+  date,
+  home,
+  away,
+  homeLogo: f.teams?.home?.logo ?? "",
+  awayLogo: f.teams?.away?.logo ?? "",
+  comp,
+  gf: g.gf,
+  ga: g.ga,
+  goalHalves,
+  cards,
+});
   }
 
   const n = perFixture.length;
@@ -193,21 +195,15 @@ async function loadTeamsForm() {
     buildTeamForm(selectedFixture.away, limit),
   ]);
 
-  setTeams(`
-    ${cappedMsg}
-    <div class="kv">
-      ${renderTeamFormSummary(homeForm)}
-      ${renderTeamFormSummary(awayForm)}
-    </div>
+ const lastN = Math.min(requested, limit); // usa quello selezionato, ma cappato
 
-    <p style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
-      <button type="button" class="btn" id="btnToggleTeamList">Mostra/Nascondi ultime partite</button>
-      <button type="button" class="btn" id="btnToggleTeamCards">Mostra/Nascondi cartellini per match</button>
-    </p>
-
-    <div id="teamList" style="display:${showList ? "block" : "none"};"></div>
-    <div id="teamCardsDetail" style="display:${showCardsDetail ? "block" : "none"};"></div>
-  `);
+setTeams(`
+  ${cappedMsg}
+  <div class="teamCardsWrap">
+    ${renderTeamFormCard(homeForm, lastN)}
+    ${renderTeamFormCard(awayForm, lastN)}
+  </div>
+`);
 
    try {
   if (window.publishIndicatorData) {
@@ -296,6 +292,97 @@ function renderTeamFormSummary(form) {
     </div>
   `;
 }
+function countResults(rows) {
+  let w = 0, d = 0, l = 0;
+  for (const x of rows || []) {
+    if ((x.gf ?? 0) > (x.ga ?? 0)) w++;
+    else if ((x.gf ?? 0) < (x.ga ?? 0)) l++;
+    else d++;
+  }
+  return { w, d, l };
+}
+
+function sum(rows, key) {
+  let s = 0;
+  for (const x of rows || []) s += Number(x?.[key] ?? 0);
+  return s;
+}
+
+function renderTeamFormCard(form, lastN) {
+  const t = form.team;
+  const rows = (form.fixtures || []).slice(0, lastN);
+
+  const res = countResults(rows);
+
+  const chips = `
+    <span class="chip chip-ok">V ${safeHTML(res.w)}</span>
+    <span class="chip chip-mid">P ${safeHTML(res.d)}</span>
+    <span class="chip chip-bad">S ${safeHTML(res.l)}</span>
+    <span class="chip">GF ${safeHTML(sum(rows, "gf"))}</span>
+    <span class="chip">GS ${safeHTML(sum(rows, "ga"))}</span>
+  `;
+
+  const body = rows.length
+    ? rows.map((x) => {
+        const isHome = String(x.home || "").toLowerCase() === String(t.name || "").toLowerCase();
+        const oppName = isHome ? x.away : x.home;
+        const oppLogo = isHome ? x.awayLogo : x.homeLogo;
+
+        let r = "D", rClass = "res-d";
+        if ((x.gf ?? 0) > (x.ga ?? 0)) { r = "W"; rClass = "res-w"; }
+        else if ((x.gf ?? 0) < (x.ga ?? 0)) { r = "L"; rClass = "res-l"; }
+
+        const y = x.cards?.yellow ?? 0;
+        const rr = x.cards?.red ?? 0;
+
+        return `
+          <tr>
+            <td class="td-date">${safeHTML(x.date)}</td>
+            <td class="td-opp">
+              <span class="opp">
+                ${oppLogo ? `<img class="oppLogo" src="${safeHTML(oppLogo)}" alt="">` : ``}
+                <span class="oppName">${safeHTML(oppName)}</span>
+              </span>
+            </td>
+            <td class="td-res"><span class="resBadge ${rClass}">${r}</span></td>
+            <td class="td-score"><strong>${safeHTML(x.gf)}-${safeHTML(x.ga)}</strong></td>
+            <td class="td-y">${y ? safeHTML(y) : "—"}</td>
+            <td class="td-r">${rr ? safeHTML(rr) : "—"}</td>
+          </tr>
+        `;
+      }).join("")
+    : `<tr><td colspan="6" class="muted"><em>Nessun dato</em></td></tr>`;
+
+  return `
+    <div class="teamCard">
+      <div class="teamCardHead">
+        <div class="teamTitle">
+          ${t.logo ? `<img class="teamLogo" src="${safeHTML(t.logo)}" alt="logo">` : ``}
+          <div class="teamName">${safeHTML(t.name)}</div>
+        </div>
+        <div class="teamLastN">Ultime ${safeHTML(lastN)}</div>
+      </div>
+
+      <div class="teamChips">${chips}</div>
+
+      <div class="teamTableWrap">
+        <table class="teamTable">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Avv.</th>
+              <th>Ris.</th>
+              <th>G</th>
+              <th class="th-y">🟨</th>
+              <th class="th-r">🟥</th>
+            </tr>
+          </thead>
+          <tbody>${body}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
 
 function renderTeamMatchesList(form) {
   const t = form.team;
@@ -336,4 +423,5 @@ function renderTeamCardsList(form) {
   `;
 
 }
+
 
