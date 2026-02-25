@@ -55,7 +55,10 @@ function renderSuggestBox(items) {
           data-team-name="${safeHTML(x.name)}"
           data-team-logo="${safeHTML(x.logo || "")}"
         >
-          ${x.logo ? `<img class="suggestLogo" src="${safeHTML(x.logo)}" alt="">` : `<span class="suggestLogo"></span>`}
+          ${x.logo
+  ? `<img class="suggestLogo" src="${safeHTML(x.logo)}" alt="" onerror="this.style.display='none'; this.parentElement.querySelector('.suggestLogoFallback').classList.remove('hidden')" />`
+  : ``}
+<span class="suggestLogoFallback ${x.logo ? "hidden" : ""}">⚽</span>
           <span class="suggestText">
             <span class="suggestName">${safeHTML(x.name)}</span>
             <span class="suggestMeta">${safeHTML(meta)}</span>
@@ -556,7 +559,7 @@ function initTeamSearchUX() {
       if (nowQ !== q) return;
 
       updateDatalist(items);
-	  hideSuggestBox();
+	  
     }, 250);
   });
 
