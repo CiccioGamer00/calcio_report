@@ -577,16 +577,18 @@ async function buildTeamForm(team, limit) {
     sumCards += cards.total;
 
     perFixture.push({
-      fixtureId,
-      date,
-      home,
-      away,
-      comp,
-      gf: g.gf,
-      ga: g.ga,
-      goalHalves,
-      cards,
-    });
+  fixtureId,
+  date,
+  home,
+  away,
+  homeLogo: f.teams?.home?.logo ?? "",
+  awayLogo: f.teams?.away?.logo ?? "",
+  comp,
+  gf: g.gf,
+  ga: g.ga,
+  goalHalves,
+  cards,
+});
   }
 
   const n = perFixture.length;
@@ -641,12 +643,15 @@ async function loadTeamsForm() {
     buildTeamForm(selectedFixture.away, limit),
   ]);
 
-  setTeams(`
-    ${cappedMsg}
-    <div class="kv">
-      ${renderTeamFormSummary(homeForm)}
-      ${renderTeamFormSummary(awayForm)}
-    </div>
+  const lastN = Math.min(5, limit); // puoi cambiare 5 in 10 se vuoi default diverso
+
+setTeams(`
+  ${cappedMsg}
+  <div class="teamCardsWrap">
+    ${renderTeamFormCard(homeForm, lastN)}
+    ${renderTeamFormCard(awayForm, lastN)}
+  </div>
+`);
 
     <p style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
       <button type="button" class="btn" id="btnToggleTeamList">Mostra/Nascondi ultime partite</button>
@@ -697,25 +702,99 @@ async function loadTeamsForm() {
   }
 }
 
-function renderTeamFormSummary(form) {
+function renderTeamFormCard(form, lastN = 5) {
   const t = form.team;
+  const rows = (form.fixtures || []).slice(0, lastN);
+
+  const chips = `
+    <span class="chip chip-ok">V ${safeHTML(countResults(rows).w)}</span>
+    <span class="chip chip-mid">P ${safeHTML(countResults(rows).d)}</span>
+    <span class="chip chip-bad">S ${safeHTML(countResults(rows).l)}</span>
+    <span class="chip">GF ${safeHTML(sum(rows, "gf"))}</span>
+    <span class="chip">GS ${safeHTML(sum(rows, "ga"))}</span>
+  `;
+
+  const body = rows.length
+    ? rows
+        .map((x) => {
+          const isHome = (x.home || "").toLowerCase() === (t.name || "").toLowerCase();
+          const oppName = isHome ? x.away : x.home;
+          const oppLogo = isHome ? x.awayLogo : x.homeLogo;
+
+          let res = "D";
+          let resClass = "res-d";
+          if (x.gf > x.ga) { res = "W"; resClass = "res-w"; }
+          else if (x.gf < x.ga) { res = "L"; resClass = "res-l"; }
+
+          const y = x.cards?.yellow ?? 0;
+          const r = x.cards?.red ?? 0;
+
+          return `
+            <tr>
+              <td class="td-date">${safeHTML(x.date)}</td>
+              <td class="td-opp">
+                <span class="opp">
+                  ${oppLogo ? `<img class="oppLogo" src="${safeHTML(oppLogo)}" alt="">` : ``}
+                  <span class="oppName">${safeHTML(oppName)}</span>
+                </span>
+              </td>
+              <td class="td-res"><span class="resBadge ${resClass}">${res}</span></td>
+              <td class="td-score"><strong>${safeHTML(x.gf)}-${safeHTML(x.ga)}</strong></td>
+              <td class="td-y">${y ? safeHTML(y) : "—"}</td>
+              <td class="td-r">${r ? safeHTML(r) : "—"}</td>
+            </tr>
+          `;
+        })
+        .join("")
+    : `<tr><td colspan="6" class="muted"><em>Nessun dato</em></td></tr>`;
+
   return `
-    <div class="kv-row">
-      <div class="k">Forma: ${safeHTML(t.name)}</div>
-      <div class="v">
-        <span class="teamline">
-          ${t.logo ? `<img class="logo" src="${safeHTML(t.logo)}" alt="logo" />` : ""}
-          <span class="pill">ultime ${safeHTML(form.limit)}</span>
-          <span class="pill">GF ${safeHTML(form.avgGF)}</span>
-          <span class="pill">GS ${safeHTML(form.avgGA)}</span>
-          <span class="pill">Gol fatti: 1T ${safeHTML(form.gf1Pct)}% · 2T ${safeHTML(form.gf2Pct)}%</span>
-          <span class="pill">Gol subiti: 1T ${safeHTML(form.ga1Pct)}% · 2T ${safeHTML(form.ga2Pct)}%</span>
-          <span class="pill">Cartellini ${safeHTML(form.avgCards)}</span>
-        </span>
-        ${form.note ? `<div class="muted" style="margin-top:6px; font-size:12px;">${safeHTML(form.note)}</div>` : ""}
+    <div class="teamCard">
+      <div class="teamCardHead">
+        <div class="teamTitle">
+          ${t.logo ? `<img class="teamLogo" src="${safeHTML(t.logo)}" alt="logo">` : ``}
+          <div class="teamName">${safeHTML(t.name)}</div>
+        </div>
+        <div class="teamLastN">Ultime ${safeHTML(lastN)}</div>
+      </div>
+
+      <div class="teamChips">${chips}</div>
+
+      <div class="teamTableWrap">
+        <table class="teamTable">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Avv.</th>
+              <th>Ris.</th>
+              <th>G</th>
+              <th class="th-y">🟨</th>
+              <th class="th-r">🟥</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${body}
+          </tbody>
+        </table>
       </div>
     </div>
   `;
+}
+
+function countResults(rows) {
+  let w = 0, d = 0, l = 0;
+  for (const x of rows || []) {
+    if ((x.gf ?? 0) > (x.ga ?? 0)) w++;
+    else if ((x.gf ?? 0) < (x.ga ?? 0)) l++;
+    else d++;
+  }
+  return { w, d, l };
+}
+
+function sum(rows, key) {
+  let s = 0;
+  for (const x of rows || []) s += Number(x?.[key] ?? 0);
+  return s;
 }
 
 function renderTeamMatchesList(form) {
@@ -1016,3 +1095,4 @@ document.getElementById("optShowTeamList")?.addEventListener("change", () => {
 document.getElementById("optShowTeamCardsDetail")?.addEventListener("change", () => {
   if (selectedFixture?.home?.id && selectedFixture?.away?.id) loadTeamsForm();
 });
+
