@@ -645,7 +645,7 @@ li{ margin:6px 0; }
   align-items: center;
   z-index: 9999;
 }
-
+.modal.hidden{ display:none !important; }
 .modal-content {
   background: #111;
   padding: 30px;
@@ -1531,6 +1531,7 @@ body.modal-open footer{
 body.modal-open .modal{
   pointer-events: auto;
 }
+
 
 
 
