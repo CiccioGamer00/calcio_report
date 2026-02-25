@@ -1071,6 +1071,8 @@ function wirePitchClicks() {
   });
 }
 async function openPlayerModal(playerId, playerName) {
+	  const auth = document.getElementById("authModal");
+  if (auth && !auth.classList.contains("hidden")) return;
   const modal = document.getElementById("playerModal");
   const title = document.getElementById("playerTitle");
   const body = document.getElementById("playerBody");
@@ -1154,3 +1156,4 @@ async function openPlayerModal(playerId, playerName) {
   body.innerHTML = html;
 }
 window.showTeam = showTeam;
+
