@@ -24,6 +24,49 @@ function getTeamDatalistEl() {
     document.getElementById("teamsList")
   );
 }
+function getTeamSuggestBoxEl() {
+  return document.getElementById("teamSuggestBox");
+}
+
+function hideSuggestBox() {
+  const box = getTeamSuggestBoxEl();
+  if (!box) return;
+  box.classList.add("hidden");
+  box.innerHTML = "";
+}
+
+function renderSuggestBox(items) {
+  const box = getTeamSuggestBoxEl();
+  if (!box) return;
+
+  const list = (items || []).slice(0, 12);
+
+  if (!list.length) {
+    hideSuggestBox();
+    return;
+  }
+
+  box.innerHTML = list
+    .map((x) => {
+      const meta = x.country ? x.country : "—";
+      return `
+        <button type="button" class="suggestItem"
+          data-team-id="${safeHTML(x.id)}"
+          data-team-name="${safeHTML(x.name)}"
+          data-team-logo="${safeHTML(x.logo || "")}"
+        >
+          ${x.logo ? `<img class="suggestLogo" src="${safeHTML(x.logo)}" alt="">` : `<span class="suggestLogo"></span>`}
+          <span class="suggestText">
+            <span class="suggestName">${safeHTML(x.name)}</span>
+            <span class="suggestMeta">${safeHTML(meta)}</span>
+          </span>
+        </button>
+      `;
+    })
+    .join("");
+
+  box.classList.remove("hidden");
+}
 function setMatch(html) {
   const el = document.getElementById("match");
   if (el) el.innerHTML = html;
@@ -31,16 +74,21 @@ function setMatch(html) {
 
 function updateDatalist(items) {
   __LAST_SUGGEST_ITEMS__ = items || [];
-  const dl = getTeamDatalistEl();
-  if (!dl) return;
 
-  dl.innerHTML = (items || [])
-    .slice(0, 15)
-    .map((x) => {
-      const label = x.country ? `${x.country} — ${x.name}` : x.name;
-      return `<option value="${safeHTML(x.name)}" label="${safeHTML(label)}"></option>`;
-    })
-    .join("");
+  // 1) datalist nativo (fallback)
+  const dl = getTeamDatalistEl();
+  if (dl) {
+    dl.innerHTML = (items || [])
+      .slice(0, 15)
+      .map((x) => {
+        const label = x.country ? `${x.country} — ${x.name}` : x.name;
+        return `<option value="${safeHTML(x.name)}" label="${safeHTML(label)}"></option>`;
+      })
+      .join("");
+  }
+
+  // 2) dropdown custom (quello bello con logo)
+  renderSuggestBox(items);
 }
 
 function findSuggestedByName(name) {
@@ -427,7 +475,42 @@ async function showTeam() {
 function initTeamSearchUX() {
   const input = getTeamInputEl();
   if (!input) return;
+  const box = getTeamSuggestBoxEl();
 
+  // click su un suggerimento
+  box?.addEventListener("click", (e) => {
+    const btn = e.target?.closest?.(".suggestItem");
+    if (!btn) return;
+
+    const name = btn.getAttribute("data-team-name") || "";
+    if (!name) return;
+
+    input.value = name;
+
+    suppress(700);
+    cancelDebounce();
+    suggestReqId++;
+    hideSuggestBox();
+
+    // chiude anche la UI nativa se aperta
+    input.blur();
+    setTimeout(() => input.focus(), 0);
+
+    showTeam();
+  });
+
+  // chiusura quando perdi focus (con micro-delay per permettere click)
+  input.addEventListener("blur", () => {
+    setTimeout(() => hideSuggestBox(), 180);
+  });
+
+  // se rifocalizzi e hai testo, puoi riaprire (solo se ci sono suggerimenti)
+  input.addEventListener("focus", () => {
+    const q = sanitizeSearch(input.value);
+    if (q.length >= 2 && __LAST_SUGGEST_ITEMS__?.length) {
+      renderSuggestBox(__LAST_SUGGEST_ITEMS__);
+    }
+  });
   let suppressSuggest = false;
   let suggestReqId = 0; // token per ignorare risposte vecchie
 
@@ -451,6 +534,7 @@ function initTeamSearchUX() {
     if (!q || q.length < 2) {
       cancelDebounce();
       updateDatalist([]);
+	  hideSuggestBox();
       return;
     }
 
@@ -472,6 +556,7 @@ function initTeamSearchUX() {
       if (nowQ !== q) return;
 
       updateDatalist(items);
+	  hideSuggestBox();
     }, 250);
   });
 
@@ -484,6 +569,7 @@ function initTeamSearchUX() {
       cancelDebounce();
       suggestReqId++; // invalida richieste in volo
       updateDatalist([]);
+	  hideSuggestBox();
 
       // (opzionale ma utile): chiude la UI del datalist su alcuni browser
       input.blur();
@@ -500,6 +586,7 @@ function initTeamSearchUX() {
       cancelDebounce();
       suggestReqId++;
       updateDatalist([]);
+	  hideSuggestBox();
       showTeam();
     }
   });
