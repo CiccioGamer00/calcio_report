@@ -187,10 +187,7 @@ async function loadTeamsForm() {
       ? `<p class="muted"><em>Nota: per evitare rallentamenti, per le squadre uso massimo ${safeHTML(limit)} partite (hai selezionato ${safeHTML(requested)}).</em></p>`
       : "";
 
-  const showList = UI_STATE.teamList;
-  const showCardsDetail = UI_STATE.teamCards;
-
-  const [homeForm, awayForm] = await Promise.all([
+    const [homeForm, awayForm] = await Promise.all([
     buildTeamForm(selectedFixture.home, limit),
     buildTeamForm(selectedFixture.away, limit),
   ]);
@@ -232,44 +229,7 @@ setTeams(`
   console.error("publish indicators teams", e);
 }
 
-  const btnList = document.getElementById("btnToggleTeamList");
-  const btnCards = document.getElementById("btnToggleTeamCards");
-  const divList = document.getElementById("teamList");
-  const divCards = document.getElementById("teamCardsDetail");
-
-  if (btnList && divList) {
-    btnList.onclick = () => {
-      const isOpen = divList.style.display !== "none";
-      UI_STATE.teamList = !isOpen;
-      divList.style.display = isOpen ? "none" : "block";
-    };
-  }
-
-  if (btnCards && divCards) {
-    btnCards.onclick = () => {
-      const isOpen = divCards.style.display !== "none";
-      UI_STATE.teamCards = !isOpen;
-      divCards.style.display = isOpen ? "none" : "block";
-    };
-  }
-
-  if (divList) {
-    divList.innerHTML = `
-      <hr />
-      <p><strong>Ultime partite (gol fatti/subiti)</strong></p>
-      ${renderTeamMatchesList(homeForm)}
-      ${renderTeamMatchesList(awayForm)}
-    `;
-  }
-
-  if (divCards) {
-    divCards.innerHTML = `
-      <hr />
-      <p><strong>Cartellini per match (solo squadra)</strong></p>
-      ${renderTeamCardsList(homeForm)}
-      ${renderTeamCardsList(awayForm)}
-    `;
-  }
+  
 }
 
 function renderTeamFormSummary(form) {
@@ -423,5 +383,6 @@ function renderTeamCardsList(form) {
   `;
 
 }
+
 
 
