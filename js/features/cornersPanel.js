@@ -61,14 +61,16 @@ async function buildTeamCorners(team, limit) {
     if (maxAgainst === null || cornersAgainst > maxAgainst) maxAgainst = cornersAgainst;
 
     perFixture.push({
-      fixtureId,
-      date,
-      home,
-      away,
-      comp,
-      cornersFor,
-      cornersAgainst,
-    });
+  fixtureId,
+  date,
+  home,
+  away,
+  homeLogo: f.teams?.home?.logo ?? "",
+  awayLogo: f.teams?.away?.logo ?? "",
+  comp,
+  cornersFor,
+  cornersAgainst,
+});
   }
 
   const n = perFixture.length;
@@ -150,7 +152,69 @@ function renderTeamCornersPerMatch(form) {
     <ul>${items || `<li class="muted">Nessun dato</li>`}</ul>
   `;
 }
+function renderTeamCornersCard(form, lastN) {
+  const t = form.team;
+  const rows = (form.fixtures || []).slice(0, lastN);
 
+  const chips = `
+    <span class="chip">Media: ${safeHTML(form.avgCorners)}</span>
+    <span class="chip">Min: ${safeHTML(form.minCorners)}</span>
+    <span class="chip">Max: ${safeHTML(form.maxCorners)}</span>
+    <span class="chip">Media subiti: ${safeHTML(form.avgCornersAgainst)}</span>
+  `;
+
+  const body = rows.length
+    ? rows.map((x) => {
+        const isHome = String(x.home || "").toLowerCase() === String(t.name || "").toLowerCase();
+        const oppName = isHome ? x.away : x.home;
+        const oppLogo = isHome ? x.awayLogo : x.homeLogo;
+
+        return `
+          <tr>
+            <td class="td-date">${safeHTML(x.date)}</td>
+            <td class="td-opp">
+              <span class="opp">
+                ${oppLogo ? `<img class="oppLogo" src="${safeHTML(oppLogo)}" alt="">` : ``}
+                <span class="oppName">${safeHTML(oppName)}</span>
+              </span>
+            </td>
+            <td class="td-score"><strong>${safeHTML(x.cornersFor)}</strong></td>
+            <td class="td-score"><strong>${safeHTML(x.cornersAgainst)}</strong></td>
+          </tr>
+        `;
+      }).join("")
+    : `<tr><td colspan="4" class="muted"><em>Nessun dato</em></td></tr>`;
+
+  return `
+    <div class="teamCard">
+      <div class="teamCardHead">
+        <div class="teamTitle">
+          ${t.logo ? `<img class="teamLogo" src="${safeHTML(t.logo)}" alt="logo">` : ``}
+          <div class="teamName">${safeHTML(t.name)}</div>
+        </div>
+        <div class="teamLastN">Ultime ${safeHTML(lastN)}</div>
+      </div>
+
+      <div class="teamChips">${chips}</div>
+
+      <div class="teamTableWrap">
+        <table class="teamTable">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Avv.</th>
+              <th>🚩 Fatti</th>
+              <th>🚩 Sub.</th>
+            </tr>
+          </thead>
+          <tbody>${body}</tbody>
+        </table>
+      </div>
+
+      ${form.note ? `<div class="muted" style="margin-top:8px; font-size:12px;"><em>${safeHTML(form.note)}</em></div>` : ``}
+    </div>
+  `;
+}
 async function loadTeamsCorners() {
   if (!selectedFixture?.home?.id || !selectedFixture?.away?.id) {
     setCorners(
@@ -178,60 +242,15 @@ async function loadTeamsCorners() {
     buildTeamCorners(selectedFixture.away, limit),
   ]);
 
-  setCorners(`
-    ${cappedMsg}
-    <div class="kv">
-      ${renderTeamCornersSummary(homeC)}
-      ${renderTeamCornersSummary(awayC)}
-    </div>
+ const lastN = Math.min(requested, limit);
 
-    <p style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
-      <button type="button" class="btn" id="btnToggleCornersList">Mostra/Nascondi ultime partite corner</button>
-      <button type="button" class="btn" id="btnToggleCornersPerMatch">Mostra/Nascondi corner per match</button>
-    </p>
-
-    <div id="cornersList" style="display:${showList ? "block" : "none"};"></div>
-    <div id="cornersPerMatch" style="display:${showPerMatch ? "block" : "none"};"></div>
-  `);
-
-  const btnList = document.getElementById("btnToggleCornersList");
-  const btnPer = document.getElementById("btnToggleCornersPerMatch");
-  const divList = document.getElementById("cornersList");
-  const divPer = document.getElementById("cornersPerMatch");
-
-  if (btnList && divList) {
-    btnList.onclick = () => {
-      const isOpen = divList.style.display !== "none";
-      UI_STATE.cornersList = !isOpen;
-      divList.style.display = isOpen ? "none" : "block";
-    };
-  }
-
-  if (btnPer && divPer) {
-    btnPer.onclick = () => {
-      const isOpen = divPer.style.display !== "none";
-      UI_STATE.cornersPerMatch = !isOpen;
-      divPer.style.display = isOpen ? "none" : "block";
-    };
-  }
-
-  if (divList) {
-    divList.innerHTML = `
-      <hr />
-      <p><strong>Ultime partite (corner)</strong></p>
-      ${renderTeamCornersList(homeC)}
-      ${renderTeamCornersList(awayC)}
-    `;
-  }
-
-  if (divPer) {
-    divPer.innerHTML = `
-      <hr />
-      <p><strong>Corner per match (fatti vs subiti)</strong></p>
-      ${renderTeamCornersPerMatch(homeC)}
-      ${renderTeamCornersPerMatch(awayC)}
-    `;
-  }
+setCorners(`
+  ${cappedMsg}
+  <div class="teamCardsWrap">
+    ${renderTeamCornersCard(homeC, lastN)}
+    ${renderTeamCornersCard(awayC, lastN)}
+  </div>
+`);
    try {
   if (window.publishIndicatorData) {
     window.publishIndicatorData("corners", {
@@ -250,3 +269,4 @@ async function loadTeamsCorners() {
 }
 
 }
+
