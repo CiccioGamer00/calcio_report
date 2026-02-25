@@ -708,7 +708,13 @@ async function loadLineupsPitch() {
     // linee
     const base = [66, 48, 30, 18]; // fino a 4 linee
     for (let i = 0; i < rows.length; i++) yLevels.push(base[i] ?? 18 - i * 10);
-
+function xForSide(x) {
+  // x in 0..100, lo comprimo in metà campo
+  // HOME: 5..49  |  AWAY: 51..95
+  const clamped = Math.max(0, Math.min(100, Number(x) || 50));
+  if (side === "away") return 50 + clamped * 0.45;
+  return 50 - clamped * 0.45;
+}
     function makeDot(pl, xPct, yPct, sideClass) {
       const num = pl?.number ?? "";
       const name = pl?.name || "—";
@@ -734,14 +740,9 @@ async function loadLineupsPitch() {
   `;
     }
 
-    // convert y per away (specchio)
-    function yForSide(y) {
-      return side === "away" ? 100 - y : y;
-    }
-
-    // GK dot
+       // GK dot
     const dots = [];
-    dots.push(makeDot(gk, 50, yForSide(yLevels[0]), side));
+    dots.push(makeDot(gk, xForSide(82), yLevels[0], side)); // GK vicino alla porta
 
     if (useGrid) {
       // usa grid: mappa row/col su percentuali (row 1..6, col 1..5)
@@ -750,9 +751,9 @@ async function loadLineupsPitch() {
         const g = posFromGrid(p.grid);
         if (!g) continue;
 
-        const x = (100 * g.col) / 6; // col 1..5 => ~16..83
-        const y = 15 + (g.row - 1) * 14; // row 1..6
-        dots.push(makeDot(p, x, yForSide(y), side));
+       const y = (100 * g.col) / 6;          // colonna -> verticale
+const x = 18 + (g.row - 1) * 14;      // riga -> profondità (verso metà campo)
+dots.push(makeDot(p, xForSide(x), y, side));
       }
       return dots.join("");
     }
@@ -762,12 +763,14 @@ async function loadLineupsPitch() {
     for (let rIdx = 0; rIdx < rows.length; rIdx++) {
       const n = rows[rIdx];
       const xs = rowXs(n);
-      const y = yForSide(yLevels[rIdx + 1] ?? 30);
+      const xDepth = yLevels[rIdx + 1] ?? 30;   // uso yLevels come “profondità”
+const y = xs[j];                           // distribuisco in verticale
+
 
       for (let j = 0; j < n; j++) {
         const pl = outfield[idx++];
         if (!pl) break;
-        dots.push(makeDot(pl, xs[j], y, side));
+        dots.push(makeDot(pl, xForSide(xDepth), y, side));
       }
     }
 
@@ -1075,7 +1078,8 @@ function renderPitchFromEstimate(est) {
         ${awayDots}
       </div>
       <div class="pitch-footnote muted">
-  * Formazione stimata dalle ultime partite (escludendo indisponibili quando disponibili). Affidabilità: <strong>MEDIA</strong>.
+  * Formazione stimata dalle ultime partite (escludendo indisponibili quando disponibili).
+  <span class="pitch-badge pitch-badge--est">AFFIDABILITÀ: MEDIA</span>
 </div>
     </div>
   `;
