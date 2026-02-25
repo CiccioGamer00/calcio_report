@@ -645,7 +645,7 @@ li{ margin:6px 0; }
   align-items: center;
   z-index: 9999;
 }
-.modal.hidden{ display:none !important; }
+
 .modal-content {
   background: #111;
   padding: 30px;
@@ -844,7 +844,13 @@ body[data-view-mode="single"] .card.is-focus{
 .stageView.hidden{ display:none; }
 
 /* box verde formazioni */
-
+.lineupsBox{
+  margin-top: 14px;
+  border-radius: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(82,255,168,0.25);
+  background: rgba(0, 255, 140, 0.10);
+}
 .lineupsBox.hidden{ display:none; }
 .lineupsHead{ font-weight: 900; margin-bottom: 8px; }
 
@@ -1197,22 +1203,21 @@ body[data-view-mode="single"] .card.is-focus{
     justify-content: center;
     text-align: center;
   }
+  .{
+    justify-items: center;
+  }
   .mh-vs{
     order: 2;
   }
 }
-.mh-logoCol{
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 0;
-  margin: 0;
-  min-width: 0;
+.{
+  display: grid;
+  justify-items: start;
+  gap: 8px;
 }
 
-.mh-team.right .mh-logoCol{
-  align-items: center; /* tiene tutto centrato come a sinistra */
+.mh-team.right .{
+  justify-items: end;
 }
 
 .mh-textCol{
@@ -1520,18 +1525,3 @@ body[data-view-mode="single"] .card.is-focus{
 .teamTable thead th:nth-child(2){
   padding-left: 36px; /* logo(18) + gap(10) + padding base(8) */
 }
-/* quando c'è un modal aperto, blocca click su pagina sotto */
-body.modal-open main,
-body.modal-open header,
-body.modal-open footer{
-  pointer-events: none;
-}
-
-/* il modal resta cliccabile */
-body.modal-open .modal{
-  pointer-events: auto;
-}
-
-
-
-
