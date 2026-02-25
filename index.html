@@ -1,105 +1,101 @@
 <!doctype html>
 <html lang="it">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Calcio Report</title>
-<link rel="stylesheet" href="style.css" />
-<link rel="icon" href="data:," />
-</head>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Calcio Report</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" href="data:," />
+  </head>
 
-<body>
-<div class="bg"></div>
+  <body>
+    <div class="bg"></div>
 
-<header class="header">
-<div class="brand">
-<div class="brand-badge">⚽</div>
-<div>
-<h1 class="title">Calcio Report</h1>
-<p class="subtitle">
-Report del prossimo match basato su dati storici reali.
-</p>
-</div>
+    <header class="header">
+      <div class="brand">
+        <div class="brand-badge">⚽</div>
+        <div>
+          <h1 class="title">Calcio Report</h1>
+          <p class="subtitle">
+            Report del prossimo match basato su dati storici reali.
+          </p>
+        </div>
 
-<!-- CTA Telegram (centro header) -->
-<a id="btnTelegramHeader" class="tg-cta" href="#" rel="noopener"
->📣 Unisciti su Telegram</a
->
+        <!-- CTA Telegram (centro header) -->
+        <a id="btnTelegramHeader" class="tg-cta" href="#" rel="noopener"
+          >📣 Unisciti su Telegram</a
+        >
 
-<!-- TOP RIGHT: badge + login/logout -->
-<div id="topBar">
-<span id="statusBadge" class="statusBadge hidden"></span>
-<button id="btnOpenAuth">Login</button>
-</div>
-</div>
-</header>
-<!-- TAB BAR (sticky) -->
+        <!-- TOP RIGHT: badge + login/logout -->
+        <div id="topBar">
+          <span id="statusBadge" class="statusBadge hidden"></span>
+          <button id="btnOpenAuth">Login</button>
+        </div>
+      </div>
+    </header>
+    <!-- TAB BAR (sticky) -->
 
-<main class="container">
-<!-- 2) BARRA RICERCA (sempre visibile) -->
-<section class="card">
-<h2 class="card-title">Cerca squadra</h2>
+    <main class="container">
+      <!-- 2) BARRA RICERCA (sempre visibile) -->
+      <section class="card">
+        <h2 class="card-title">Cerca squadra</h2>
 
-<form class="form" onsubmit="return false;">
-<div class="searchRow">
-<div class="searchGrow">
-<label for="teamSearchInput">Nome squadra</label>
-<input
-id="teamSearchInput"
-type="text"
-list="teamsList"
-placeholder="Es. Napoli"
-autocomplete="off"
-/>
-        <div id="teamSuggestBox" class="suggestBox hidden" role="listbox" aria-label="Suggerimenti squadre"></div>
-<datalist id="teamsList"></datalist>
-</div>
+        <form class="form" onsubmit="return false;">
+          <div class="searchRow">
+            <div class="searchGrow">
+              <label for="teamSearchInput">Nome squadra</label>
+              <input
+                id="teamSearchInput"
+                type="text"
+                list="teamsList"
+                placeholder="Es. Napoli"
+                autocomplete="off"
+              />
+			  <!-- Dropdown suggerimenti custom (con logo) -->
+  <div id="teamSuggestBox" class="suggestBox hidden" role="listbox" aria-label="Suggerimenti squadre"></div>
 
-<button id="btnSearch" type="button" class="btn primary">
-Cerca
-</button>
+              <datalist id="teamsList"></datalist>
+            </div>
 
-<div class="gamesPick">
-<label for="refHistoryCount">Partite</label>
-<select id="refHistoryCount">
-<option value="5" selected>5</option>
-<option value="10">10</option>
-<option value="15">15</option>
-<option value="20">20</option>
-</select>
-</div>
-</div>
-</form>
-</section>
+            <button id="btnSearch" type="button" class="btn primary">
+              Cerca
+            </button>
 
-<!-- 3) TABS (sotto la ricerca) -->
-<nav class="tabs tabs-under-search" id="panelTabs" aria-label="Sezioni">
-<button class="tab is-active" data-view="match" type="button">
-⚽ Match
-</button>
-        <button class="tab" data-view="referee" type="button">
-          🧑‍⚖️ Arbitro
+            <div class="gamesPick">
+              <label for="refHistoryCount">Partite</label>
+              <select id="refHistoryCount">
+                <option value="5" selected>5</option>
+                <option value="10">10</option>
+                <option value="15">15</option>
+                <option value="20">20</option>
+              </select>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <!-- 3) TABS (sotto la ricerca) -->
+      <nav class="tabs tabs-under-search" id="panelTabs" aria-label="Sezioni">
+        <button class="tab is-active" data-view="match" type="button">
+          ⚽ Match
         </button>
-        <button class="tab" data-view="teamsPanel" type="button">
-          👥 Squadre
+        <!-- PRO -->
+        <button
+          class="tab"
+          data-view="indicatorsPanel"
+          data-pro-tab="1"
+          type="button"
+        >
+          📊 Indicatori
         </button>
-        <button class="tab" data-view="cornersPanel" type="button">
-          🚩 Corner
+        <button
+          class="tab"
+          data-view="predictionPanel"
+          data-pro-tab="1"
+          type="button"
+        >
+          🧠 Predizione
         </button>
-        <button class="tab" data-view="shotsPanel" type="button">
-          🎯 Tiri
-        </button>
-        <button class="tab" data-view="injuriesPanel" type="button">
-          🩹 Indisponibili
-        </button>
-
-<!-- PRO -->
-<button
-class="tab"
-@@ -109,134 +93,200 @@
->
-🧠 Predizione
-</button>
         
         <button class="tab" data-view="referee" type="button">
           🧑‍⚖️ Arbitro
@@ -119,9 +115,9 @@ class="tab"
         <button class="tab" data-view="standingsPanel" type="button">
           🏆 Classifica
         </button>
-</nav>
+      </nav>
 
-<section class="card card-viewport" id="viewportCard">
+      <section class="card card-viewport" id="viewportCard">
         <!-- MATCH view (default) -->
         <div id="matchView" class="content stageView">
           <div id="match" class="content">
@@ -131,25 +127,6 @@ class="tab"
           </div>
       
 
-  <!-- MATCH view (default) -->
-  <div id="matchView" class="content stageView">
-    <div id="match" class="content">
-      <p class="muted"><em>Seleziona una squadra per vedere il prossimo match.</em></p>
-    </div>
-
-    <!-- Box verde: probabili formazioni (solo se disponibili) -->
-    <div id="lineupsBox" class="lineupsBox hidden">
-      <div class="lineupsHead">Probabili formazioni</div>
-      <div id="lineupsContent" class="lineupsContent">
-        <p class="muted"><em>Formazioni non disponibili.</em></p>
-      </div>
-    </div>
-  </div>
-
-  <!-- ALTRE view (una alla volta) -->
-  <div id="referee" class="content stageView hidden">
-    <p class="muted"><em>Qui verranno mostrati arbitro e storico (se disponibile).</em></p>
-  </div>
           <!-- Box verde: probabili formazioni (solo se disponibili) -->
           <div id="lineupsBox" class="lineupsBox hidden">
             <div class="lineupsHead">Probabili formazioni</div>
@@ -159,9 +136,6 @@ class="tab"
           </div>
         </div>
 
-  <div id="teamsPanel" class="content stageView hidden">
-    <p class="muted"><em>Qui verrà mostrata la forma delle due squadre (ultime X partite).</em></p>
-  </div>
         <!-- ALTRE view (una alla volta) -->
              <div id="standingsPanel" class="content stageView hidden">
   <p class="muted"><em>Apri la scheda “Classifica” per caricare i dati.</em></p>
@@ -172,9 +146,6 @@ class="tab"
           </p>
         </div>
 
-  <div id="cornersPanel" class="content stageView hidden">
-    <p class="muted"><em>Qui verranno mostrati i corner delle due squadre (ultime X partite).</em></p>
-  </div>
         <div id="teamsPanel" class="content stageView hidden">
           <p class="muted">
             <em
@@ -184,9 +155,6 @@ class="tab"
           </p>
         </div>
 
-  <div id="shotsPanel" class="content stageView hidden">
-    <p class="muted"><em>Qui verranno mostrati i tiri delle due squadre (ultime X partite).</em></p>
-  </div>
         <div id="cornersPanel" class="content stageView hidden">
           <p class="muted">
             <em
@@ -196,9 +164,6 @@ class="tab"
           </p>
         </div>
 
-  <div id="injuriesPanel" class="content stageView hidden">
-    <p class="muted"><em>Qui verranno mostrati gli indisponibili delle due squadre.</em></p>
-  </div>
         <div id="shotsPanel" class="content stageView hidden">
           <p class="muted">
             <em
@@ -208,18 +173,12 @@ class="tab"
           </p>
         </div>
 
-  <div id="indicatorsPanel" class="content stageView hidden" data-pro-only="1">
-    <p class="muted"><em>Gli indicatori verranno mostrati dopo aver selezionato un match.</em></p>
-  </div>
         <div id="injuriesPanel" class="content stageView hidden">
           <p class="muted">
             <em>Qui verranno mostrati gli indisponibili delle due squadre.</em>
           </p>
         </div>
 
-  <div id="predictionPanel" class="content stageView hidden" data-pro-only="1">
-    <p class="muted"><em>Seleziona una squadra per vedere la stima.</em></p>
-  </div>
         <div
           id="indicatorsPanel"
           class="content stageView hidden"
@@ -233,7 +192,6 @@ class="tab"
           </p>
         </div>
 
-</section>
         <div
           id="predictionPanel"
           class="content stageView hidden"
@@ -244,68 +202,66 @@ class="tab"
           </p>
         </div>
       </section>
-</main>
-    
+    </main>
 
-<!-- LOADER overlay (calcio) -->
-<div
-id="crLoader"
-class="loader hidden"
-aria-live="polite"
-aria-busy="true"
->
-<div class="loader-card">
-<div class="ball-track" aria-hidden="true">
-<div class="ball"></div>
-</div>
-<div class="loader-text">
-<div class="loader-title">Caricamento…</div>
-<div class="loader-sub" id="crLoaderMsg">
-Il pallone sta rotolando 🏃‍♂️⚽
-</div>
-</div>
-</div>
-</div>
-<!-- MODAL AUTH (invariato: se già lo hai, lascialo com’è nel tuo file) -->
-<div id="authModal" class="modal hidden">
-<div class="modal-content">
-<span class="close" id="btnCloseAuth">&times;</span>
+    <!-- LOADER overlay (calcio) -->
+    <div
+      id="crLoader"
+      class="loader hidden"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div class="loader-card">
+        <div class="ball-track" aria-hidden="true">
+          <div class="ball"></div>
+        </div>
+        <div class="loader-text">
+          <div class="loader-title">Caricamento…</div>
+          <div class="loader-sub" id="crLoaderMsg">
+            Il pallone sta rotolando 🏃‍♂️⚽
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- MODAL AUTH (invariato: se già lo hai, lascialo com’è nel tuo file) -->
+    <div id="authModal" class="modal hidden">
+      <div class="modal-content">
+        <span class="close" id="btnCloseAuth">&times;</span>
 
-<h3>Login / Registrazione</h3>
-<div id="authMsg" style="min-height: 18px; opacity: 0.9"></div>
+        <h3>Login / Registrazione</h3>
+        <div id="authMsg" style="min-height: 18px; opacity: 0.9"></div>
 
-<input id="authEmail" type="email" placeholder="Email" />
-<input id="authPass" type="password" placeholder="Password (min 6)" />
+        <input id="authEmail" type="email" placeholder="Email" />
+        <input id="authPass" type="password" placeholder="Password (min 6)" />
 
-<div class="auth-buttons">
-<button id="btnLogin">Login</button>
-<button id="btnRegister">Registrati</button>
-</div>
+        <div class="auth-buttons">
+          <button id="btnLogin">Login</button>
+          <button id="btnRegister">Registrati</button>
+        </div>
 
-<div class="auth-buttons" style="margin-top: 10px">
-<button id="btnPayPal" class="btn paypal">
-💳 Abbonati con PayPal
-</button>
-</div>
+        <div class="auth-buttons" style="margin-top: 10px">
+          <button id="btnPayPal" class="btn paypal">
+            💳 Abbonati con PayPal
+          </button>
+        </div>
 
-<hr style="border-color: #333; width: 100%" />
+        <hr style="border-color: #333; width: 100%" />
 
-<input
-id="redeemCode"
-type="text"
-placeholder="Codice attivazione (30 giorni)"
-/>
-<button id="btnRedeem">Attiva codice</button>
-</div>
-</div>
+        <input
+          id="redeemCode"
+          type="text"
+          placeholder="Codice attivazione (30 giorni)"
+        />
+        <button id="btnRedeem">Attiva codice</button>
+      </div>
+    </div>
 
-<footer class="footer">
-<div>
-<span class="muted">Supporto:</span>
-<a id="supportEmailLink" href="#">(imposta email)</a>
-</div>
-</footer>
-
+    <footer class="footer">
+      <div>
+        <span class="muted">Supporto:</span>
+        <a id="supportEmailLink" href="#">(imposta email)</a>
+      </div>
+    </footer>
     <div id="playerModal" class="modal hidden">
       <div class="modal-content" style="width: min(520px, calc(100% - 24px))">
         <span class="close" id="btnClosePlayer">&times;</span>
@@ -315,26 +271,25 @@ placeholder="Codice attivazione (30 giorni)"
         </div>
       </div>
     </div>
-<script src="config.js?v=6"></script>
+    <script src="config.js?v=6"></script>
 
-<script src="js/state.js?v=2"></script>
-<script src="js/utils.js?v=2"></script>
-<script src="js/api.js?v=2"></script>
+    <script src="js/state.js?v=2"></script>
+    <script src="js/utils.js?v=2"></script>
+    <script src="js/api.js?v=2"></script>
 
-<script src="js/features/panelsShared.js?v=3"></script>
-<script src="js/features/indicatorsPanel.js?v=1"></script>
-<script src="js/features/foulsPanel.js?v=1"></script>
-<script src="js/features/refereePanel.js?v=3"></script>
-<script src="js/features/teamsPanel.js?v=3"></script>
-<script src="js/features/cornersPanel.js?v=3"></script>
-<script src="js/features/shotsPanel.js?v=3"></script>
-<script src="js/features/injuriesPanel.js?v=3"></script>
-<script src="js/features/predictionPanel.js?v=1"></script>
+    <script src="js/features/panelsShared.js?v=3"></script>
+    <script src="js/features/indicatorsPanel.js?v=1"></script>
+    <script src="js/features/foulsPanel.js?v=1"></script>
+    <script src="js/features/refereePanel.js?v=3"></script>
+    <script src="js/features/teamsPanel.js?v=3"></script>
+    <script src="js/features/cornersPanel.js?v=3"></script>
+    <script src="js/features/shotsPanel.js?v=3"></script>
+    <script src="js/features/injuriesPanel.js?v=3"></script>
+    <script src="js/features/predictionPanel.js?v=1"></script>
     <script src="js/features/standingsPanel.js?v=1"></script>
 
-<!-- teamFlow per ultimo tra i features -->
-<script src="js/features/teamFlow.js?v=3"></script>
-<script src="app.js?v=7"></script>
-</body>
+    <!-- teamFlow per ultimo tra i features -->
+    <script src="js/features/teamFlow.js?v=3"></script>
+    <script src="app.js?v=7"></script>
+  </body>
 </html>
-
