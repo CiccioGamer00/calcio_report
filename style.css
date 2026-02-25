@@ -1641,3 +1641,5 @@ body[data-view-mode="single"] .card.is-focus{
   .td-score{ width: 70px; }
 }
 
+/* Allinea intestazione "Avv." con il testo delle squadre (dopo il logo) */
+.teamTable thead th:nth-child(2){ padding-left: 36px; }
