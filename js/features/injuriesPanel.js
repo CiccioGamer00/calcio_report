@@ -107,7 +107,20 @@ const surname = fullName.includes(".") ? fullName.split(".").slice(1).join(".").
       `;
     })
     .join("");
+function playerChipHTML(p) {
+  // Supporta sia struttura: { player:{name,photo} } sia { name, photo }
+  const name = p?.player?.name ?? p?.name ?? "—";
+  const photo = p?.player?.photo ?? p?.photo ?? "";
 
+  const img = photo
+    ? `<img class="pimg" src="${safeHTML(photo)}" alt="${safeHTML(name)}"
+         loading="lazy"
+         referrerpolicy="no-referrer"
+         onerror="this.style.display='none'">`
+    : `<span class="pimg" style="display:inline-block"></span>`;
+
+  return `<span class="pchip">${img}<span class="pname">${safeHTML(name)}</span></span>`;
+}
   return `
     <div class="kv-row">
       <div class="k">Indisponibili: ${safeHTML(teamName)}</div>
@@ -183,3 +196,4 @@ async function loadInjuries() {
     </div>
   `);
 }
+
