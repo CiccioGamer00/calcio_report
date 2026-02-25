@@ -1519,5 +1519,45 @@ body[data-view-mode="single"] .card.is-focus{
 .teamTable thead th:nth-child(2){
   padding-left: 36px; /* logo(18) + gap(10) + padding base(8) */
 }
+/* Indisponibili: player chip con foto */
+.injRow{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 0;
+  border-bottom:1px solid var(--line);
+}
+
+.pchip{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width: 0; /* permette ellipsis */
+}
+
+.pimg{
+  width:28px;
+  height:28px;
+  border-radius:50%;
+  object-fit:cover;
+  background: rgba(255,255,255,.08);
+  flex: 0 0 28px;
+}
+
+.pname{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width: 260px;
+}
+
+.injMeta{
+  margin-left:auto;
+  display:flex;
+  gap:10px;
+  align-items:center;
+  color: var(--muted);
+  font-size:.92rem;
+}
 
 
