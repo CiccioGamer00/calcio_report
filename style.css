@@ -1320,3 +1320,35 @@ body[data-view-mode="single"] .card.is-focus{
   display: grid;
   gap: 8px;
 }
+@media (max-width: 820px){
+  .mh-main{
+    grid-template-columns: 1fr;
+    gap: 12px;
+    text-align: center;
+  }
+  .mh-team,
+  .mh-team.right{
+    justify-content: center;
+    text-align: center;
+  }
+  .mh-logoCol{
+    justify-items: center;
+  }
+  .mh-vs{
+    order: 2;
+  }
+}
+.mh-logoCol{
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+}
+
+.mh-team.right .mh-logoCol{
+  justify-items: end;
+}
+
+.mh-textCol{
+  display: grid;
+  gap: 8px;
+}
