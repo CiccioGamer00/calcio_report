@@ -1008,100 +1008,79 @@ async function estimateLineupsForFixture() {
 }
 
 function renderPitchFromEstimate(est) {
-  const homeFormation = est?.home?.formation || "4-4-2";
-  const awayFormation = est?.away?.formation || "4-4-2";
+  if (!est || !est.home || !est.away) return '<p class="muted">Dati formazione non disponibili.</p>';
 
-  // riuso la tua layoutTeamPlayers esistente dentro loadLineupsPitch:
-  // qui ricostruiamo oggetti come startXI: [{player:{...}}] per compatibilità
-  const homeXI = (est?.home?.startXI || []).map((p) => ({ player: p }));
-  const awayXI = (est?.away?.startXI || []).map((p) => ({ player: p }));
+  const homeFormation = est.home.formation || "4-4-2";
+  const awayFormation = est.away.formation || "4-4-2";
 
-  // usa la tua layoutTeamPlayers già dentro loadLineupsPitch:
-  // per non duplicare, copio l’idea base: generiamo dot con --x/--y
-  // (qui facciamo una versione compatta uguale alla tua)
+  // Trasformiamo i dati per il layout
+  const homeXI = (est.home.startXI || []).map(p => ({ player: p }));
+  const awayXI = (est.away.startXI || []).map(p => ({ player: p }));
+
   function parseFormation(f) {
-    const parts = String(f || "")
-      .split("-")
-      .map((x) => parseInt(x, 10))
-      .filter((n) => Number.isFinite(n) && n > 0);
-    return parts.length ? parts : [4, 4, 2];
+    return String(f || "4-4-2").split("-").map(n => parseInt(n, 10));
   }
+
   function rowXs(n) {
     if (n <= 1) return [50];
     return Array.from({ length: n }, (_, i) => (100 * (i + 1)) / (n + 1));
   }
-  function makeDot(pl, xPct, yPct, sideClass) {
+
+  function makeDot(pl, x, y, side) {
     return `
-      <button class="pitch-player ${sideClass}" style="--x:${xPct};--y:${yPct};" type="button"
-        data-player-id="${safeHTML(pl?.id ?? "")}"
-        data-player-name="${safeHTML(pl?.name ?? "")}"
+      <button class="pitch-player ${side}" style="--x:${x}; --y:${y};" type="button"
+        data-player-id="${safeHTML(pl?.id)}"
+        data-player-name="${safeHTML(pl?.name)}"
       >
-        ${pl?.photo ? `<img class="pp-photo" src="${safeHTML(pl.photo)}" alt="" />` : ""}
-        <div class="pp-badge">${safeHTML(pl?.number ?? "")}</div>
-        <div class="pp-name">${safeHTML(pl?.name ?? "—")}</div>
-        <div class="pp-tag">STIMATA</div>
+        <div class="pp-photo-wrapper">
+            ${pl?.photo ? `<img class="pp-photo" src="${safeHTML(pl.photo)}" loading="lazy" />` : '<div class="pp-photo-placeholder"></div>'}
+            <div class="pp-badge">${safeHTML(pl?.number || "")}</div>
+        </div>
+        <div class="pp-name">${safeHTML(pl?.name || "—")}</div>
       </button>
     `;
   }
+
   function layout(startXI, formationStr, side) {
-    const players = startXI.map((x) => x?.player || {}).filter(Boolean);
-    if (players.length < 11) return ""; 
-
-    const rows = parseFormation(formationStr); // es: [4, 3, 3]
-    const gk = players[0];
-    const outFielders = players.slice(1);
-
-    // Definiamo le zone Y per la metà campo (0-50%)
-    // Il GK sta vicino al fondo (5%), l'ultima riga di attacco vicino alla metà (45%)
-    const ySteps = [5, 18, 30, 42, 48]; 
+    const players = startXI.map(x => x.player).filter(Boolean);
+    const rows = parseFormation(formationStr);
     
+    // Y Levels per un campo verticale compatto (0-100%)
+    // Away (Top): 5 (GK), 20, 32, 45
+    // Home (Bottom): 95 (GK), 80, 68, 55
+    const ySteps = [5, 18, 30, 42]; 
+    const finalY = (y) => (side === "home" ? 100 - y : y);
+
     let html = "";
-    
-    // Funzione per invertire la Y se è la squadra Home (che sta in basso 50-100%)
-    const finalY = (y) => side === "home" ? 100 - y : y;
+    // Portiere
+    if (players[0]) html += makeDot(players[0], 50, finalY(ySteps[0]), side);
 
-    // 1. Posiziona Portiere
-    html += makeDot(gk, 50, finalY(ySteps[0]), side);
-
-    // 2. Posiziona le linee del modulo
-    let currentIdx = 0;
-    rows.forEach((numPlayers, rowIdx) => {
-        const xPositions = rowXs(numPlayers);
-        const yPos = finalY(ySteps[rowIdx + 1] || 45);
-        
-        for (let i = 0; i < numPlayers; i++) {
-            const pl = outFielders[currentIdx++];
-            if (pl) {
-                html += makeDot(pl, xPositions[i], yPos, side);
-            }
-        }
+    let idx = 1;
+    rows.forEach((num, rIdx) => {
+      const xs = rowXs(num);
+      const y = finalY(ySteps[rIdx + 1] || 45);
+      for (let j = 0; j < num; j++) {
+        if (players[idx]) html += makeDot(players[idx], xs[j], y, side);
+        idx++;
+      }
     });
     return html;
-}
-
-  const homeDots = layout(homeXI, homeFormation, "home");
-  const awayDots = layout(awayXI, awayFormation, "away");
+  }
 
   return `
-    <div class="pitch">
-      <div class="pitch-lines"></div>
-      <div class="pitch-mid"></div>
-
-      <div class="pitch-teamname left">
-        ${safeHTML(selectedFixture.home?.name || "Casa")} • ${safeHTML(homeFormation)} <span class="pitch-badge">STIMATA</span>
+    <div class="pitch-container">
+      <div class="pitch">
+        <div class="pitch-lines"></div>
+        <div class="pitch-mid"></div>
+        <div class="pitch-grid">
+          ${layout(homeXI, homeFormation, "home")}
+          ${layout(awayXI, awayFormation, "away")}
+        </div>
       </div>
-      <div class="pitch-teamname right">
-        ${safeHTML(selectedFixture.away?.name || "Trasferta")} • ${safeHTML(awayFormation)} <span class="pitch-badge">STIMATA</span>
+      <div class="pitch-legend">
+        <div class="legend-team"><strong>${selectedFixture.home.name}</strong> (${homeFormation})</div>
+        <div class="legend-team text-right"><strong>${selectedFixture.away.name}</strong> (${awayFormation})</div>
       </div>
-
-      <div class="pitch-grid">
-        ${homeDots}
-        ${awayDots}
-      </div>
-      <div class="pitch-footnote muted">
-  * Formazione stimata dalle ultime partite (escludendo indisponibili quando disponibili).
-  <span class="pitch-badge pitch-badge--est">AFFIDABILITÀ: MEDIA</span>
-</div>
     </div>
   `;
 }
