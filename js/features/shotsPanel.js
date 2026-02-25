@@ -135,16 +135,18 @@ async function buildTeamShots(team, limit) {
     sumAgOT += shotsAgainstOT;
 
     perFixture.push({
-      fixtureId,
-      date,
-      home,
-      away,
-      comp,
-      shotsFor,
-      shotsForOT,
-      shotsAgainst,
-      shotsAgainstOT,
-    });
+  fixtureId,
+  date,
+  home,
+  away,
+  homeLogo: f.teams?.home?.logo ?? "",
+  awayLogo: f.teams?.away?.logo ?? "",
+  comp,
+  shotsFor,
+  shotsForOT,
+  shotsAgainst,
+  shotsAgainstOT,
+});
   }
 
   const n = perFixture.length;
@@ -232,7 +234,69 @@ function renderTeamShotsPerMatch(form) {
     <ul>${items || `<li class="muted">Nessun dato</li>`}</ul>
   `;
 }
+function renderTeamShotsCard(form, lastN) {
+  const t = form.team;
+  const rows = (form.fixtures || []).slice(0, lastN);
 
+  const chips = `
+    <span class="chip">Media tiri: ${safeHTML(form.avgShotsFor)}</span>
+    <span class="chip">In porta: ${safeHTML(form.avgOnTargetFor)}</span>
+    <span class="chip">Subiti: ${safeHTML(form.avgShotsAgainst)}</span>
+    <span class="chip">In porta subiti: ${safeHTML(form.avgOnTargetAgainst)}</span>
+  `;
+
+  const body = rows.length
+    ? rows.map((x) => {
+        const isHome = String(x.home || "").toLowerCase() === String(t.name || "").toLowerCase();
+        const oppName = isHome ? x.away : x.home;
+        const oppLogo = isHome ? x.awayLogo : x.homeLogo;
+
+        return `
+          <tr>
+            <td class="td-date">${safeHTML(x.date)}</td>
+            <td class="td-opp">
+              <span class="opp">
+                ${oppLogo ? `<img class="oppLogo" src="${safeHTML(oppLogo)}" alt="">` : ``}
+                <span class="oppName">${safeHTML(oppName)}</span>
+              </span>
+            </td>
+            <td class="td-score"><strong>${safeHTML(x.shotsFor)}</strong></td>
+            <td class="td-score"><strong>${safeHTML(x.shotsForOT)}</strong></td>
+          </tr>
+        `;
+      }).join("")
+    : `<tr><td colspan="4" class="muted"><em>Nessun dato</em></td></tr>`;
+
+  return `
+    <div class="teamCard">
+      <div class="teamCardHead">
+        <div class="teamTitle">
+          ${t.logo ? `<img class="teamLogo" src="${safeHTML(t.logo)}" alt="logo">` : ``}
+          <div class="teamName">${safeHTML(t.name)}</div>
+        </div>
+        <div class="teamLastN">Ultime ${safeHTML(lastN)}</div>
+      </div>
+
+      <div class="teamChips">${chips}</div>
+
+      <div class="teamTableWrap">
+        <table class="teamTable">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Avv.</th>
+              <th>🎯 Totali</th>
+              <th>🥅 In porta</th>
+            </tr>
+          </thead>
+          <tbody>${body}</tbody>
+        </table>
+      </div>
+
+      ${form.note ? `<div class="muted" style="margin-top:8px; font-size:12px;"><em>${safeHTML(form.note)}</em></div>` : ``}
+    </div>
+  `;
+}
 async function loadTeamsShots() {
   if (!selectedFixture?.home?.id || !selectedFixture?.away?.id) {
     setShots(
@@ -263,60 +327,15 @@ async function loadTeamsShots() {
     buildTeamShots(selectedFixture.away, limit),
   ]);
 
-  setShots(`
-    ${cappedMsg}
-    <div class="kv">
-      ${renderTeamShotsSummary(homeS)}
-      ${renderTeamShotsSummary(awayS)}
-    </div>
+  const lastN = Math.min(requested, limit);
 
-    <p style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
-      <button type="button" class="btn" id="btnToggleShotsList">Mostra/Nascondi ultime partite tiri</button>
-      <button type="button" class="btn" id="btnToggleShotsPerMatch">Mostra/Nascondi tiri per match</button>
-    </p>
-
-    <div id="shotsList" style="display:${showList ? "block" : "none"};"></div>
-    <div id="shotsPerMatch" style="display:${showPerMatch ? "block" : "none"};"></div>
-  `);
-
-  const btnList = document.getElementById("btnToggleShotsList");
-  const btnPer = document.getElementById("btnToggleShotsPerMatch");
-  const divList = document.getElementById("shotsList");
-  const divPer = document.getElementById("shotsPerMatch");
-
-  if (btnList && divList) {
-    btnList.onclick = () => {
-      const isOpen = divList.style.display !== "none";
-      UI_STATE.shotsList = !isOpen;
-      divList.style.display = isOpen ? "none" : "block";
-    };
-  }
-
-  if (btnPer && divPer) {
-    btnPer.onclick = () => {
-      const isOpen = divPer.style.display !== "none";
-      UI_STATE.shotsPerMatch = !isOpen;
-      divPer.style.display = isOpen ? "none" : "block";
-    };
-  }
-
-  if (divList) {
-    divList.innerHTML = `
-      <hr />
-      <p><strong>Ultime partite (tiri)</strong></p>
-      ${renderTeamShotsList(homeS)}
-      ${renderTeamShotsList(awayS)}
-    `;
-  }
-
-  if (divPer) {
-    divPer.innerHTML = `
-      <hr />
-      <p><strong>Tiri per match (fatti vs subiti)</strong></p>
-      ${renderTeamShotsPerMatch(homeS)}
-      ${renderTeamShotsPerMatch(awayS)}
-    `;
-  }
+setShots(`
+  ${cappedMsg}
+  <div class="teamCardsWrap">
+    ${renderTeamShotsCard(homeS, lastN)}
+    ${renderTeamShotsCard(awayS, lastN)}
+  </div>
+`);
 try {
   if (window.publishIndicatorData) {
     window.publishIndicatorData("shots", {
@@ -338,3 +357,4 @@ try {
   console.error("publish indicators shots", e);
 }
 }
+
