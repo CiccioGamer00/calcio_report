@@ -894,27 +894,40 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 8) {
   return data;
 }
 
+// Funzione salvagente: crea 11 giocatori finti se l'API è vuota
+function generateMockLineup() {
+  const arr = [];
+  for(let i = 1; i <= 11; i++) {
+    arr.push({ 
+      player: { id: i, name: "Player " + i, number: i, pos: i === 1 ? "G" : "M" } 
+    });
+  }
+  return { formation: "4-4-2", startXI: arr, mock: true };
+}
+
 async function estimateLineupsForFixture() {
   const homeId = selectedFixture?.home?.id;
   const awayId = selectedFixture?.away?.id;
   if (!homeId || !awayId) return null;
 
-  // Rimuovo il blocco rigido su leagueId e season per garantire il fallback!
   const leagueId = selectedFixture?.leagueId || null;
   const season = selectedFixture?.season || null;
 
-  const [homeEst, awayEst] = await Promise.all([
+  let [homeEst, awayEst] = await Promise.all([
     estimateLineupForTeam(homeId, leagueId, season, 10),
     estimateLineupForTeam(awayId, leagueId, season, 10),
   ]);
 
-  if (!homeEst || !awayEst) return null;
+  // ECCO IL SALVAGENTE: Se l'API fallisce, metto la formazione mockata
+  let isMock = false;
+  if (!homeEst) { homeEst = generateMockLineup(); isMock = true; }
+  if (!awayEst) { awayEst = generateMockLineup(); isMock = true; }
 
-  return { type: "estimated", home: homeEst, away: awayEst };
+  return { type: isMock ? "mock" : "estimated", home: homeEst, away: awayEst };
 }
 
 function renderPitchFromEstimate(est) {
-  if (!est || !est.home || !est.away) return '<p class="muted">Dati formazione non disponibili.</p>';
+  if (!est || !est.home || !est.away) return '<p class="muted">Errore rendering.</p>';
 
   const homeFormation = est.home.formation || "4-4-2";
   const awayFormation = est.away.formation || "4-4-2";
@@ -924,7 +937,6 @@ function renderPitchFromEstimate(est) {
     return parts.length ? parts : [4, 4, 2];
   }
 
-  // Genera posizioni orizzontali (X) per una riga di N giocatori
   function rowXs(n) {
     if (n <= 1) return [50];
     return Array.from({ length: n }, (_, i) => (100 * (i + 1)) / (n + 1));
@@ -933,11 +945,9 @@ function renderPitchFromEstimate(est) {
   function makeDot(pl, x, y, side) {
     return `
       <button class="pitch-player ${side}" style="--x:${x}; --y:${y};" type="button"
-        data-player-id="${safeHTML(pl?.id)}"
-        data-player-name="${safeHTML(pl?.name)}"
-      >
+        data-player-id="${safeHTML(pl?.id)}" data-player-name="${safeHTML(pl?.name)}">
         <div class="pp-photo-wrapper">
-            ${pl?.photo ? `<img class="pp-photo" src="${safeHTML(pl.photo)}" loading="lazy" onerror="this.style.display='none'" />` : '<div class="pp-photo-placeholder"></div>'}
+            ${pl?.photo ? `<img class="pp-photo" src="${safeHTML(pl.photo)}" loading="lazy" onerror="this.style.display='none'" />` : '<div class="pp-photo-placeholder" style="width:100%;height:100%;background:#333;border-radius:50%;border:2px solid white;"></div>'}
             <div class="pp-badge">${safeHTML(pl?.number || "")}</div>
         </div>
         <div class="pp-name">${safeHTML(pl?.name || "—")}</div>
@@ -949,23 +959,19 @@ function renderPitchFromEstimate(est) {
     const players = teamData.startXI || [];
     const rows = parseFormation(teamData.formation);
     
-    // Y Levels per campo verticale (0-100%).
-    // Trasferta (Alto): Portiere a 6%, Difesa a 22%, ecc.
+    // Y Levels
     const ySteps = [6, 22, 38, 50]; 
-    // Invertiamo la Y se è la squadra di casa (così parte dal basso, 100%)
     const finalY = (y) => (side === "home" ? 100 - y : y);
 
     let html = "";
     if (!players.length) return html;
 
-    // 1. Il Portiere (sempre il primo dopo il sort)
     html += makeDot(players[0], 50, finalY(ySteps[0]), side);
 
-    // 2. Giocatori di movimento
     let idx = 1;
     rows.forEach((num, rIdx) => {
       const xs = rowXs(num);
-      const y = finalY(ySteps[rIdx + 1] || 48); // Se il modulo ha tante linee, stringiamo a ridosso della metà
+      const y = finalY(ySteps[rIdx + 1] || 48);
       for (let j = 0; j < num; j++) {
         if (players[idx]) {
           html += makeDot(players[idx], xs[j], y, side);
@@ -976,23 +982,30 @@ function renderPitchFromEstimate(est) {
     return html;
   }
 
+  // Notare i div pitch-area-top e pitch-area-bottom aggiunti qui sotto
   return `
     <div class="pitch-container">
       <div class="pitch">
         <div class="pitch-lines"></div>
         <div class="pitch-mid"></div>
+        <div class="pitch-area-top"></div>
+        <div class="pitch-area-bottom"></div>
         ${layout(est.home, "home")}
         ${layout(est.away, "away")}
       </div>
       <div class="pitch-legend" style="display:flex; justify-content:space-between; margin-top:10px; font-size:13px; padding: 0 10px;">
         <div class="legend-team" style="text-align: left;">
             <strong>${safeHTML(selectedFixture?.home?.name || "Casa")}</strong> 
-            <span class="pitch-badge pitch-badge--est" style="border-color:#ffb84d; background:rgba(255,184,77,0.15);">STIMA STORICO</span><br>
+            <span class="pitch-badge pitch-badge--est" style="border-color:#ffb84d; background:rgba(255,184,77,0.15);">
+                ${est.type === 'mock' ? 'MOCK DATA' : 'STIMA STORICO'}
+            </span><br>
             <span class="muted" style="font-size:11px;">Modulo Probabile: ${homeFormation}</span>
         </div>
         <div class="legend-team" style="text-align: right;">
             <strong>${safeHTML(selectedFixture?.away?.name || "Trasferta")}</strong> 
-            <span class="pitch-badge pitch-badge--est" style="border-color:#ffb84d; background:rgba(255,184,77,0.15);">STIMA STORICO</span><br>
+            <span class="pitch-badge pitch-badge--est" style="border-color:#ffb84d; background:rgba(255,184,77,0.15);">
+                ${est.type === 'mock' ? 'MOCK DATA' : 'STIMA STORICO'}
+            </span><br>
             <span class="muted" style="font-size:11px;">Modulo Probabile: ${awayFormation}</span>
         </div>
       </div>
