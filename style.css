@@ -1529,111 +1529,8 @@ body[data-view-mode="single"] .card.is-focus{
 .teamTable thead th:nth-child(2){
   padding-left: 36px; /* logo(18) + gap(10) + padding base(8) */
 }
-.pitch-badge{
-  display:inline-block;
-  margin-left:8px;
-  padding:3px 8px;
-  border-radius:999px;
-  font-size:11px;
-  font-weight:900;
-  letter-spacing:.3px;
-  border:1px solid var(--line);
-  background: rgba(255,255,255,.07);
-}
-
-.pitch-badge--official{
-  border-color: rgba(82,255,168,.55);
-  background: rgba(82,255,168,.10);
-}
-.pitch-badge--est{
-  border-color: rgba(103,163,255,.55);
-  background: rgba(103,163,255,.10);
-}
-.pp-face{
-  width:44px;height:44px;
-  border-radius:14px;
-  display:flex;align-items:center;justify-content:center;
-  font-weight:950;
-  border:1px solid rgba(255,255,255,0.18);
-  background: rgba(0,0,0,0.25);
-}
-/* Container per limitare l'altezza del campo */
-.pitch-container {
-    max-width: 500px;
-    margin: 0 auto;
-    padding: 10px;
-}
-
-.pitch {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 0.75; /* Più compatto verticalmente */
-    background: linear-gradient(to bottom, #1a4a1a, #2d5a2d);
-    border: 2px solid rgba(255,255,255,0.2);
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-/* Le linee del campo che avevi già, ma assicurate */
-.pitch-lines {
-    position: absolute;
-    inset: 10px;
-    border: 2px solid rgba(255,255,255,0.3);
-    pointer-events: none;
-}
-
-.pitch-mid {
-    position: absolute;
-    top: 50%; left: 0; right: 0;
-    height: 2px; background: rgba(255,255,255,0.3);
-}
-
-/* Giocatori */
-.pitch-player {
-    position: absolute;
-    left: calc(var(--x) * 1%);
-    top: calc(var(--y) * 1%);
-    transform: translate(-50%, -50%);
-    background: none; border: none; padding: 0;
-    display: flex; flex-direction: column; align-items: center;
-    z-index: 10; width: 60px;
-}
-
-.pp-photo-wrapper {
-    position: relative;
-    width: 32px; height: 32px;
-}
-
-.pp-photo {
-    width: 100%; height: 100%;
-    border-radius: 50%;
-    border: 2px solid var(--accent);
-    background: #111;
-    object-fit: cover;
-}
-
-.pp-name {
-    font-size: 9px;
-    font-weight: bold;
-    color: white;
-    text-shadow: 1px 1px 3px black;
-    margin-top: 2px;
-    text-align: center;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.pp-badge {
-    position: absolute;
-    bottom: -2px; right: -2px;
-    background: white; color: black;
-    font-size: 8px; padding: 1px 3px;
-    border-radius: 4px; font-weight: 900;
-}
 /* =========================
-   CAMPO RESPONSIVE (MAGIA CSS)
+   CAMPO RESPONSIVE PERFETTO
    ========================= */
 .pitch-container {
     width: 100%;
@@ -1641,18 +1538,20 @@ body[data-view-mode="single"] .card.is-focus{
     padding: 10px 0;
 }
 
-/* 1. MOBILE DI DEFAULT (Verticale) */
 .pitch {
     position: relative;
     width: 100%;
-    aspect-ratio: 0.72; /* Proporzione verticale */
+    aspect-ratio: 0.72; /* Mobile: Verticale */
     background: linear-gradient(to bottom, #1a4a1a, #2d5a2d);
-    border: 2px solid rgba(255,255,255,0.2);
+    border: 2px solid rgba(255,255,255,0.3);
     border-radius: 8px;
     overflow: hidden;
-    transition: aspect-ratio 0.3s ease;
 }
 
+/* Rimuove qualsiasi residuo di vecchi cerchi sballati */
+.pitch::before, .pitch::after { display: none !important; }
+
+/* Linee laterali fisse */
 .pitch-lines {
     position: absolute;
     inset: 10px;
@@ -1660,11 +1559,14 @@ body[data-view-mode="single"] .card.is-focus{
     pointer-events: none;
 }
 
-/* Linea di metà campo (Mobile = Orizzontale) */
+/* Linea di metà campo (Mobile: Orizzontale) */
 .pitch-mid {
     position: absolute;
-    top: 50%; left: 0; right: 0;
-    height: 2px; background: rgba(255,255,255,0.3);
+    top: 50%; left: 10px; right: 10px;
+    height: 2px;
+    background: rgba(255,255,255,0.3);
+    transform: translateY(-50%);
+    pointer-events: none;
 }
 
 /* Cerchio di centrocampo */
@@ -1673,87 +1575,67 @@ body[data-view-mode="single"] .card.is-focus{
     position: absolute;
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
-    width: 70px; height: 70px;
+    width: 80px; height: 80px;
     border: 2px solid rgba(255,255,255,0.3);
     border-radius: 50%;
 }
 
-/* Posizionamento Giocatori Base (Mobile) */
+/* Aree di rigore (Mobile: Sopra e Sotto) */
+.pitch-area-top, .pitch-area-bottom {
+    position: absolute;
+    left: 50%; transform: translateX(-50%);
+    width: 140px; height: 50px;
+    border: 2px solid rgba(255,255,255,0.3);
+    pointer-events: none;
+}
+.pitch-area-top { top: 10px; border-top: none; }
+.pitch-area-bottom { bottom: 10px; border-bottom: none; }
+
+
+/* Giocatori Mobile */
 .pitch-player {
     position: absolute;
-    /* Su mobile la Y è l'altezza e la X è la larghezza */
     left: calc(var(--x) * 1%);
     top: calc(var(--y) * 1%);
     transform: translate(-50%, -50%);
     background: none; border: none; padding: 0;
     display: flex; flex-direction: column; align-items: center;
-    z-index: 10; width: 65px;
-    cursor: pointer;
+    z-index: 10; width: 65px; cursor: pointer;
 }
 
-.pp-photo-wrapper {
-    position: relative;
-    width: 36px; height: 36px;
-}
-
+.pp-photo-wrapper { position: relative; width: 36px; height: 36px; }
 .pp-photo {
-    width: 100%; height: 100%;
-    border-radius: 50%;
+    width: 100%; height: 100%; border-radius: 50%;
     border: 2px solid rgba(255,255,255,0.8);
-    background: #111;
-    object-fit: cover;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    background: #111; object-fit: cover; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
 }
-
-/* Colori squadre per distinguere bene le maglie (bordo foto) */
 .pitch-player.home .pp-photo { border-color: rgba(82,255,168,0.9); }
 .pitch-player.away .pp-photo { border-color: rgba(103,163,255,0.9); }
 
 .pp-name {
-    font-size: 10px;
-    font-weight: 800;
-    color: white;
-    text-shadow: 1px 1px 4px black;
-    margin-top: 4px;
-    text-align: center;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    background: rgba(0,0,0,0.4);
-    padding: 2px 6px;
-    border-radius: 4px;
+    font-size: 10px; font-weight: 800; color: white;
+    text-shadow: 1px 1px 4px black; margin-top: 4px; text-align: center;
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    background: rgba(0,0,0,0.4); padding: 2px 6px; border-radius: 4px;
 }
-
 .pp-badge {
-    position: absolute;
-    bottom: -4px; right: -4px;
-    background: white; color: black;
-    font-size: 9px; padding: 2px 4px;
-    border-radius: 4px; font-weight: 900;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    position: absolute; bottom: -4px; right: -4px;
+    background: white; color: black; font-size: 9px; padding: 2px 4px;
+    border-radius: 4px; font-weight: 900; box-shadow: 0 2px 4px rgba(0,0,0,0.4);
 }
 
-/* 2. PC DESKTOP (Orizzontale!) */
+/* PC DESKTOP: Diventa Orizzontale */
 @media (min-width: 920px) {
-    .pitch {
-        aspect-ratio: 1.8; /* Proporzione larga e panoramica */
-        background: linear-gradient(to right, #1a4a1a, #2d5a2d); /* Sfumatura da sx a dx */
-    }
+    .pitch { aspect-ratio: 1.8; background: linear-gradient(to right, #1a4a1a, #2d5a2d); }
     
-    /* Ruotiamo la linea di centrocampo (Desktop = Verticale) */
-    .pitch-mid {
-        top: 0; bottom: 0;
-        left: 50%; right: auto;
-        width: 2px; height: 100%;
-    }
+    /* Ruota la metà campo (Verticale) */
+    .pitch-mid { top: 10px; bottom: 10px; left: 50%; right: auto; width: 2px; height: auto; transform: translateX(-50%); }
+    
+    /* Ruota le aree di rigore (Sinistra e Destra) */
+    .pitch-area-top, .pitch-area-bottom { top: 50%; transform: translateY(-50%); width: 50px; height: 140px; }
+    .pitch-area-top { left: 10px; border-left: none; border-top: 2px solid rgba(255,255,255,0.3); border-bottom: 2px solid rgba(255,255,255,0.3); border-right: 2px solid rgba(255,255,255,0.3); }
+    .pitch-area-bottom { right: 10px; left: auto; border-right: none; border-top: 2px solid rgba(255,255,255,0.3); border-bottom: 2px solid rgba(255,255,255,0.3); border-left: 2px solid rgba(255,255,255,0.3); }
 
-    /* INVERSIONE COORDINATE: La vera magia */
-    .pitch-player {
-        /* La coordinata Y calcolata per il mobile diventa la X (da sinistra a destra).
-           Usiamo (100 - Y) così la squadra di casa (che era in basso a Y=95) finisce a X=5 (Sinistra).
-           La coordinata X del mobile diventa l'altezza Y. */
-        left: calc((100 - var(--y)) * 1%);
-        top: calc(var(--x) * 1%);
-    }
+    /* Inverte le assi per i giocatori */
+    .pitch-player { left: calc((100 - var(--y)) * 1%); top: calc(var(--x) * 1%); }
 }
