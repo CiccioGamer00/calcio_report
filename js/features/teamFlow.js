@@ -784,18 +784,17 @@ function cacheKeyEst(teamId, leagueId, season) {
   return `${teamId}|${leagueId || "all"}|${season || "all"}`;
 }
 
-// 1. Recupera l'allenatore reale
+// 1. Recupera l'allenatore reale (Più preciso)
 async function fetchCurrentCoach(teamId) {
-  if (!teamId) return "Allenatore";
+  if (!teamId) return "N/D";
   try {
       const r = await apiGet(`/coachs?team=${teamId}`, { retries: 1 });
       if (r && r.ok && Array.isArray(r.arr) && r.arr.length > 0) {
-          // Cerca l'allenatore la cui carriera in questo team non ha una data di fine, o prendi il primo della lista
-          const current = r.arr.find(c => c.career && c.career.some(car => car.team.id === teamId && car.end === null)) || r.arr[0];
-          return current?.name || "Allenatore";
+          // L'API mette l'allenatore attuale come primo risultato
+          return r.arr[0]?.name || "N/D";
       }
-  } catch(e) { console.warn("Errore fetch coach:", e); }
-  return "Allenatore";
+  } catch(e) { console.warn("Errore fetch coach"); }
+  return "N/D";
 }
 
 // 2. Recupera infortunati
@@ -834,14 +833,15 @@ function formationMode(arr) {
 }
 
 // 3. Calcola Formazione Statistica
-async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
+async function estimateLineupForTeam(teamId, leagueId, season, limit = 2) { 
+  // ATTENZIONE: limit = 2 per non farci bloccare dall'API (Rate Limit)
   if (!teamId) return null;
 
   const key = cacheKeyEst(teamId, leagueId, season);
   const hit = __EST_LINEUP_CACHE__.get(key);
   if (hit && Date.now() - hit.ts < 5 * 60_000) return hit.data;
 
-  // Recupera coach e infortunati in parallelo
+  // Recupera coach e infortunati
   const [injured, coachName] = await Promise.all([
       fetchInjuredPlayerIds(teamId, season),
       fetchCurrentCoach(teamId)
@@ -855,8 +855,6 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
       );
       fixtures = fx.ok && !fx.errors && Array.isArray(fx.arr) ? fx.arr : [];
   } catch(e) {}
-
-  if (!fixtures.length) return null;
 
   const counts = new Map();
   const formations = [];
@@ -896,24 +894,45 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
     } catch(e) { continue; }
   }
 
-  if (counts.size < 11) return null;
+  let XI = [];
+  let form = "4-4-2";
+  let isMock = false;
 
-  const top = Array.from(counts.values()).sort((a, b) => b.n - a.n).slice(0, 11).map((x) => x.player);
-  const XI = sortByRole(top);
-  const form = formationMode(formations);
+  // Se l'API non ci ha bloccato e ha trovato almeno 11 giocatori
+  if (counts.size >= 11) {
+    const top = Array.from(counts.values()).sort((a, b) => b.n - a.n).slice(0, 11).map((x) => x.player);
+    XI = sortByRole(top);
+    form = formationMode(formations);
+  } else {
+    // SALVAGENTE: Mette i pallini finti, MA TIENE IL VERO MISTER E IL MODULO!
+    isMock = true;
+    for(let i = 1; i <= 11; i++) {
+      XI.push({ id: i, name: "N/D", number: "", pos: i === 1 ? "G" : "M" });
+    }
+  }
 
-  const data = { formation: form, startXI: XI, injuredCount: injured.size, coach: coachName };
+  const data = { formation: form, startXI: XI, injuredCount: injured.size, coach: coachName, isMock };
   __EST_LINEUP_CACHE__.set(key, { ts: Date.now(), data });
   return data;
 }
 
-// 4. Fallback (se API vuota)
-function generateMockLineup(teamName) {
-  const arr = [];
-  for(let i = 1; i <= 11; i++) {
-    arr.push({ player: { id: i, name: "N/D", number: "", pos: i === 1 ? "G" : "M" } });
-  }
-  return { formation: "4-4-2", startXI: arr, mock: true, coach: "N/D" };
+// 4. Fallback Principale
+async function estimateLineupsForFixture() {
+  const homeId = selectedFixture?.home?.id;
+  const awayId = selectedFixture?.away?.id;
+  if (!homeId || !awayId) return null;
+
+  const leagueId = selectedFixture?.leagueId || null;
+  const season = selectedFixture?.season || null;
+
+  const [homeEst, awayEst] = await Promise.all([
+    estimateLineupForTeam(homeId, leagueId, season, 2),
+    estimateLineupForTeam(awayId, leagueId, season, 2),
+  ]);
+
+  if (!homeEst || !awayEst) return null;
+
+  return { type: (homeEst.isMock || awayEst.isMock) ? "mock" : "estimated", home: homeEst, away: awayEst };
 }
 
 async function estimateLineupsForFixture() {
