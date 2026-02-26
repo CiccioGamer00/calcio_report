@@ -481,7 +481,10 @@ function initTeamSearchUX() {
   const input = getTeamInputEl();
   if (!input) return;
   const box = getTeamSuggestBoxEl();
-
+// ✅ Se esiste la tendina custom, disattivo la datalist nativa del browser
+if (box) {
+  input.removeAttribute("list");
+}
   // click su un suggerimento
   box?.addEventListener("click", (e) => {
     const btn = e.target?.closest?.(".suggestItem");
@@ -625,7 +628,9 @@ async function loadLineupsPitch() {
       wirePitchClicks(); // abilita click players per popup stats
       return;
     }
-    content.innerHTML = renderPitchPlaceholder("Formazioni non disponibili (ancora).");
+    content.innerHTML = renderPitchPlaceholder(
+      "Formazioni non disponibili (ancora).",
+    );
     return;
   }
 
@@ -642,9 +647,12 @@ async function loadLineupsPitch() {
   const awayFormation = String(away?.formation || "").trim();
 
   // ========== HELPERS ==========
-  
+
   function parseFormation(f) {
-    const parts = String(f || "").split("-").map((x) => parseInt(x, 10)).filter((n) => Number.isFinite(n) && n > 0);
+    const parts = String(f || "")
+      .split("-")
+      .map((x) => parseInt(x, 10))
+      .filter((n) => Number.isFinite(n) && n > 0);
     return parts.length ? parts : null;
   }
 
@@ -664,19 +672,15 @@ async function loadLineupsPitch() {
     const pid = pl?.id ?? "";
 
     return `
-      <button class="pitch-player ${sideClass}" style="--x:${xPct};--y:${yPct};" type="button"
-        data-player-id="${safeHTML(pid)}"
-        data-player-name="${safeHTML(name)}"
-        ${pid ? "" : "disabled"}
-        aria-label="${safeHTML(name)}"
-      >
-        <div class="pp-photo-wrapper">
-          ${photo ? `<img class="pp-photo" src="${safeHTML(photo)}" alt="" loading="lazy" onerror="this.style.display='none'"/>` : '<div class="pp-photo-placeholder"></div>'}
-          <div class="pp-badge">${safeHTML(num)}</div>
-        </div>
-        <div class="pp-name">${safeHTML(name)}</div>
-      </button>
-    `;
+  <button class="pitch-player ${sideClass}" style="--x:${xPct};--y:${yPct};" type="button"
+    data-player-id="${safeHTML(pl?.id ?? "")}"
+    data-player-name="${safeHTML(name)}"
+  >
+    ${photo ? `<img class="pp-photo" src="${safeHTML(photo)}" alt="" />` : ""}
+    <div class="pp-badge">${safeHTML(num)}</div>
+    <div class="pp-name">${safeHTML(name)}</div>
+  </button>
+`;
   }
 
   // Posiziona la squadra in base al modulo
@@ -687,13 +691,13 @@ async function loadLineupsPitch() {
     // Identifica il portiere
     let gk = players[0];
     const outfield = players.filter((pl) => pl !== gk);
-    
+
     // Fallback se manca il modulo
     const rows = formation || [4, 4, 2];
 
     // Y Levels per un campo verticale (0-100%)
-    const ySteps = [6, 20, 34, 46]; 
-    
+    const ySteps = [6, 20, 34, 46];
+
     // Inverti la Y per la squadra di casa (che gioca in basso verso l'alto)
     const finalY = (y) => (side === "home" ? 100 - y : y);
 
@@ -732,7 +736,7 @@ async function loadLineupsPitch() {
   function renderPitch(homeDots, awayDots) {
     const homeName = selectedFixture.home?.name || "Casa";
     const awayName = selectedFixture.away?.name || "Trasferta";
-    
+
     return `
       <div class="pitch-container">
         <div class="pitch">
@@ -788,28 +792,53 @@ function cacheKeyEst(teamId, leagueId, season) {
 async function fetchCurrentCoach(teamId) {
   if (!teamId) return "N/D";
   try {
-      const r = await apiGet(`/coachs?team=${teamId}`, { retries: 1 });
-      if (r && r.ok && Array.isArray(r.arr) && r.arr.length > 0) {
-          return r.arr[0]?.name || "N/D";
-      }
-  } catch(e) { console.warn("Errore fetch coach"); }
+    const r = await apiGet(`/coachs?team=${teamId}`, { retries: 1 });
+    if (r && r.ok && Array.isArray(r.arr) && r.arr.length > 0) {
+      return r.arr[0]?.name || "N/D";
+    }
+  } catch (e) {
+    console.warn("Errore fetch coach");
+  }
   return "N/D";
 }
 
 // 2. Recupera infortunati
 async function fetchInjuredPlayerIds(teamId, season) {
   if (!teamId) return new Set();
-  const currentSeason = season || new Date().getFullYear(); 
+  const currentSeason = season || new Date().getFullYear();
   try {
-      const r = await apiGet(`/injuries?team=${teamId}&season=${currentSeason}`, { retries: 1 });
-      const out = new Set();
-      if (!r.ok || r.errors || !Array.isArray(r.arr)) return out;
-      for (const row of r.arr) {
-        const pid = row?.player?.id ?? null;
-        if (pid) out.add(pid);
-      }
-      return out;
-  } catch(e) { return new Set(); }
+    const r = await apiGet(`/injuries?team=${teamId}&season=${currentSeason}`, {
+      retries: 1,
+    });
+    const out = new Set();
+    if (!r.ok || r.errors || !Array.isArray(r.arr)) return out;
+    for (const row of r.arr) {
+      const pid = row?.player?.id ?? null;
+      if (pid) out.add(pid);
+    }
+    return out;
+  } catch (e) {
+    return new Set();
+  }
+}
+async function fetchSquadPlayerIds(teamId) {
+  // /players/squads?team=...  -> rosa attuale (riduce i "fantasmi" e gli omonimi)
+  if (!teamId) return null;
+  const r = await apiGet(`/players/squads?team=${teamId}`, {
+    retries: 2,
+    delays: [400, 900],
+  });
+  if (!r.ok || r.errors || !Array.isArray(r.arr) || !r.arr.length) return null;
+
+  const set = new Set();
+  const squad = r.arr[0]?.players;
+  if (Array.isArray(squad)) {
+    for (const p of squad) {
+      const pid = p?.id ?? null;
+      if (pid) set.add(pid);
+    }
+  }
+  return set.size ? set : null;
 }
 
 function sortByRole(players) {
@@ -827,11 +856,13 @@ function sortByRole(players) {
 function formationMode(arr) {
   if (!arr || !arr.length) return "4-4-2";
   const map = {};
-  arr.forEach(f => { if(f) map[f] = (map[f] || 0) + 1; });
-  return Object.keys(map).reduce((a, b) => map[a] > map[b] ? a : b, "4-4-2");
+  arr.forEach((f) => {
+    if (f) map[f] = (map[f] || 0) + 1;
+  });
+  return Object.keys(map).reduce((a, b) => (map[a] > map[b] ? a : b), "4-4-2");
 }
 
-async function estimateLineupForTeam(teamId, leagueId, season) {
+async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
   if (!teamId) return null;
 
   const key = cacheKeyEst(teamId, leagueId, season);
@@ -839,54 +870,171 @@ async function estimateLineupForTeam(teamId, leagueId, season) {
   if (hit && Date.now() - hit.ts < 5 * 60_000) return hit.data;
 
   const [injured, coachName] = await Promise.all([
-      fetchInjuredPlayerIds(teamId, season),
-      fetchCurrentCoach(teamId)
+    fetchInjuredPlayerIds(teamId, season),
+    fetchCurrentCoach(teamId),
   ]);
 
-  let XI = [];
-  let form = "4-4-2";
-  let isMock = false;
-  let badgeLabel = "ROSA BASE";
+  // 1) prendo ultimi match (prima stessa lega, poi fallback all)
+  let fixtures = [];
+  if (leagueId && season) {
+    const fx = await apiGet(
+      `/fixtures?team=${teamId}&league=${leagueId}&season=${season}&last=${limit}&status=FT&timezone=Europe/Rome`,
+      { retries: 2, delays: [450, 900] },
+    );
+    fixtures = fx.ok && !fx.errors && Array.isArray(fx.arr) ? fx.arr : [];
+  }
+  if (!fixtures.length) {
+    const fx = await apiGet(
+      `/fixtures?team=${teamId}&last=${limit}&status=FT&timezone=Europe/Rome`,
+      { retries: 2, delays: [450, 900] },
+    );
+    fixtures = fx.ok && !fx.errors && Array.isArray(fx.arr) ? fx.arr : [];
+  }
+  if (!fixtures.length) return null;
 
-  try {
-      // 1 sola chiamata per scaricare tutta la rosa, zero rischio Rate Limit
-      const sq = await apiGet(`/players/squads?team=${teamId}`, { retries: 1 });
-      const players = sq?.arr?.[0]?.players || [];
+  // 2) recupero anche rosa attuale per filtrare “fantasmi/omonimi”
+  const squadIds = await fetchSquadPlayerIds(teamId).catch(() => null);
 
-      if (players.length >= 11) {
-          const available = players.filter(p => !injured.has(p.id));
-          const gks = available.filter(p => p.position === "Goalkeeper");
-          const outfield = available.filter(p => p.position !== "Goalkeeper");
+  // counts: playerId -> {w, player}
+  const counts = new Map();
+  const formations = []; // {f, w}
+  let usedMatches = 0;
 
-          const selected = [];
-          if (gks.length > 0) selected.push(gks[0]);
-          else if (available.length > 0) selected.push(available[0]);
+  for (let i = 0; i < fixtures.length; i++) {
+    const f = fixtures[i];
+    const fid = f?.fixture?.id ?? null;
+    if (!fid) continue;
 
-          for(let i = 0; i < 10 && i < outfield.length; i++) {
-              selected.push(outfield[i]);
-          }
+    // peso recency (più recente pesa di più)
+    const w = Math.max(0.35, 1 - i * 0.12);
 
-          XI = sortByRole(selected.map(p => ({
-              id: p.id,
-              name: p.name || "—",
-              number: p.number ?? "",
-              photo: p.photo || "",
-              pos: p.position === "Goalkeeper" ? "G" : (p.position === "Defender" ? "D" : (p.position === "Midfielder" ? "M" : "A"))
-          })));
-      }
-  } catch(e) { console.warn("Errore recupero rosa"); }
+    const lr = await apiGet(`/fixtures/lineups?fixture=${fid}`, {
+      retries: 1,
+      delays: [450],
+    });
+    const arr = lr.ok && !lr.errors && Array.isArray(lr.arr) ? lr.arr : [];
+    if (!arr.length) continue;
 
-  // Se l'API fallisce del tutto
-  if (XI.length < 11) {
-    isMock = true;
-    XI = [];
-    for(let i = 1; i <= 11; i++) {
-      XI.push({ id: `mock_${i}`, name: "N/D", number: "", pos: i === 1 ? "G" : "M", photo: "" });
+    const block = arr.find((x) => (x?.team?.id ?? null) === teamId) || null;
+    if (!block) continue;
+
+    usedMatches++;
+
+    const formation = String(block?.formation || "").trim();
+    if (formation) formations.push({ f: formation, w });
+
+    const startXI = Array.isArray(block?.startXI) ? block.startXI : [];
+    for (const row of startXI) {
+      const pl = row?.player || {};
+      const pid = pl?.id ?? null;
+      if (!pid) continue;
+
+      if (injured.has(pid)) continue;
+      if (squadIds && !squadIds.has(pid)) continue;
+
+      const prev = counts.get(pid) || { w: 0, player: null };
+
+      counts.set(pid, {
+        w: prev.w + w,
+        player: {
+          id: pid,
+          name: pl?.name || "—",
+          number: pl?.number ?? "",
+          photo: pl?.photo || "",
+          pos: pl?.pos || pl?.position || "",
+        },
+      });
     }
-    badgeLabel = "DATI NON DISP.";
   }
 
-  const data = { formation: form, startXI: XI, injuredCount: injured.size, coach: coachName, isMock, badgeLabel };
+  if (counts.size < 11 || usedMatches === 0) {
+    // fallback “rosa base” (ma con badge chiaro)
+    const sq = await apiGet(`/players/squads?team=${teamId}`, { retries: 1 });
+    const players = sq?.arr?.[0]?.players || [];
+    const available = players.filter((p) => !injured.has(p.id));
+    const selected = available.slice(0, 11).map((p) => ({
+      id: p.id,
+      name: p.name || "—",
+      number: p.number ?? "",
+      photo: p.photo || "",
+      pos:
+        p.position === "Goalkeeper"
+          ? "G"
+          : p.position === "Defender"
+            ? "D"
+            : p.position === "Midfielder"
+              ? "M"
+              : "A",
+    }));
+    const XI = sortByRole(selected);
+
+    const data = {
+      formation: "4-4-2",
+      startXI: XI,
+      coach: coachName,
+      injuredCount: injured.size,
+      badgeLabel: "STIMA (ROSA)",
+      usedMatches: 0,
+      candidates: { GK: [], DEF: [], MID: [], ATT: [] },
+    };
+    __EST_LINEUP_CACHE__.set(key, { ts: Date.now(), data });
+    return data;
+  }
+
+  // 3) XI = top 11 per peso
+  const ranked = Array.from(counts.values()).sort((a, b) => b.w - a.w);
+  const XI = sortByRole(ranked.slice(0, 11).map((x) => x.player));
+
+  // 4) modulo: “moda pesata”
+  const fm = new Map();
+  for (const x of formations) fm.set(x.f, (fm.get(x.f) || 0) + x.w);
+  let bestForm = "4-4-2",
+    bestW = 0;
+  for (const [k, v] of fm.entries()) {
+    if (v > bestW) {
+      bestW = v;
+      bestForm = k;
+    }
+  }
+
+  // 5) candidati per ruolo (top 6) con % su usedMatches (pesato -> normalizziamo su bestW)
+  const roleKey = (pos) => {
+    const p = String(pos || "").toUpperCase();
+    if (p.startsWith("G")) return "GK";
+    if (p.startsWith("D")) return "DEF";
+    if (p.startsWith("M")) return "MID";
+    if (p.startsWith("F") || p.startsWith("A")) return "ATT";
+    return "MID";
+  };
+
+  const cand = { GK: [], DEF: [], MID: [], ATT: [] };
+
+for (const it of ranked.slice(0, 40)) {
+  const r = roleKey(it.player.pos);
+
+  // % semplice e stabile (normalizzata su numero match con lineup trovate)
+  const pctRaw = Math.round((it.w / (usedMatches || 1)) * 100);
+  const pct = Math.max(0, Math.min(100, pctRaw));
+
+  // ✅ MANCAVA QUESTO: push nel bucket giusto
+  cand[r].push({ ...it.player, pct, score: it.w });
+}
+
+cand.GK = cand.GK.slice(0, 4);
+cand.DEF = cand.DEF.slice(0, 6);
+cand.MID = cand.MID.slice(0, 6);
+cand.ATT = cand.ATT.slice(0, 6);
+
+  const data = {
+    formation: bestForm || "4-4-2",
+    startXI: XI,
+    coach: coachName,
+    injuredCount: injured.size,
+    badgeLabel: `STIMA (${usedMatches}/${limit})`,
+    usedMatches,
+    candidates: cand,
+  };
+
   __EST_LINEUP_CACHE__.set(key, { ts: Date.now(), data });
   return data;
 }
@@ -907,12 +1055,17 @@ async function estimateLineupsForFixture() {
 
   if (!homeEst || !awayEst) return null;
 
-  return { type: (homeEst.isMock || awayEst.isMock) ? "mock" : "estimated", home: homeEst, away: awayEst };
+  return {
+    type: homeEst.isMock || awayEst.isMock ? "mock" : "estimated",
+    home: homeEst,
+    away: awayEst,
+  };
 }
 
 // 5. Rendering del Campo
 function renderPitchFromEstimate(est) {
-  if (!est || !est.home || !est.away) return '<p class="muted">Errore rendering.</p>';
+  if (!est || !est.home || !est.away)
+    return '<p class="muted">Errore rendering.</p>';
 
   const homeFormation = est.home.formation || "4-4-2";
   const awayFormation = est.away.formation || "4-4-2";
@@ -920,7 +1073,10 @@ function renderPitchFromEstimate(est) {
   const awayCoach = est.away.coach || "N/D";
 
   function parseFormation(f) {
-    const parts = String(f || "4-4-2").split("-").map(n => parseInt(n, 10)).filter(n => !isNaN(n));
+    const parts = String(f || "4-4-2")
+      .split("-")
+      .map((n) => parseInt(n, 10))
+      .filter((n) => !isNaN(n));
     return parts.length ? parts : [4, 4, 2];
   }
 
@@ -931,7 +1087,9 @@ function renderPitchFromEstimate(est) {
 
   function makeDot(pl, x, y, side) {
     const isFake = String(pl?.id).startsWith("mock");
-    const disabledAttr = isFake ? 'disabled style="cursor:default; opacity:0.8;"' : '';
+    const disabledAttr = isFake
+      ? 'disabled style="cursor:default; opacity:0.8;"'
+      : "";
 
     return `
       <button class="pitch-player ${side}" style="--x:${x}; --y:${y};" type="button"
@@ -948,8 +1106,8 @@ function renderPitchFromEstimate(est) {
   function layout(teamData, side) {
     const players = teamData.startXI || [];
     const rows = parseFormation(teamData.formation);
-    
-    const ySteps = [6, 20, 32, 44]; 
+
+    const ySteps = [6, 20, 32, 44];
     const finalY = (y) => (side === "home" ? 100 - y : y);
 
     let html = "";
@@ -969,6 +1127,34 @@ function renderPitchFromEstimate(est) {
       }
     });
     return html;
+  }
+  function candButton(p) {
+    if (!p?.id) return "";
+    return `
+    <button type="button" class="candChip"
+      data-player-id="${safeHTML(p.id)}"
+      data-player-name="${safeHTML(p.name)}"
+      title="Apri statistiche"
+    >
+      ${p.photo ? `<img class="candPhoto" src="${safeHTML(p.photo)}" alt="" onerror="this.style.display='none'"/>` : ""}
+      <span class="candName">${safeHTML(p.name)}</span>
+      <span class="candPct">${safeHTML(p.pct ?? "—")}%</span>
+    </button>
+  `;
+  }
+
+  function candidatesBlock(teamName, c) {
+    if (!c) return "";
+    return `
+    <div class="candTeam">
+      <div class="candTitle">${safeHTML(teamName)}</div>
+
+      <div class="candRow"><div class="candRole">POR</div><div class="candList">${(c.GK || []).map(candButton).join("") || `<span class="muted">—</span>`}</div></div>
+      <div class="candRow"><div class="candRole">DIF</div><div class="candList">${(c.DEF || []).map(candButton).join("") || `<span class="muted">—</span>`}</div></div>
+      <div class="candRow"><div class="candRole">CEN</div><div class="candList">${(c.MID || []).map(candButton).join("") || `<span class="muted">—</span>`}</div></div>
+      <div class="candRow"><div class="candRole">ATT</div><div class="candList">${(c.ATT || []).map(candButton).join("") || `<span class="muted">—</span>`}</div></div>
+    </div>
+  `;
   }
 
   return `
@@ -998,6 +1184,7 @@ function renderPitchFromEstimate(est) {
                 ${safeHTML(est.home.badgeLabel)}
             </span>
         </div>
+        
         <div class="legend-team" style="text-align: right;">
             <strong>${safeHTML(selectedFixture?.away?.name || "Trasferta")}</strong> 
             <span class="pitch-badge pitch-badge--est" style="border-color:#ffb84d; background:rgba(255,184,77,0.15);">
@@ -1005,6 +1192,10 @@ function renderPitchFromEstimate(est) {
             </span>
         </div>
       </div>
+      <div class="candWrap">
+  ${candidatesBlock(selectedFixture?.home?.name || "Casa", est.home?.candidates)}
+  ${candidatesBlock(selectedFixture?.away?.name || "Trasferta", est.away?.candidates)}
+</div>
     </div>
   `;
 }
@@ -1016,11 +1207,17 @@ function wirePitchClicks() {
   root.__wired = true;
 
   root.addEventListener("click", async (e) => {
-    const btn = e.target?.closest?.(".pitch-player");
-    if (!btn || btn.hasAttribute("disabled")) return;
-    const playerId = btn.getAttribute("data-player-id");
-    const playerName = btn.getAttribute("data-player-name") || "Giocatore";
+    const el =
+      e.target?.closest?.(".pitch-player") ||
+      e.target?.closest?.(".candChip");
+
+    if (!el || el.hasAttribute("disabled")) return;
+
+    const playerId = el.getAttribute("data-player-id");
+    const playerName = el.getAttribute("data-player-name") || "Giocatore";
+
     if (!playerId || playerId === "undefined") return;
+
     await openPlayerModal(playerId, playerName);
   });
 }
@@ -1040,16 +1237,28 @@ async function openPlayerModal(playerId, playerName) {
 
   const close = () => modal.classList.add("hidden");
   closeBtn?.addEventListener("click", close, { once: true });
-  modal.addEventListener("click", (e) => { if (e.target?.id === "playerModal") close(); }, { once: true });
+  modal.addEventListener(
+    "click",
+    (e) => {
+      if (e.target?.id === "playerModal") close();
+    },
+    { once: true },
+  );
 
   const leagueId = selectedFixture?.leagueId || "39"; // Fallback Serie A
   const season = selectedFixture?.season || new Date().getFullYear();
   const key = `${playerId}|${leagueId}|${season}`;
 
   const cached = __PLAYER_STATS_CACHE__.get(key);
-  if (cached) { body.innerHTML = cached; return; }
+  if (cached) {
+    body.innerHTML = cached;
+    return;
+  }
 
-  const r = await apiGet(`/players?id=${encodeURIComponent(playerId)}&season=${encodeURIComponent(season)}`, { retries: 1 });
+  const r = await apiGet(
+    `/players?id=${encodeURIComponent(playerId)}&season=${encodeURIComponent(season)}`,
+    { retries: 1 },
+  );
 
   if (!r.ok || r.errors || !Array.isArray(r.arr) || r.arr.length === 0) {
     body.innerHTML = `<p class="muted"><em>Nessuna statistica dettagliata trovata per questo giocatore.</em></p>`;
@@ -1059,7 +1268,10 @@ async function openPlayerModal(playerId, playerName) {
   const p = r.arr[0]?.player || {};
   // Cerchiamo le statistiche specifiche del campionato attuale (leagueId)
   const allStats = r.arr[0]?.statistics || [];
-  const stats = allStats.find(s => String(s.league?.id) === String(leagueId)) || allStats[0] || {};
+  const stats =
+    allStats.find((s) => String(s.league?.id) === String(leagueId)) ||
+    allStats[0] ||
+    {};
   const games = stats?.games || {};
   const goals = stats?.goals || {};
   const cards = stats?.cards || {};
