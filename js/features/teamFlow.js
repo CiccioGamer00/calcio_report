@@ -931,6 +931,10 @@ function renderPitchFromEstimate(est) {
 
   const homeFormation = est.home.formation || "4-4-2";
   const awayFormation = est.away.formation || "4-4-2";
+  
+  // (Placeholder per gli allenatori. Se un domani le API li forniscono, li passiamo qui)
+  const homeCoach = "Mister " + (selectedFixture?.home?.name || "Casa");
+  const awayCoach = "Mister " + (selectedFixture?.away?.name || "Trasferta");
 
   function parseFormation(f) {
     const parts = String(f || "4-4-2").split("-").map(n => parseInt(n, 10)).filter(n => !isNaN(n));
@@ -959,19 +963,21 @@ function renderPitchFromEstimate(est) {
     const players = teamData.startXI || [];
     const rows = parseFormation(teamData.formation);
     
-    // Y Levels
-    const ySteps = [6, 22, 38, 50]; 
+    // Y Levels corretto: massimo 44 (lascia libero il cerchio di centrocampo)
+    const ySteps = [6, 20, 32, 44]; 
     const finalY = (y) => (side === "home" ? 100 - y : y);
 
     let html = "";
     if (!players.length) return html;
 
+    // Portiere
     html += makeDot(players[0], 50, finalY(ySteps[0]), side);
 
+    // Movimento
     let idx = 1;
     rows.forEach((num, rIdx) => {
       const xs = rowXs(num);
-      const y = finalY(ySteps[rIdx + 1] || 48);
+      const y = finalY(ySteps[rIdx + 1] || 44);
       for (let j = 0; j < num; j++) {
         if (players[idx]) {
           html += makeDot(players[idx], xs[j], y, side);
@@ -982,7 +988,6 @@ function renderPitchFromEstimate(est) {
     return html;
   }
 
-  // Notare i div pitch-area-top e pitch-area-bottom aggiunti qui sotto
   return `
     <div class="pitch-container">
       <div class="pitch">
@@ -990,6 +995,16 @@ function renderPitchFromEstimate(est) {
         <div class="pitch-mid"></div>
         <div class="pitch-area-top"></div>
         <div class="pitch-area-bottom"></div>
+        
+        <div class="coach-badge home">
+            <strong>👤 ${safeHTML(homeCoach)}</strong><br>
+            <span style="opacity:0.8">⚙️ Modulo: ${homeFormation}</span>
+        </div>
+        <div class="coach-badge away">
+            <strong>👤 ${safeHTML(awayCoach)}</strong><br>
+            <span style="opacity:0.8">⚙️ Modulo: ${awayFormation}</span>
+        </div>
+
         ${layout(est.home, "home")}
         ${layout(est.away, "away")}
       </div>
@@ -997,16 +1012,14 @@ function renderPitchFromEstimate(est) {
         <div class="legend-team" style="text-align: left;">
             <strong>${safeHTML(selectedFixture?.home?.name || "Casa")}</strong> 
             <span class="pitch-badge pitch-badge--est" style="border-color:#ffb84d; background:rgba(255,184,77,0.15);">
-                ${est.type === 'mock' ? 'MOCK DATA' : 'STIMA STORICO'}
-            </span><br>
-            <span class="muted" style="font-size:11px;">Modulo Probabile: ${homeFormation}</span>
+                ${est.type === 'mock' ? 'DATI TEST' : 'STIMA STATISTICA'}
+            </span>
         </div>
         <div class="legend-team" style="text-align: right;">
             <strong>${safeHTML(selectedFixture?.away?.name || "Trasferta")}</strong> 
             <span class="pitch-badge pitch-badge--est" style="border-color:#ffb84d; background:rgba(255,184,77,0.15);">
-                ${est.type === 'mock' ? 'MOCK DATA' : 'STIMA STORICO'}
-            </span><br>
-            <span class="muted" style="font-size:11px;">Modulo Probabile: ${awayFormation}</span>
+                ${est.type === 'mock' ? 'DATI TEST' : 'STIMA STATISTICA'}
+            </span>
         </div>
       </div>
     </div>
