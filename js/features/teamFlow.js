@@ -831,8 +831,7 @@ function formationMode(arr) {
   return Object.keys(map).reduce((a, b) => map[a] > map[b] ? a : b, "4-4-2");
 }
 
-// 3. Calcola Formazione Statistica (Con PARACADUTE ROSA)
-async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
+async function estimateLineupForTeam(teamId, leagueId, season) {
   if (!teamId) return null;
 
   const key = cacheKeyEst(teamId, leagueId, season);
@@ -847,93 +846,44 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
   let XI = [];
   let form = "4-4-2";
   let isMock = false;
-  let badgeLabel = "STIMA STATISTICA";
+  let badgeLabel = "ROSA BASE";
 
-  // TENTATIVO 1: Analisi Storico (Ultime 10 partite)
   try {
-      const fx = await apiGet(`/fixtures?team=${teamId}&last=${limit}&status=FT`, { retries: 2, delays: [300, 600] });
-      const fixtures = fx?.arr || [];
-      const counts = new Map();
-      const formations = [];
+      // 1 sola chiamata per scaricare tutta la rosa, zero rischio Rate Limit
+      const sq = await apiGet(`/players/squads?team=${teamId}`, { retries: 1 });
+      const players = sq?.arr?.[0]?.players || [];
 
-      for (const f of fixtures) {
-        const fid = f?.fixture?.id;
-        if (!fid) continue;
-        try {
-            const lr = await apiGet(`/fixtures/lineups?fixture=${fid}`, { retries: 1 });
-            const block = (lr?.arr || []).find(x => x?.team?.id === teamId);
-            if (!block) continue;
+      if (players.length >= 11) {
+          const available = players.filter(p => !injured.has(p.id));
+          const gks = available.filter(p => p.position === "Goalkeeper");
+          const outfield = available.filter(p => p.position !== "Goalkeeper");
 
-            if (block.formation) formations.push(block.formation);
-            const startXI = Array.isArray(block.startXI) ? block.startXI : [];
+          const selected = [];
+          if (gks.length > 0) selected.push(gks[0]);
+          else if (available.length > 0) selected.push(available[0]);
 
-            for (const row of startXI) {
-              const pl = row?.player || {};
-              const pid = pl?.id;
-              if (!pid || injured.has(pid)) continue;
-
-              const prev = counts.get(pid) || { n: 0, player: null };
-              counts.set(pid, {
-                n: prev.n + 1,
-                player: {
-                  id: pid,
-                  name: pl.name || "—",
-                  number: pl.number ?? "",
-                  photo: pl.photo || "",
-                  pos: pl.pos || pl.grid || "M",
-                },
-              });
-            }
-        } catch(e) {}
-      }
-
-      if (counts.size >= 11) {
-        const top = Array.from(counts.values()).sort((a, b) => b.n - a.n).slice(0, 11).map(x => x.player);
-        XI = sortByRole(top);
-        form = formationMode(formations);
-      }
-  } catch(e) {}
-
-  // TENTATIVO 2 (PARACADUTE): Se lo storico è vuoto, scarica la vera Rosa attuale
-  if (XI.length < 11) {
-      try {
-          const sq = await apiGet(`/players/squads?team=${teamId}`, { retries: 1 });
-          const players = sq?.arr?.[0]?.players || [];
-
-          if (players.length >= 11) {
-              const available = players.filter(p => !injured.has(p.id));
-              const gks = available.filter(p => p.position === "Goalkeeper");
-              const outfield = available.filter(p => p.position !== "Goalkeeper");
-
-              const selected = [];
-              if (gks.length > 0) selected.push(gks[0]);
-              else if (available.length > 0) selected.push(available[0]);
-
-              for(let i = 0; i < 10 && i < outfield.length; i++) {
-                  selected.push(outfield[i]);
-              }
-
-              XI = sortByRole(selected.map(p => ({
-                  id: p.id,
-                  name: p.name || "—",
-                  number: p.number ?? "",
-                  photo: p.photo || "",
-                  pos: p.position === "Goalkeeper" ? "G" : (p.position === "Defender" ? "D" : (p.position === "Midfielder" ? "M" : "A"))
-              })));
-              form = "4-4-2"; // Modulo standard per la rosa
-              badgeLabel = "ROSA REALE (NO STORICO)";
+          for(let i = 0; i < 10 && i < outfield.length; i++) {
+              selected.push(outfield[i]);
           }
-      } catch(e) { console.warn("Errore recupero rosa"); }
-  }
 
-  // TENTATIVO 3 (ULTIMA SPIAGGIA): Fallimento API totale
+          XI = sortByRole(selected.map(p => ({
+              id: p.id,
+              name: p.name || "—",
+              number: p.number ?? "",
+              photo: p.photo || "",
+              pos: p.position === "Goalkeeper" ? "G" : (p.position === "Defender" ? "D" : (p.position === "Midfielder" ? "M" : "A"))
+          })));
+      }
+  } catch(e) { console.warn("Errore recupero rosa"); }
+
+  // Se l'API fallisce del tutto
   if (XI.length < 11) {
     isMock = true;
     XI = [];
     for(let i = 1; i <= 11; i++) {
       XI.push({ id: `mock_${i}`, name: "N/D", number: "", pos: i === 1 ? "G" : "M", photo: "" });
     }
-    badgeLabel = "DATI NON DISPONIBILI";
+    badgeLabel = "DATI NON DISP.";
   }
 
   const data = { formation: form, startXI: XI, injuredCount: injured.size, coach: coachName, isMock, badgeLabel };
@@ -1107,7 +1057,9 @@ async function openPlayerModal(playerId, playerName) {
   }
 
   const p = r.arr[0]?.player || {};
-  const stats = r.arr[0]?.statistics?.[0] || {};
+  // Cerchiamo le statistiche specifiche del campionato attuale (leagueId)
+  const allStats = r.arr[0]?.statistics || [];
+  const stats = allStats.find(s => String(s.league?.id) === String(leagueId)) || allStats[0] || {};
   const games = stats?.games || {};
   const goals = stats?.goals || {};
   const cards = stats?.cards || {};
