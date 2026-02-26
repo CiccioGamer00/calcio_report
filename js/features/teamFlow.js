@@ -781,177 +781,136 @@ const __EST_LINEUP_CACHE__ = new Map(); // key -> {ts, data}
 const __PLAYER_STATS_CACHE__ = new Map(); // playerId|season|league -> data
 
 function cacheKeyEst(teamId, leagueId, season) {
-  return `${teamId}|${leagueId}|${season}`;
+  return `${teamId}|${leagueId || "all"}|${season || "all"}`;
 }
 
 async function fetchInjuredPlayerIds(teamId, season) {
-  // endpoint API-Football: /injuries?team=...&season=...
-  // (se l’API risponde vuota, ok)
-  if (!teamId || !season) return new Set();
-  const r = await apiGet(`/injuries?team=${teamId}&season=${season}`, {
-    retries: 2,
-    delays: [400, 900],
-  });
-  const out = new Set();
-  if (!r.ok || r.errors || !Array.isArray(r.arr)) return out;
-
-  for (const row of r.arr) {
-    const pid = row?.player?.id ?? null;
-    if (pid) out.add(pid);
+  if (!teamId) return new Set();
+  // Se non c'è la season, usiamo l'anno corrente come fallback grezzo
+  const currentSeason = season || new Date().getFullYear(); 
+  try {
+      const r = await apiGet(`/injuries?team=${teamId}&season=${currentSeason}`, { retries: 1, delays: [400] });
+      const out = new Set();
+      if (!r.ok || r.errors || !Array.isArray(r.arr)) return out;
+      for (const row of r.arr) {
+        const pid = row?.player?.id ?? null;
+        if (pid) out.add(pid);
+      }
+      return out;
+  } catch(e) {
+      return new Set(); // Fallback sicuro
   }
-  return out;
 }
 
-function formationMode(list) {
-  const m = new Map();
-  for (const x of list || []) {
-    const f = String(x || "").trim();
-    if (!f) continue;
-    m.set(f, (m.get(f) || 0) + 1);
-  }
-  let best = null,
-    bestN = 0;
-  for (const [k, n] of m.entries()) {
-    if (n > bestN) {
-      best = k;
-      bestN = n;
-    }
-  }
-  return best;
-}
-
+// Ordina i giocatori per ruolo (Portiere -> Difesa -> Centrocampo -> Attacco)
 function sortByRole(players) {
-  // prova a usare "pos" o "position" se presente, fallback ordine attuale
-  const rank = (p) => {
-    const pos = String(p?.pos || p?.position || "").toUpperCase();
-    if (pos.startsWith("G")) return 0; // GK
-    if (pos.startsWith("D")) return 1; // DEF
-    if (pos.startsWith("M")) return 2; // MID
-    if (pos.startsWith("F") || pos.startsWith("A")) return 3; // ATT
-    return 9;
+  const rank = (pos) => {
+    const p = String(pos || "").toUpperCase();
+    if (p.includes("G")) return 1; // GK
+    if (p.includes("D")) return 2; // DEF
+    if (p.includes("M")) return 3; // MID
+    if (p.includes("F") || p.includes("A")) return 4; // ATT
+    return 5;
   };
-  return (players || []).slice().sort((a, b) => rank(a) - rank(b));
-}
-// Ordina i giocatori per ruolo così il layout sa chi è il portiere (idx 0)
-function sortByRole(players) {
-  const order = { "Goalkeeper": 1, "Defender": 2, "Midfielder": 3, "Attacker": 4 };
-  return [...players].sort((a, b) => (order[a.pos] || 5) - (order[b.pos] || 5));
+  return [...players].sort((a, b) => rank(a.pos) - rank(b.pos));
 }
 
-// Trova il modulo più frequente tra quelli passati
 function formationMode(arr) {
-  if (!arr.length) return "4-4-2";
+  if (!arr || !arr.length) return "4-4-2";
   const map = {};
-  arr.forEach(f => map[f] = (map[f] || 0) + 1);
-  return Object.keys(map).reduce((a, b) => map[a] > map[b] ? a : b);
+  arr.forEach(f => { if(f) map[f] = (map[f] || 0) + 1; });
+  return Object.keys(map).reduce((a, b) => map[a] > map[b] ? a : b, "4-4-2");
 }
+
 async function estimateLineupForTeam(teamId, leagueId, season, limit = 8) {
-  if (!teamId || !season) return null;
+  if (!teamId) return null;
 
   const key = cacheKeyEst(teamId, leagueId, season);
   const hit = __EST_LINEUP_CACHE__.get(key);
-  if (hit && Date.now() - hit.ts < 5 * 60_000) return hit.data; // 5 min cache
+  if (hit && Date.now() - hit.ts < 5 * 60_000) return hit.data;
 
   const injured = await fetchInjuredPlayerIds(teamId, season);
-
-  // 1) prova stessa lega+stagione (se leagueId c'è)
   let fixtures = [];
-  if (leagueId) {
-    const fx = await apiGet(
-      `/fixtures?team=${teamId}&league=${leagueId}&season=${season}&last=${limit}&status=FT&timezone=Europe/Rome`,
-      { retries: 2, delays: [450, 900] },
-    );
-    fixtures = fx.ok && !fx.errors && Array.isArray(fx.arr) ? fx.arr : [];
-  }
 
-  // 2) fallback: ultime partite TUTTE le competizioni (serve per coppe/UCL ecc)
-  if (!fixtures.length) {
-    const fx = await apiGet(
-      `/fixtures?team=${teamId}&last=${limit}&status=FT&timezone=Europe/Rome`,
-      { retries: 2, delays: [450, 900] },
-    );
-    fixtures = fx.ok && !fx.errors && Array.isArray(fx.arr) ? fx.arr : [];
+  try {
+      // Usiamo una chiamata generica alle ultime partite della squadra, infallibile.
+      const fx = await apiGet(
+        `/fixtures?team=${teamId}&last=${limit}&status=FT&timezone=Europe/Rome`,
+        { retries: 2, delays: [450, 900] },
+      );
+      fixtures = fx.ok && !fx.errors && Array.isArray(fx.arr) ? fx.arr : [];
+  } catch(e) {
+      console.warn("Errore fetch storico match per stima", e);
   }
 
   if (!fixtures.length) return null;
 
-  const counts = new Map(); // playerId -> {n, player}
+  const counts = new Map();
   const formations = [];
 
   for (const f of fixtures) {
     const fid = f?.fixture?.id ?? null;
     if (!fid) continue;
 
-    const lr = await apiGet(`/fixtures/lineups?fixture=${fid}`, {
-      retries: 1,
-      delays: [450],
-    });
-    const arr = lr.ok && !lr.errors && Array.isArray(lr.arr) ? lr.arr : [];
-    if (!arr.length) continue;
+    try {
+        const lr = await apiGet(`/fixtures/lineups?fixture=${fid}`, { retries: 1, delays: [400] });
+        const arr = lr.ok && !lr.errors && Array.isArray(lr.arr) ? lr.arr : [];
+        if (!arr.length) continue;
 
-    const block = arr.find((x) => (x?.team?.id ?? null) === teamId) || null;
-    if (!block) continue;
+        const block = arr.find((x) => (x?.team?.id ?? null) === teamId);
+        if (!block) continue;
 
-    const formation = String(block?.formation || "").trim();
-    if (formation) formations.push(formation);
+        if (block.formation) formations.push(block.formation);
 
-    const startXI = Array.isArray(block?.startXI) ? block.startXI : [];
-    for (const row of startXI) {
-      const pl = row?.player || {};
-      const pid = pl?.id ?? null;
-      if (!pid) continue;
-      if (injured.has(pid)) continue;
+        const startXI = Array.isArray(block.startXI) ? block.startXI : [];
+        for (const row of startXI) {
+          const pl = row?.player || {};
+          const pid = pl?.id ?? null;
+          if (!pid || injured.has(pid)) continue;
 
-      const prev = counts.get(pid) || { n: 0, player: null };
-      counts.set(pid, {
-        n: prev.n + 1,
-        player: {
-          id: pid,
-          name: pl?.name || "—",
-          number: pl?.number ?? "",
-          photo: pl?.photo || "",
-          pos: pl?.pos || pl?.position || "",
-        },
-      });
-    }
+          const prev = counts.get(pid) || { n: 0, player: null };
+          counts.set(pid, {
+            n: prev.n + 1,
+            player: {
+              id: pid,
+              name: pl.name || "—",
+              number: pl.number ?? "",
+              photo: pl.photo || "",
+              pos: pl.pos || pl.position || "M",
+            },
+          });
+        }
+    } catch(e) { continue; } // Ignora il singolo match se fallisce
   }
 
   if (counts.size < 11) return null;
 
-  const top = Array.from(counts.values())
-    .sort((a, b) => b.n - a.n)
-    .slice(0, 11)
-    .map((x) => x.player);
-
+  const top = Array.from(counts.values()).sort((a, b) => b.n - a.n).slice(0, 11).map((x) => x.player);
   const XI = sortByRole(top);
-  const form = formationMode(formations) || "4-4-2";
+  const form = formationMode(formations);
 
   const data = { formation: form, startXI: XI, injuredCount: injured.size };
   __EST_LINEUP_CACHE__.set(key, { ts: Date.now(), data });
   return data;
 }
+
 async function estimateLineupsForFixture() {
-  const leagueId = selectedFixture?.leagueId;
-  const season = selectedFixture?.season;
   const homeId = selectedFixture?.home?.id;
   const awayId = selectedFixture?.away?.id;
+  if (!homeId || !awayId) return null;
 
-  if (!leagueId || !season || !homeId || !awayId) return null;
+  // Rimuovo il blocco rigido su leagueId e season per garantire il fallback!
+  const leagueId = selectedFixture?.leagueId || null;
+  const season = selectedFixture?.season || null;
 
   const [homeEst, awayEst] = await Promise.all([
-    estimateLineupForTeam(homeId, leagueId, season, 8),
-    estimateLineupForTeam(awayId, leagueId, season, 8),
+    estimateLineupForTeam(homeId, leagueId, season, 10),
+    estimateLineupForTeam(awayId, leagueId, season, 10),
   ]);
 
   if (!homeEst || !awayEst) return null;
 
-  return {
-    type: "estimated",
-    leagueId,
-    season,
-    home: homeEst,
-    away: awayEst,
-  };
+  return { type: "estimated", home: homeEst, away: awayEst };
 }
 
 function renderPitchFromEstimate(est) {
@@ -960,14 +919,12 @@ function renderPitchFromEstimate(est) {
   const homeFormation = est.home.formation || "4-4-2";
   const awayFormation = est.away.formation || "4-4-2";
 
-  // Trasformiamo i dati per il layout
-  const homeXI = (est.home.startXI || []).map(p => ({ player: p }));
-  const awayXI = (est.away.startXI || []).map(p => ({ player: p }));
-
   function parseFormation(f) {
-    return String(f || "4-4-2").split("-").map(n => parseInt(n, 10));
+    const parts = String(f || "4-4-2").split("-").map(n => parseInt(n, 10)).filter(n => !isNaN(n));
+    return parts.length ? parts : [4, 4, 2];
   }
 
+  // Genera posizioni orizzontali (X) per una riga di N giocatori
   function rowXs(n) {
     if (n <= 1) return [50];
     return Array.from({ length: n }, (_, i) => (100 * (i + 1)) / (n + 1));
@@ -980,7 +937,7 @@ function renderPitchFromEstimate(est) {
         data-player-name="${safeHTML(pl?.name)}"
       >
         <div class="pp-photo-wrapper">
-            ${pl?.photo ? `<img class="pp-photo" src="${safeHTML(pl.photo)}" loading="lazy" />` : '<div class="pp-photo-placeholder"></div>'}
+            ${pl?.photo ? `<img class="pp-photo" src="${safeHTML(pl.photo)}" loading="lazy" onerror="this.style.display='none'" />` : '<div class="pp-photo-placeholder"></div>'}
             <div class="pp-badge">${safeHTML(pl?.number || "")}</div>
         </div>
         <div class="pp-name">${safeHTML(pl?.name || "—")}</div>
@@ -988,26 +945,31 @@ function renderPitchFromEstimate(est) {
     `;
   }
 
-  function layout(startXI, formationStr, side) {
-    const players = startXI.map(x => x.player).filter(Boolean);
-    const rows = parseFormation(formationStr);
+  function layout(teamData, side) {
+    const players = teamData.startXI || [];
+    const rows = parseFormation(teamData.formation);
     
-    // Y Levels per un campo verticale compatto (0-100%)
-    // Away (Top): 5 (GK), 20, 32, 45
-    // Home (Bottom): 95 (GK), 80, 68, 55
-    const ySteps = [5, 18, 30, 42]; 
+    // Y Levels per campo verticale (0-100%).
+    // Trasferta (Alto): Portiere a 6%, Difesa a 22%, ecc.
+    const ySteps = [6, 22, 38, 50]; 
+    // Invertiamo la Y se è la squadra di casa (così parte dal basso, 100%)
     const finalY = (y) => (side === "home" ? 100 - y : y);
 
     let html = "";
-    // Portiere
-    if (players[0]) html += makeDot(players[0], 50, finalY(ySteps[0]), side);
+    if (!players.length) return html;
 
+    // 1. Il Portiere (sempre il primo dopo il sort)
+    html += makeDot(players[0], 50, finalY(ySteps[0]), side);
+
+    // 2. Giocatori di movimento
     let idx = 1;
     rows.forEach((num, rIdx) => {
       const xs = rowXs(num);
-      const y = finalY(ySteps[rIdx + 1] || 45);
+      const y = finalY(ySteps[rIdx + 1] || 48); // Se il modulo ha tante linee, stringiamo a ridosso della metà
       for (let j = 0; j < num; j++) {
-        if (players[idx]) html += makeDot(players[idx], xs[j], y, side);
+        if (players[idx]) {
+          html += makeDot(players[idx], xs[j], y, side);
+        }
         idx++;
       }
     });
@@ -1019,20 +981,25 @@ function renderPitchFromEstimate(est) {
       <div class="pitch">
         <div class="pitch-lines"></div>
         <div class="pitch-mid"></div>
-        <div class="pitch-grid">
-          ${layout(homeXI, homeFormation, "home")}
-          ${layout(awayXI, awayFormation, "away")}
-        </div>
+        ${layout(est.home, "home")}
+        ${layout(est.away, "away")}
       </div>
-      <div class="pitch-legend">
-        <div class="legend-team"><strong>${selectedFixture.home.name}</strong> (${homeFormation})</div>
-        <div class="legend-team text-right"><strong>${selectedFixture.away.name}</strong> (${awayFormation})</div>
+      <div class="pitch-legend" style="display:flex; justify-content:space-between; margin-top:10px; font-size:13px; padding: 0 10px;">
+        <div class="legend-team" style="text-align: left;">
+            <strong>${safeHTML(selectedFixture?.home?.name || "Casa")}</strong> 
+            <span class="pitch-badge pitch-badge--est" style="border-color:#ffb84d; background:rgba(255,184,77,0.15);">STIMA STORICO</span><br>
+            <span class="muted" style="font-size:11px;">Modulo Probabile: ${homeFormation}</span>
+        </div>
+        <div class="legend-team" style="text-align: right;">
+            <strong>${safeHTML(selectedFixture?.away?.name || "Trasferta")}</strong> 
+            <span class="pitch-badge pitch-badge--est" style="border-color:#ffb84d; background:rgba(255,184,77,0.15);">STIMA STORICO</span><br>
+            <span class="muted" style="font-size:11px;">Modulo Probabile: ${awayFormation}</span>
+        </div>
       </div>
     </div>
   `;
 }
 
-// abilita click players (event delegation)
 function wirePitchClicks() {
   const root = document.getElementById("lineupsContent");
   if (!root || root.__wired) return;
@@ -1041,16 +1008,15 @@ function wirePitchClicks() {
   root.addEventListener("click", async (e) => {
     const btn = e.target?.closest?.(".pitch-player");
     if (!btn) return;
-
     const playerId = btn.getAttribute("data-player-id");
     const playerName = btn.getAttribute("data-player-name") || "Giocatore";
-
-    if (!playerId) return;
-
+    if (!playerId || playerId === "undefined") return;
     await openPlayerModal(playerId, playerName);
   });
 }
+
 async function openPlayerModal(playerId, playerName) {
+  // ... mantieni la logica identica per la modale che avevi prima ...
   const auth = document.getElementById("authModal");
   if (auth && !auth.classList.contains("hidden")) return;
   const modal = document.getElementById("playerModal");
@@ -1063,55 +1029,29 @@ async function openPlayerModal(playerId, playerName) {
   body.innerHTML = `<p class="muted"><em>Carico statistiche…</em></p>`;
   modal.classList.remove("hidden");
 
-  const leagueId = selectedFixture?.leagueId;
-  const season = selectedFixture?.season;
-  const key = `${playerId}|${leagueId}|${season}`;
-
-  // chiusura
   const close = () => modal.classList.add("hidden");
   closeBtn?.addEventListener("click", close, { once: true });
-  modal.addEventListener(
-    "click",
-    (e) => {
-      if (e.target?.id === "playerModal") close();
-    },
-    { once: true },
-  );
+  modal.addEventListener("click", (e) => { if (e.target?.id === "playerModal") close(); }, { once: true });
 
-  if (!leagueId || !season) {
-    body.innerHTML = `<p class="muted"><em>Statistiche non disponibili (mancano league/season).</em></p>`;
-    return;
-  }
+  const leagueId = selectedFixture?.leagueId || "39"; // Fallback Serie A se manca
+  const season = selectedFixture?.season || new Date().getFullYear();
+  const key = `${playerId}|${leagueId}|${season}`;
 
   const cached = __PLAYER_STATS_CACHE__.get(key);
-  if (cached) {
-    body.innerHTML = cached;
-    return;
-  }
+  if (cached) { body.innerHTML = cached; return; }
 
-  // API-Football players: /players?id=...&season=...&league=...
-  const r = await apiGet(
-    `/players?id=${encodeURIComponent(playerId)}&season=${encodeURIComponent(season)}&league=${encodeURIComponent(leagueId)}`,
-    {
-      retries: 2,
-      delays: [450, 900],
-    },
-  );
+  const r = await apiGet(`/players?id=${encodeURIComponent(playerId)}&season=${encodeURIComponent(season)}`, { retries: 1, delays: [450] });
 
   if (!r.ok || r.errors || !Array.isArray(r.arr) || r.arr.length === 0) {
-    body.innerHTML = `<p class="muted"><em>Nessuna statistica trovata per questo giocatore.</em></p>`;
+    body.innerHTML = `<p class="muted"><em>Nessuna statistica dettagliata trovata per questo giocatore.</em></p>`;
     return;
   }
 
   const p = r.arr[0]?.player || {};
   const stats = r.arr[0]?.statistics?.[0] || {};
-
   const games = stats?.games || {};
   const goals = stats?.goals || {};
   const cards = stats?.cards || {};
-  const fouls = stats?.fouls || {};
-  const shots = stats?.shots || {};
-  const passes = stats?.passes || {};
 
   const html = `
     <div class="kv">
@@ -1119,20 +1059,12 @@ async function openPlayerModal(playerId, playerName) {
       <div class="kv-row"><div class="k">Età</div><div class="v">${safeHTML(p?.age ?? "—")}</div></div>
       <div class="kv-row"><div class="k">Ruolo</div><div class="v">${safeHTML(games?.position ?? "—")}</div></div>
       <div class="kv-row"><div class="k">Presenze</div><div class="v">${safeHTML(games?.appearences ?? games?.appearances ?? "—")}</div></div>
-      <div class="kv-row"><div class="k">Minuti</div><div class="v">${safeHTML(games?.minutes ?? "—")}</div></div>
-
-      <div class="kv-row"><div class="k">Gol</div><div class="v">${safeHTML(goals?.total ?? "—")}</div></div>
-      <div class="kv-row"><div class="k">Assist</div><div class="v">${safeHTML(goals?.assists ?? "—")}</div></div>
-
-      <div class="kv-row"><div class="k">Tiri</div><div class="v">${safeHTML(shots?.total ?? "—")} tot / ${safeHTML(shots?.on ?? "—")} in porta</div></div>
-      <div class="kv-row"><div class="k">Passaggi</div><div class="v">${safeHTML(passes?.total ?? "—")} tot / ${safeHTML(passes?.key ?? "—")} key</div></div>
-
-      <div class="kv-row"><div class="k">Falli</div><div class="v">${safeHTML(fouls?.committed ?? "—")} commessi / ${safeHTML(fouls?.drawn ?? "—")} subiti</div></div>
-      <div class="kv-row"><div class="k">Cartellini</div><div class="v">🟨 ${safeHTML(cards?.yellow ?? "—")} / 🟥 ${safeHTML(cards?.red ?? "—")}</div></div>
+      <div class="kv-row"><div class="k">Gol / Assist</div><div class="v">${safeHTML(goals?.total ?? "0")} / ${safeHTML(goals?.assists ?? "0")}</div></div>
+      <div class="kv-row"><div class="k">Cartellini (G/R)</div><div class="v">🟨 ${safeHTML(cards?.yellow ?? "0")} / 🟥 ${safeHTML(cards?.red ?? "0")}</div></div>
     </div>
   `;
-
   __PLAYER_STATS_CACHE__.set(key, html);
   body.innerHTML = html;
 }
+
 window.showTeam = showTeam;
