@@ -602,7 +602,7 @@ async function loadLineupsPitch() {
   const content = document.getElementById("lineupsContent");
   if (!box || !content) return;
 
-  // Mostra sempre il box (campo sempre visibile)
+  // Mostra sempre il box
   box.classList.remove("hidden");
 
   if (!selectedFixture?.id) {
@@ -617,7 +617,7 @@ async function loadLineupsPitch() {
     delays: [350, 900],
   });
 
-  // Se non disponibili: provo STIMATA (ultimi match + indisponibili)
+  // Se non disponibili ufficialmente: provo STIMATA (storico + indisponibili)
   if (!r.ok || r.errors || !Array.isArray(r.arr) || r.arr.length === 0) {
     const est = await estimateLineupsForFixture().catch(() => null);
     if (est?.home && est?.away) {
@@ -625,9 +625,7 @@ async function loadLineupsPitch() {
       wirePitchClicks(); // abilita click players per popup stats
       return;
     }
-    content.innerHTML = renderPitchPlaceholder(
-      "Formazioni non disponibili (ancora).",
-    );
+    content.innerHTML = renderPitchPlaceholder("Formazioni non disponibili (ancora).");
     return;
   }
 
@@ -640,170 +638,120 @@ async function loadLineupsPitch() {
   const homeXI = Array.isArray(home?.startXI) ? home.startXI : [];
   const awayXI = Array.isArray(away?.startXI) ? away.startXI : [];
 
-  const homeFormation = String(home?.formation || "").trim(); // es "4-3-3"
+  const homeFormation = String(home?.formation || "").trim();
   const awayFormation = String(away?.formation || "").trim();
-  const lineupTag = "UFFICIALE";
 
-  // ========== helpers ==========
-  function posFromGrid(g) {
-    const s = String(g || "");
-    const m = s.match(/^(\d+)\s*:\s*(\d+)$/);
-    if (!m) return null;
-    return { row: parseInt(m[1], 10), col: parseInt(m[2], 10) };
-  }
-
+  // ========== HELPERS ==========
+  
   function parseFormation(f) {
-    // "4-3-3" -> [4,3,3]
-    const parts = String(f || "")
-      .split("-")
-      .map((x) => parseInt(x, 10))
-      .filter((n) => Number.isFinite(n) && n > 0);
+    const parts = String(f || "").split("-").map((x) => parseInt(x, 10)).filter((n) => Number.isFinite(n) && n > 0);
     return parts.length ? parts : null;
   }
 
-  // genera coordinate (x,y) in percent per una riga con N giocatori
+  // Genera coordinate (X) in percentuale per centrare i giocatori sulla riga
   function rowXs(n) {
     if (n <= 1) return [50];
     const xs = [];
-    for (let i = 0; i < n; i++) {
-      xs.push((100 * (i + 1)) / (n + 1));
-    }
+    for (let i = 0; i < n; i++) xs.push((100 * (i + 1)) / (n + 1));
     return xs;
   }
 
-  // layout per squadra su metà campo (home sinistra, away destra)
+  // Crea il singolo "pallino" del giocatore sul campo
+  function makeDot(pl, xPct, yPct, sideClass) {
+    const num = pl?.number ?? "";
+    const name = pl?.name || "—";
+    const photo = pl?.photo || "";
+    const pid = pl?.id ?? "";
+
+    return `
+      <button class="pitch-player ${sideClass}" style="--x:${xPct};--y:${yPct};" type="button"
+        data-player-id="${safeHTML(pid)}"
+        data-player-name="${safeHTML(name)}"
+        ${pid ? "" : "disabled"}
+        aria-label="${safeHTML(name)}"
+      >
+        <div class="pp-photo-wrapper">
+          ${photo ? `<img class="pp-photo" src="${safeHTML(photo)}" alt="" loading="lazy" onerror="this.style.display='none'"/>` : '<div class="pp-photo-placeholder"></div>'}
+          <div class="pp-badge">${safeHTML(num)}</div>
+        </div>
+        <div class="pp-name">${safeHTML(name)}</div>
+      </button>
+    `;
+  }
+
+  // Posiziona la squadra in base al modulo
   function layoutTeamPlayers(startXI, formationStr, side) {
-    // 1) prova grid (se almeno 6 player ce l’hanno)
-    const withGrid = startXI
-      .map((p) => {
-        const pl = p?.player || {};
-        const grid = posFromGrid(pl?.grid);
-        return { p, grid };
-      })
-      .filter((x) => x.grid);
-
-    const useGrid = withGrid.length >= 6;
-
-    // 2) altrimenti usa formation
     const formation = parseFormation(formationStr);
-
-    // separa GK + outfield (API spesso mette GK come primo, ma non garantito)
     const players = startXI.map((x) => x?.player || {}).filter(Boolean);
 
-    // GK: prova a beccarlo da pos o grid row 1, altrimenti primo
+    // Identifica il portiere
     let gk = players[0];
-    const gkByGrid = players.find((pl) => posFromGrid(pl.grid)?.row === 1);
-    if (gkByGrid) gk = gkByGrid;
-
     const outfield = players.filter((pl) => pl !== gk);
-
-    // target rows: [GK] + formation rows, fallback 4-4-2
+    
+    // Fallback se manca il modulo
     const rows = formation || [4, 4, 2];
 
-    // Y percent su metà campo: GK vicino alla porta, attacco verso metà
-    // home: 80% -> 20% (da sinistra verso centro), away specchiato
-    const yLevels = [];
-    // GK
-    yLevels.push(82);
-    // linee
-    const base = [66, 48, 30, 18]; // fino a 4 linee
-    for (let i = 0; i < rows.length; i++) yLevels.push(base[i] ?? 18 - i * 10);
-function xForSide(x) {
-  // x in 0..100, lo comprimo in metà campo
-  // HOME: 5..49  |  AWAY: 51..95
-  const clamped = Math.max(0, Math.min(100, Number(x) || 50));
-  if (side === "away") return 50 + clamped * 0.45;
-  return 50 - clamped * 0.45;
-}
-    function makeDot(pl, xPct, yPct, sideClass) {
-      const num = pl?.number ?? "";
-      const name = pl?.name || "—";
-      const photo = pl?.photo || "";
-      const pid = pl?.id ?? "";
+    // Y Levels per un campo verticale (0-100%)
+    const ySteps = [6, 20, 34, 46]; 
+    
+    // Inverti la Y per la squadra di casa (che gioca in basso verso l'alto)
+    const finalY = (y) => (side === "home" ? 100 - y : y);
 
-      return `
-    <button class="pitch-player ${sideClass}" style="--x:${xPct};--y:${yPct};" type="button"
-      data-player-id="${safeHTML(pid)}"
-      data-player-name="${safeHTML(name)}"
-      ${pid ? "" : "disabled"}
-      aria-label="${safeHTML(name)}"
-    >
-      ${
-        photo
-          ? `<img class="pp-photo" src="${safeHTML(photo)}" alt="" loading="lazy" referrerpolicy="no-referrer"
-        onerror="this.style.display='none'"/>`
-          : ""
-      }
-      <div class="pp-badge">${safeHTML(num)}</div>
-      <div class="pp-name">${safeHTML(name)}</div>
-    </button>
-  `;
-    }
-
-       // GK dot
     const dots = [];
-    dots.push(makeDot(gk, xForSide(82), yLevels[0], side)); // GK vicino alla porta
 
-    if (useGrid) {
-      // usa grid: mappa row/col su percentuali (row 1..6, col 1..5)
-      for (const p of players) {
-        if (p === gk) continue;
-        const g = posFromGrid(p.grid);
-        if (!g) continue;
-
-       const y = (100 * g.col) / 6;          // colonna -> verticale
-const x = 18 + (g.row - 1) * 14;      // riga -> profondità (verso metà campo)
-dots.push(makeDot(p, xForSide(x), y, side));
-      }
-      return dots.join("");
+    // Posiziona il Portiere
+    if (gk) {
+      dots.push(makeDot(gk, 50, finalY(ySteps[0]), side));
     }
 
-    // formation layout: distribuisci outfield per righe
+    // Posiziona i giocatori di movimento
     let idx = 0;
     for (let rIdx = 0; rIdx < rows.length; rIdx++) {
       const n = rows[rIdx];
-      const xs = rowXs(n);
-      const xDepth = yLevels[rIdx + 1] ?? 30;   // uso yLevels come “profondità”
-const y = xs[j];                           // distribuisco in verticale
-
+      const xs = rowXs(n); // Asse X (larghezza)
+      const yDepth = finalY(ySteps[rIdx + 1] || 46); // Asse Y (profondità)
 
       for (let j = 0; j < n; j++) {
         const pl = outfield[idx++];
         if (!pl) break;
-        dots.push(makeDot(pl, xForSide(xDepth), y, side));
+        // QUI ERA IL BUG! Ora le X e Y sono assegnate correttamente dentro il ciclo
+        dots.push(makeDot(pl, xs[j], yDepth, side));
       }
     }
 
-    // se avanzano giocatori (panchina/bug), li piazzo vicino al centro
+    // Giocatori extra (in caso di panchinari finiti per errore nei titolari)
     while (idx < outfield.length) {
       const pl = outfield[idx++];
-      dots.push(makeDot(pl, 50, yForSide(45), side));
+      dots.push(makeDot(pl, 50, finalY(50), side));
     }
 
     return dots.join("");
   }
 
+  // Disegna il contenitore del campo
   function renderPitch(homeDots, awayDots) {
+    const homeName = selectedFixture.home?.name || "Casa";
+    const awayName = selectedFixture.away?.name || "Trasferta";
+    
     return `
-      <div class="pitch">
-        <div class="pitch-lines"></div>
-        <div class="pitch-mid"></div>
-
-     <div class="pitch-teamname left">
-  ${safeHTML(selectedFixture.home?.name || "Casa")}${homeFormation ? ` • ${safeHTML(homeFormation)}` : ""}
-  <span class="pitch-badge pitch-badge--official">UFFICIALE</span>
-  ${homeCoach ? ` <span class="muted" style="margin-left:8px;">(${safeHTML(homeCoach)})</span>` : ""}
-</div>
-
-<div class="pitch-teamname right">
-  ${safeHTML(selectedFixture.away?.name || "Trasferta")}${awayFormation ? ` • ${safeHTML(awayFormation)}` : ""}
-  <span class="pitch-badge pitch-badge--official">UFFICIALE</span>
-  ${awayCoach ? ` <span class="muted" style="margin-left:8px;">(${safeHTML(awayCoach)})</span>` : ""}
-</div>
-
-        <div class="pitch-grid">
-          ${homeDots}
-          ${awayDots}
+      <div class="pitch-container">
+        <div class="pitch">
+          <div class="pitch-lines"></div>
+          <div class="pitch-mid"></div>
+          <div class="pitch-grid">
+            ${awayDots}
+            ${homeDots}
+          </div>
+        </div>
+        <div class="pitch-legend" style="display:flex; justify-content:space-between; margin-top:10px; font-size:13px;">
+          <div class="legend-team">
+             <strong>${safeHTML(homeName)}</strong> <span class="pitch-badge pitch-badge--official">UFFICIALE</span><br>
+             <span class="muted">${homeFormation ? `Modulo: ${safeHTML(homeFormation)}` : ""}</span>
+          </div>
+          <div class="legend-team text-right" style="text-align: right;">
+             <strong>${safeHTML(awayName)}</strong> <span class="pitch-badge pitch-badge--official">UFFICIALE</span><br>
+             <span class="muted">${awayFormation ? `Modulo: ${safeHTML(awayFormation)}` : ""}</span>
+          </div>
         </div>
       </div>
     `;
@@ -811,20 +759,19 @@ const y = xs[j];                           // distribuisco in verticale
 
   function renderPitchPlaceholder(msg) {
     return `
-      <div class="pitch pitch--empty">
-        <div class="pitch-lines"></div>
-        <div class="pitch-mid"></div>
-        <div class="pitch-grid">
-          <div class="muted" style="padding:14px;"><em>${safeHTML(msg)}</em></div>
+      <div class="pitch-container">
+        <div class="pitch pitch--empty" style="display:flex; align-items:center; justify-content:center;">
+          <div class="pitch-lines"></div>
+          <div class="pitch-mid"></div>
+          <div class="muted" style="z-index:10;"><em>${safeHTML(msg)}</em></div>
         </div>
       </div>
     `;
   }
 
+  // --- ESECUZIONE ---
   const homeDots = layoutTeamPlayers(homeXI, homeFormation, "home");
   const awayDots = layoutTeamPlayers(awayXI, awayFormation, "away");
-  const homeCoach = home?.coach?.name ? String(home.coach.name) : "";
-  const awayCoach = away?.coach?.name ? String(away.coach.name) : "";
 
   content.innerHTML = renderPitch(homeDots, awayDots);
   wirePitchClicks();
