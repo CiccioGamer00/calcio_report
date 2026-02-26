@@ -833,15 +833,15 @@ function formationMode(arr) {
 }
 
 // 3. Calcola Formazione Statistica
-async function estimateLineupForTeam(teamId, leagueId, season, limit = 2) { 
-  // ATTENZIONE: limit = 2 per non farci bloccare dall'API (Rate Limit)
+// 3. Calcola Formazione Statistica (ORA USA 10 PARTITE)
+async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
   if (!teamId) return null;
 
   const key = cacheKeyEst(teamId, leagueId, season);
   const hit = __EST_LINEUP_CACHE__.get(key);
   if (hit && Date.now() - hit.ts < 5 * 60_000) return hit.data;
 
-  // Recupera coach e infortunati
+  // Recupera coach e infortunati in parallelo
   const [injured, coachName] = await Promise.all([
       fetchInjuredPlayerIds(teamId, season),
       fetchCurrentCoach(teamId)
@@ -849,8 +849,9 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 2) {
 
   let fixtures = [];
   try {
+      // Chiamata su 10 partite per avere dati solidi su modulo e titolari
       const fx = await apiGet(
-        `/fixtures?team=${teamId}&last=${limit}&status=FT&timezone=Europe/Rome`,
+        `/fixtures?team=${teamId}&last=${limit}&status=FT`,
         { retries: 2, delays: [300, 600] }
       );
       fixtures = fx.ok && !fx.errors && Array.isArray(fx.arr) ? fx.arr : [];
@@ -887,7 +888,7 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 2) {
               name: pl.name || "—",
               number: pl.number ?? "",
               photo: pl.photo || "",
-              pos: pl.pos || pl.position || "M",
+              pos: pl.pos || pl.grid || "M",
             },
           });
         }
@@ -898,22 +899,41 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 2) {
   let form = "4-4-2";
   let isMock = false;
 
-  // Se l'API non ci ha bloccato e ha trovato almeno 11 giocatori
   if (counts.size >= 11) {
+    // Abbiamo i dati reali! Ordina e prendi il modulo più usato
     const top = Array.from(counts.values()).sort((a, b) => b.n - a.n).slice(0, 11).map((x) => x.player);
     XI = sortByRole(top);
     form = formationMode(formations);
   } else {
-    // SALVAGENTE: Mette i pallini finti, MA TIENE IL VERO MISTER E IL MODULO!
+    // Fallback: squadra senza storico formazioni nell'API (es. leghe minori)
     isMock = true;
     for(let i = 1; i <= 11; i++) {
-      XI.push({ id: i, name: "N/D", number: "", pos: i === 1 ? "G" : "M" });
+      // Metto 'mock_' davanti all'ID così non partono chiamate API a giocatori inesistenti
+      XI.push({ id: `mock_${i}`, name: "N/D", number: "", pos: i === 1 ? "G" : "M", photo: "" });
     }
   }
 
   const data = { formation: form, startXI: XI, injuredCount: injured.size, coach: coachName, isMock };
   __EST_LINEUP_CACHE__.set(key, { ts: Date.now(), data });
   return data;
+}
+
+// Generatore del singolo giocatore in campo (Blocca i click sui finti)
+function makeDot(pl, x, y, side) {
+  // Se è un dato stimato senza ID reale, NON DEVE ESSERE CLICCABILE
+  const isFake = String(pl?.id).startsWith("mock");
+  const disabledAttr = isFake ? 'disabled style="cursor:default; opacity:0.8;"' : '';
+
+  return `
+    <button class="pitch-player ${side}" style="--x:${x}; --y:${y};" type="button"
+      data-player-id="${safeHTML(pl?.id)}" data-player-name="${safeHTML(pl?.name)}" ${disabledAttr}>
+      <div class="pp-photo-wrapper">
+          ${pl?.photo ? `<img class="pp-photo" src="${safeHTML(pl.photo)}" loading="lazy" onerror="this.style.display='none'" />` : '<div class="pp-photo-placeholder" style="width:100%;height:100%;background:#222;border-radius:50%;border:2px solid rgba(255,255,255,0.3);"></div>'}
+          <div class="pp-badge">${safeHTML(pl?.number || "")}</div>
+      </div>
+      <div class="pp-name">${safeHTML(pl?.name || "—")}</div>
+    </button>
+  `;
 }
 
 // 4. Fallback Principale
