@@ -784,13 +784,12 @@ function cacheKeyEst(teamId, leagueId, season) {
   return `${teamId}|${leagueId || "all"}|${season || "all"}`;
 }
 
-// 1. Recupera l'allenatore reale (Più preciso)
+// 1. Recupera l'allenatore reale
 async function fetchCurrentCoach(teamId) {
   if (!teamId) return "N/D";
   try {
       const r = await apiGet(`/coachs?team=${teamId}`, { retries: 1 });
       if (r && r.ok && Array.isArray(r.arr) && r.arr.length > 0) {
-          // L'API mette l'allenatore attuale come primo risultato
           return r.arr[0]?.name || "N/D";
       }
   } catch(e) { console.warn("Errore fetch coach"); }
@@ -832,8 +831,7 @@ function formationMode(arr) {
   return Object.keys(map).reduce((a, b) => map[a] > map[b] ? a : b, "4-4-2");
 }
 
-// 3. Calcola Formazione Statistica
-// 3. Calcola Formazione Statistica (ORA USA 10 PARTITE)
+// 3. Calcola Formazione Statistica (Con PARACADUTE ROSA)
 async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
   if (!teamId) return null;
 
@@ -841,120 +839,109 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
   const hit = __EST_LINEUP_CACHE__.get(key);
   if (hit && Date.now() - hit.ts < 5 * 60_000) return hit.data;
 
-  // Recupera coach e infortunati in parallelo
   const [injured, coachName] = await Promise.all([
       fetchInjuredPlayerIds(teamId, season),
       fetchCurrentCoach(teamId)
   ]);
 
-  let fixtures = [];
-  try {
-      // Chiamata su 10 partite per avere dati solidi su modulo e titolari
-      const fx = await apiGet(
-        `/fixtures?team=${teamId}&last=${limit}&status=FT`,
-        { retries: 2, delays: [300, 600] }
-      );
-      fixtures = fx.ok && !fx.errors && Array.isArray(fx.arr) ? fx.arr : [];
-  } catch(e) {}
-
-  const counts = new Map();
-  const formations = [];
-
-  for (const f of fixtures) {
-    const fid = f?.fixture?.id ?? null;
-    if (!fid) continue;
-
-    try {
-        const lr = await apiGet(`/fixtures/lineups?fixture=${fid}`, { retries: 1 });
-        const arr = lr.ok && !lr.errors && Array.isArray(lr.arr) ? lr.arr : [];
-        if (!arr.length) continue;
-
-        const block = arr.find((x) => (x?.team?.id ?? null) === teamId);
-        if (!block) continue;
-
-        if (block.formation) formations.push(block.formation);
-
-        const startXI = Array.isArray(block.startXI) ? block.startXI : [];
-        for (const row of startXI) {
-          const pl = row?.player || {};
-          const pid = pl?.id ?? null;
-          if (!pid || injured.has(pid)) continue;
-
-          const prev = counts.get(pid) || { n: 0, player: null };
-          counts.set(pid, {
-            n: prev.n + 1,
-            player: {
-              id: pid,
-              name: pl.name || "—",
-              number: pl.number ?? "",
-              photo: pl.photo || "",
-              pos: pl.pos || pl.grid || "M",
-            },
-          });
-        }
-    } catch(e) { continue; }
-  }
-
   let XI = [];
   let form = "4-4-2";
   let isMock = false;
+  let badgeLabel = "STIMA STATISTICA";
 
-  if (counts.size >= 11) {
-    // Abbiamo i dati reali! Ordina e prendi il modulo più usato
-    const top = Array.from(counts.values()).sort((a, b) => b.n - a.n).slice(0, 11).map((x) => x.player);
-    XI = sortByRole(top);
-    form = formationMode(formations);
-  } else {
-    // Fallback: squadra senza storico formazioni nell'API (es. leghe minori)
-    isMock = true;
-    for(let i = 1; i <= 11; i++) {
-      // Metto 'mock_' davanti all'ID così non partono chiamate API a giocatori inesistenti
-      XI.push({ id: `mock_${i}`, name: "N/D", number: "", pos: i === 1 ? "G" : "M", photo: "" });
-    }
+  // TENTATIVO 1: Analisi Storico (Ultime 10 partite)
+  try {
+      const fx = await apiGet(`/fixtures?team=${teamId}&last=${limit}&status=FT`, { retries: 2, delays: [300, 600] });
+      const fixtures = fx?.arr || [];
+      const counts = new Map();
+      const formations = [];
+
+      for (const f of fixtures) {
+        const fid = f?.fixture?.id;
+        if (!fid) continue;
+        try {
+            const lr = await apiGet(`/fixtures/lineups?fixture=${fid}`, { retries: 1 });
+            const block = (lr?.arr || []).find(x => x?.team?.id === teamId);
+            if (!block) continue;
+
+            if (block.formation) formations.push(block.formation);
+            const startXI = Array.isArray(block.startXI) ? block.startXI : [];
+
+            for (const row of startXI) {
+              const pl = row?.player || {};
+              const pid = pl?.id;
+              if (!pid || injured.has(pid)) continue;
+
+              const prev = counts.get(pid) || { n: 0, player: null };
+              counts.set(pid, {
+                n: prev.n + 1,
+                player: {
+                  id: pid,
+                  name: pl.name || "—",
+                  number: pl.number ?? "",
+                  photo: pl.photo || "",
+                  pos: pl.pos || pl.grid || "M",
+                },
+              });
+            }
+        } catch(e) {}
+      }
+
+      if (counts.size >= 11) {
+        const top = Array.from(counts.values()).sort((a, b) => b.n - a.n).slice(0, 11).map(x => x.player);
+        XI = sortByRole(top);
+        form = formationMode(formations);
+      }
+  } catch(e) {}
+
+  // TENTATIVO 2 (PARACADUTE): Se lo storico è vuoto, scarica la vera Rosa attuale
+  if (XI.length < 11) {
+      try {
+          const sq = await apiGet(`/players/squads?team=${teamId}`, { retries: 1 });
+          const players = sq?.arr?.[0]?.players || [];
+
+          if (players.length >= 11) {
+              const available = players.filter(p => !injured.has(p.id));
+              const gks = available.filter(p => p.position === "Goalkeeper");
+              const outfield = available.filter(p => p.position !== "Goalkeeper");
+
+              const selected = [];
+              if (gks.length > 0) selected.push(gks[0]);
+              else if (available.length > 0) selected.push(available[0]);
+
+              for(let i = 0; i < 10 && i < outfield.length; i++) {
+                  selected.push(outfield[i]);
+              }
+
+              XI = sortByRole(selected.map(p => ({
+                  id: p.id,
+                  name: p.name || "—",
+                  number: p.number ?? "",
+                  photo: p.photo || "",
+                  pos: p.position === "Goalkeeper" ? "G" : (p.position === "Defender" ? "D" : (p.position === "Midfielder" ? "M" : "A"))
+              })));
+              form = "4-4-2"; // Modulo standard per la rosa
+              badgeLabel = "ROSA REALE (NO STORICO)";
+          }
+      } catch(e) { console.warn("Errore recupero rosa"); }
   }
 
-  const data = { formation: form, startXI: XI, injuredCount: injured.size, coach: coachName, isMock };
+  // TENTATIVO 3 (ULTIMA SPIAGGIA): Fallimento API totale
+  if (XI.length < 11) {
+    isMock = true;
+    XI = [];
+    for(let i = 1; i <= 11; i++) {
+      XI.push({ id: `mock_${i}`, name: "N/D", number: "", pos: i === 1 ? "G" : "M", photo: "" });
+    }
+    badgeLabel = "DATI NON DISPONIBILI";
+  }
+
+  const data = { formation: form, startXI: XI, injuredCount: injured.size, coach: coachName, isMock, badgeLabel };
   __EST_LINEUP_CACHE__.set(key, { ts: Date.now(), data });
   return data;
 }
 
-// Generatore del singolo giocatore in campo (Blocca i click sui finti)
-function makeDot(pl, x, y, side) {
-  // Se è un dato stimato senza ID reale, NON DEVE ESSERE CLICCABILE
-  const isFake = String(pl?.id).startsWith("mock");
-  const disabledAttr = isFake ? 'disabled style="cursor:default; opacity:0.8;"' : '';
-
-  return `
-    <button class="pitch-player ${side}" style="--x:${x}; --y:${y};" type="button"
-      data-player-id="${safeHTML(pl?.id)}" data-player-name="${safeHTML(pl?.name)}" ${disabledAttr}>
-      <div class="pp-photo-wrapper">
-          ${pl?.photo ? `<img class="pp-photo" src="${safeHTML(pl.photo)}" loading="lazy" onerror="this.style.display='none'" />` : '<div class="pp-photo-placeholder" style="width:100%;height:100%;background:#222;border-radius:50%;border:2px solid rgba(255,255,255,0.3);"></div>'}
-          <div class="pp-badge">${safeHTML(pl?.number || "")}</div>
-      </div>
-      <div class="pp-name">${safeHTML(pl?.name || "—")}</div>
-    </button>
-  `;
-}
-
-// 4. Fallback Principale
-async function estimateLineupsForFixture() {
-  const homeId = selectedFixture?.home?.id;
-  const awayId = selectedFixture?.away?.id;
-  if (!homeId || !awayId) return null;
-
-  const leagueId = selectedFixture?.leagueId || null;
-  const season = selectedFixture?.season || null;
-
-  const [homeEst, awayEst] = await Promise.all([
-    estimateLineupForTeam(homeId, leagueId, season, 2),
-    estimateLineupForTeam(awayId, leagueId, season, 2),
-  ]);
-
-  if (!homeEst || !awayEst) return null;
-
-  return { type: (homeEst.isMock || awayEst.isMock) ? "mock" : "estimated", home: homeEst, away: awayEst };
-}
-
+// 4. Fallback Globale Match
 async function estimateLineupsForFixture() {
   const homeId = selectedFixture?.home?.id;
   const awayId = selectedFixture?.away?.id;
@@ -968,21 +955,19 @@ async function estimateLineupsForFixture() {
     estimateLineupForTeam(awayId, leagueId, season, 10),
   ]);
 
-  let isMock = false;
-  if (!homeEst) { homeEst = generateMockLineup(); isMock = true; }
-  if (!awayEst) { awayEst = generateMockLineup(); isMock = true; }
+  if (!homeEst || !awayEst) return null;
 
-  return { type: isMock ? "mock" : "estimated", home: homeEst, away: awayEst };
+  return { type: (homeEst.isMock || awayEst.isMock) ? "mock" : "estimated", home: homeEst, away: awayEst };
 }
 
-// 5. Rendering del Campo e Calcolo Dinamico Coordinate
+// 5. Rendering del Campo
 function renderPitchFromEstimate(est) {
   if (!est || !est.home || !est.away) return '<p class="muted">Errore rendering.</p>';
 
   const homeFormation = est.home.formation || "4-4-2";
   const awayFormation = est.away.formation || "4-4-2";
-  const homeCoach = est.home.coach || "Allenatore";
-  const awayCoach = est.away.coach || "Allenatore";
+  const homeCoach = est.home.coach || "N/D";
+  const awayCoach = est.away.coach || "N/D";
 
   function parseFormation(f) {
     const parts = String(f || "4-4-2").split("-").map(n => parseInt(n, 10)).filter(n => !isNaN(n));
@@ -995,11 +980,14 @@ function renderPitchFromEstimate(est) {
   }
 
   function makeDot(pl, x, y, side) {
+    const isFake = String(pl?.id).startsWith("mock");
+    const disabledAttr = isFake ? 'disabled style="cursor:default; opacity:0.8;"' : '';
+
     return `
       <button class="pitch-player ${side}" style="--x:${x}; --y:${y};" type="button"
-        data-player-id="${safeHTML(pl?.id)}" data-player-name="${safeHTML(pl?.name)}">
+        data-player-id="${safeHTML(pl?.id)}" data-player-name="${safeHTML(pl?.name)}" ${disabledAttr}>
         <div class="pp-photo-wrapper">
-            ${pl?.photo ? `<img class="pp-photo" src="${safeHTML(pl.photo)}" loading="lazy" onerror="this.style.display='none'" />` : '<div class="pp-photo-placeholder" style="width:100%;height:100%;background:#333;border-radius:50%;border:2px solid white;"></div>'}
+            ${pl?.photo ? `<img class="pp-photo" src="${safeHTML(pl.photo)}" loading="lazy" onerror="this.style.display='none'" />` : '<div class="pp-photo-placeholder" style="width:100%;height:100%;background:#222;border-radius:50%;border:2px solid rgba(255,255,255,0.3);"></div>'}
             <div class="pp-badge">${safeHTML(pl?.number || "")}</div>
         </div>
         <div class="pp-name">${safeHTML(pl?.name || "—")}</div>
@@ -1007,28 +995,22 @@ function renderPitchFromEstimate(est) {
     `;
   }
 
-  // Motore di posizionamento dinamico
   function layout(teamData, side) {
     const players = teamData.startXI || [];
-    const rows = parseFormation(teamData.formation); // Es: [4, 2, 3, 1]
+    const rows = parseFormation(teamData.formation);
     
+    const ySteps = [6, 20, 32, 44]; 
     const finalY = (y) => (side === "home" ? 100 - y : y);
+
     let html = "";
     if (!players.length) return html;
 
-    // Portiere fisso al 6% della profondità
-    html += makeDot(players[0], 50, finalY(6), side);
-
-    // Calcoliamo lo spazio per i giocatori di movimento.
-    // Dobbiamo stare tra il 16% (fuori area) e il 44% (prima del centrocampo)
-    const availableDepth = 38; // 44 - 6 = 38
-    const stepY = availableDepth / rows.length;
+    html += makeDot(players[0], 50, finalY(ySteps[0]), side);
 
     let idx = 1;
     rows.forEach((num, rIdx) => {
       const xs = rowXs(num);
-      // La coordinata Y avanza proporzionalmente in base a quante linee ci sono
-      const y = finalY(6 + (stepY * (rIdx + 1))); 
+      const y = finalY(ySteps[rIdx + 1] || 44);
       for (let j = 0; j < num; j++) {
         if (players[idx]) {
           html += makeDot(players[idx], xs[j], y, side);
@@ -1063,13 +1045,13 @@ function renderPitchFromEstimate(est) {
         <div class="legend-team" style="text-align: left;">
             <strong>${safeHTML(selectedFixture?.home?.name || "Casa")}</strong> 
             <span class="pitch-badge pitch-badge--est" style="border-color:#ffb84d; background:rgba(255,184,77,0.15);">
-                ${est.type === 'mock' ? 'NESSUN DATO STORICO API' : 'STIMA STATISTICA'}
+                ${safeHTML(est.home.badgeLabel)}
             </span>
         </div>
         <div class="legend-team" style="text-align: right;">
             <strong>${safeHTML(selectedFixture?.away?.name || "Trasferta")}</strong> 
             <span class="pitch-badge pitch-badge--est" style="border-color:#ffb84d; background:rgba(255,184,77,0.15);">
-                ${est.type === 'mock' ? 'NESSUN DATO STORICO API' : 'STIMA STATISTICA'}
+                ${safeHTML(est.away.badgeLabel)}
             </span>
         </div>
       </div>
@@ -1085,7 +1067,7 @@ function wirePitchClicks() {
 
   root.addEventListener("click", async (e) => {
     const btn = e.target?.closest?.(".pitch-player");
-    if (!btn) return;
+    if (!btn || btn.hasAttribute("disabled")) return;
     const playerId = btn.getAttribute("data-player-id");
     const playerName = btn.getAttribute("data-player-name") || "Giocatore";
     if (!playerId || playerId === "undefined") return;
