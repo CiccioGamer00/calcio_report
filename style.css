@@ -1664,3 +1664,38 @@ body[data-view-mode="single"] .card.is-focus{
 @media (min-width: 920px) {
     .coach-badge.home { top: 10px; bottom: auto; left: 10px; }
 }
+
+/* =========================
+   FIX LISTA INDISPONIBILI
+   ========================= */
+.injRow {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    gap: 12px;
+}
+.pchip {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255,255,255,0.06);
+    padding: 4px 12px 4px 4px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.pimg {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #111;
+    border: 1px solid rgba(255,255,255,0.2);
+}
+.pname {
+    font-size: 13px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.92);
+}
+.injMeta {
+    font-size: 12px;
+}
