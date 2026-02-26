@@ -1699,3 +1699,58 @@ body[data-view-mode="single"] .card.is-focus{
 .injMeta {
     font-size: 12px;
 }
+.candWrap{
+  margin-top: 12px;
+  display:grid;
+  gap:12px;
+}
+@media (min-width: 900px){
+  .candWrap{ grid-template-columns: 1fr 1fr; }
+}
+.candTeam{
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 12px;
+  padding: 10px;
+  background: rgba(0,0,0,0.18);
+}
+.candTitle{
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+.candRow{
+  display:grid;
+  grid-template-columns: 44px 1fr;
+  gap:10px;
+  align-items:start;
+  padding: 6px 0;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+.candRow:first-child{ border-top: none; }
+.candRole{
+  font-size: 12px;
+  color: rgba(255,255,255,0.70);
+  font-weight: 900;
+  padding-top: 6px;
+}
+.candList{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.candChip{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border:1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.92);
+  cursor:pointer;
+}
+.candChip:hover{ filter: brightness(1.08); }
+.candPhoto{
+  width: 18px; height: 18px; border-radius: 999px; object-fit: cover;
+}
+.candName{ font-size: 12px; font-weight: 800; }
+.candPct{ font-size: 12px; opacity: 0.8; font-weight: 900; }
