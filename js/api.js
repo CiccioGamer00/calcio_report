@@ -17,6 +17,28 @@ function shouldRetry({ ok, status, errors, arr }, pathWithQuery) {
   return false;
 }
 
+// ==========================================
+// NUOVA MEMORY CACHE (FRONTEND)
+// ==========================================
+const __API_FRONTEND_CACHE__ = new Map();
+const CACHE_TTL_MS = 3 * 60 * 1000; // 3 minuti di default per tutto
+
+function getFromLocalCache(url) {
+  const hit = __API_FRONTEND_CACHE__.get(url);
+  if (hit && Date.now() - hit.ts < CACHE_TTL_MS) {
+    return hit.data;
+  }
+  return null;
+}
+
+function setInLocalCache(url, data) {
+  // Non cachiamo errori
+  if (data.ok && !data.errors) {
+    __API_FRONTEND_CACHE__.set(url, { ts: Date.now(), data });
+  }
+}
+// ==========================================
+
 async function apiGet(pathWithQuery, opts = {}) {
   const baseUrl = window.API_CONFIG?.baseUrl;
   const baseHeaders = window.API_CONFIG?.headers;
@@ -25,6 +47,13 @@ async function apiGet(pathWithQuery, opts = {}) {
   const delays = Array.isArray(opts.delays) ? opts.delays : [400, 900, 1600];
 
   const url = `${baseUrl}${pathWithQuery}`;
+
+  // 1. Controllo immediato nella cache del browser (RAM)
+  const cachedData = getFromLocalCache(url);
+  if (cachedData) {
+    // Risoluzione istantanea senza rete
+    return cachedData;
+  }
 
   const h = new Headers(baseHeaders || {});
   const token = localStorage.getItem("CR_TOKEN");
@@ -35,7 +64,7 @@ async function apiGet(pathWithQuery, opts = {}) {
   // id richiesta (per loader)
   const reqId = `${Date.now()}_${Math.random().toString(16).slice(2)}`;
 
-  // ✅ Loader start (UI) — ma SOLO qui, una volta
+  // Loader start (UI)
   window.dispatchEvent(
     new CustomEvent("cr:loading", { detail: { on: true, url, reqId } })
   );
@@ -65,7 +94,11 @@ async function apiGet(pathWithQuery, opts = {}) {
           window.dispatchEvent(new CustomEvent("cr:paywall", { detail: out }));
         }
 
-        if (!shouldRetry(out, pathWithQuery)) return out;
+        if (!shouldRetry(out, pathWithQuery)) {
+          // 2. Salvataggio in cache prima di restituire i dati
+          setInLocalCache(url, out);
+          return out;
+        }
       } catch (e) {
         last = {
           ok: false,
@@ -94,7 +127,7 @@ async function apiGet(pathWithQuery, opts = {}) {
       }
     );
   } finally {
-    // ✅ Loader stop SEMPRE (anche su return dentro al try)
+    // Loader stop
     window.dispatchEvent(
       new CustomEvent("cr:loading", { detail: { on: false, url, reqId } })
     );
