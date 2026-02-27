@@ -692,7 +692,9 @@ async function loadLineupsPitch() {
     data-player-id="${safeHTML(pl?.id ?? "")}"
     data-player-name="${safeHTML(name)}"
   >
-    ${photo ? `<img class="pp-photo" src="${safeHTML(photo)}" alt="" />` : ""}
+    <img class="pp-photo" src="${safeHTML(pl.photo)}" loading="lazy"
+  onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2214%22 r=%228%22 fill=%22%23cfd8dc%22/><path d=%22M6 38c2-9 10-14 14-14s12 5 14 14%22 fill=%22%23cfd8dc%22/></svg>';"
+/>
     <div class="pp-badge">${safeHTML(num)}</div>
     <div class="pp-name">${safeHTML(name)}</div>
   </button>
@@ -1595,3 +1597,4 @@ async function openPlayerModal(playerId, playerName) {
 }
 
 window.showTeam = showTeam;
+
