@@ -783,7 +783,7 @@ async function loadLineupsPitch() {
 // ====== STIMA FORMAZIONI E ALLENATORI (fallback) ======
 const __EST_LINEUP_CACHE__ = new Map(); // key -> {ts, data}
 const __PLAYER_STATS_CACHE__ = new Map(); // playerId|season|league -> data
-
+const __TEAM_APPEAR_CACHE__ = new Map(); // team|league|season -> {ts, map(playerId->apps)}
 function cacheKeyEst(teamId, leagueId, season) {
   return `${teamId}|${leagueId || "all"}|${season || "all"}`;
 }
@@ -840,7 +840,44 @@ async function fetchSquadPlayerIds(teamId) {
   }
   return set.size ? set : null;
 }
+async function fetchTeamLeagueAppearances(teamId, leagueId, season) {
+  if (!teamId || !leagueId || !season) return null;
 
+  const key = `${teamId}|${leagueId}|${season}`;
+  const hit = __TEAM_APPEAR_CACHE__.get(key);
+  if (hit && Date.now() - hit.ts < 10 * 60_000) return hit.map;
+
+  const out = new Map();
+
+  let page = 1;
+  let safety = 0;
+
+  while (safety++ < 6) {
+    const r = await apiGet(
+      `/players?team=${teamId}&league=${leagueId}&season=${season}&page=${page}`,
+      { retries: 1, delays: [350] },
+    );
+
+    const arr = (r.ok && !r.errors && Array.isArray(r.arr)) ? r.arr : [];
+    if (!arr.length) break;
+
+    for (const row of arr) {
+      const pid = row?.player?.id ?? null;
+      if (!pid) continue;
+
+      const stats = Array.isArray(row?.statistics) ? row.statistics[0] : null;
+      const apps = stats?.games?.appearences ?? stats?.games?.appearances ?? 0;
+
+      out.set(pid, Number(apps) || 0);
+    }
+
+    if (arr.length < 20) break;
+    page++;
+  }
+
+  __TEAM_APPEAR_CACHE__.set(key, { ts: Date.now(), map: out });
+  return out;
+}
 function sortByRole(players) {
   const rank = (pos) => {
     const p = String(pos || "").toUpperCase();
@@ -874,7 +911,7 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
     fetchCurrentCoach(teamId),
   ]);
 
-  // 1) prendo ultimi match (prima stessa lega, poi fallback all)
+  // 1) ultimi match (prima stessa lega, poi fallback all)
   let fixtures = [];
   if (leagueId && season) {
     const fx = await apiGet(
@@ -892,7 +929,7 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
   }
   if (!fixtures.length) return null;
 
-  // 2) recupero anche rosa attuale per filtrare “fantasmi/omonimi”
+  // 2) rosa attuale (filtra fantasmi)
   const squadIds = await fetchSquadPlayerIds(teamId).catch(() => null);
 
   // counts: playerId -> {w, player}
@@ -905,7 +942,6 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
     const fid = f?.fixture?.id ?? null;
     if (!fid) continue;
 
-    // peso recency (più recente pesa di più)
     const w = Math.max(0.35, 1 - i * 0.12);
 
     const lr = await apiGet(`/fixtures/lineups?fixture=${fid}`, {
@@ -933,7 +969,6 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
       if (squadIds && !squadIds.has(pid)) continue;
 
       const prev = counts.get(pid) || { w: 0, player: null };
-
       counts.set(pid, {
         w: prev.w + w,
         player: {
@@ -946,8 +981,21 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
       });
     }
   }
-  // ====== SETTORI + FILL SMART (NO "ROSA A CASO") ======
 
+  // 3) MODULO DEL MISTER = moda pesata
+  const fm = new Map();
+  for (const x of formations) fm.set(x.f, (fm.get(x.f) || 0) + x.w);
+
+  let bestForm = "4-4-2";
+  let bestW = 0;
+  for (const [k, v] of fm.entries()) {
+    if (v > bestW) {
+      bestW = v;
+      bestForm = k;
+    }
+  }
+
+  // ===== Helpers ruolo / settore =====
   function macroRoleFromPos(pos) {
     const p = String(pos || "").toUpperCase();
     if (p.startsWith("G")) return "GK";
@@ -962,13 +1010,11 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
     if (s.includes("goal")) return "GK";
     if (s.includes("def")) return "DEF";
     if (s.includes("mid")) return "MID";
-    // forward/attacker/striker/wing -> ATT (macro)
     if (s.includes("forw") || s.includes("att") || s.includes("strik") || s.includes("wing")) return "ATT";
     return "MID";
   }
 
   function parseFormationCounts(fStr) {
-    // "4-4-2" -> {GK:1, DEF:4, MID:4, ATT:2}
     const parts = String(fStr || "4-4-2")
       .split("-")
       .map((x) => parseInt(x, 10))
@@ -977,30 +1023,10 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
     const def = parts[0] ?? 4;
     const mid = parts[1] ?? 4;
     const att = parts[2] ?? 2;
-
     return { GK: 1, DEF: def, MID: mid, ATT: att };
   }
 
-  function normalizePlayerFromSquad(p) {
-    return {
-      id: p?.id,
-      name: p?.name || "—",
-      number: p?.number ?? "",
-      photo: p?.photo || "",
-      pos: macroRoleFromSquadPosition(p?.position), // "GK/DEF/MID/ATT"
-    };
-  }
-
-  function buildScoreMapFromCounts(countsMap) {
-    const m = new Map();
-    for (const [pid, obj] of countsMap.entries()) {
-      m.set(pid, obj?.w ?? 0);
-    }
-    return m;
-  }
-
   function stableFallbackSort(a, b) {
-    // deterministico: score desc, number asc, name asc
     const sa = a?.score ?? 0;
     const sb = b?.score ?? 0;
     if (sb !== sa) return sb - sa;
@@ -1015,28 +1041,59 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
     return String(a?.name || "").localeCompare(String(b?.name || ""), "it", { sensitivity: "base" });
   }
 
-  function fillXIBySectors({ formationStr, rankedList, squadPlayers, injuredSet, squadIdsSet }) {
-    const need = parseFormationCounts(formationStr || "4-4-2");
-    const scoreById = buildScoreMapFromCounts(counts);
+  // presenze competizione (bulk) -> evita 0 presenze quando possibile
+  const appsMap = await fetchTeamLeagueAppearances(teamId, leagueId, season).catch(() => null);
 
-    // 1) pool dalla rosa (filtrata): solo disponibili
-    const pool = (Array.isArray(squadPlayers) ? squadPlayers : [])
-      .filter((p) => p?.id && !injuredSet.has(p.id))
-      .map(normalizePlayerFromSquad)
-      .filter((p) => !squadIdsSet || squadIdsSet.has(p.id)) // se abbiamo squadIdsSet, rispettiamolo
-      .map((p) => ({ ...p, score: scoreById.get(p.id) ?? 0 }));
+  // lista ranked dai match recenti
+  const rankedList = Array.from(counts.values()).sort((a, b) => b.w - a.w);
 
-    // indicizza per ruolo
+  async function buildXIBySectors() {
+    const need = parseFormationCounts(bestForm || "4-4-2");
+
+    const scoreById = new Map();
+    for (const [pid, obj] of counts.entries()) scoreById.set(pid, obj?.w ?? 0);
+
+    // leggo rosa
+    const sq = await apiGet(`/players/squads?team=${teamId}`, { retries: 1 });
+    const squadPlayers = sq?.arr?.[0]?.players || [];
+
+    // pool disponibile (no injured) + (opzionale) solo ID presenti nella rosa attuale
+    let pool = (Array.isArray(squadPlayers) ? squadPlayers : [])
+      .filter((p) => p?.id && !injured.has(p.id))
+      .filter((p) => !squadIds || squadIds.has(p.id))
+      .map((p) => {
+        const role = macroRoleFromSquadPosition(p?.position);
+        const recent = scoreById.get(p.id) ?? 0;
+        const apps = appsMap ? (appsMap.get(p.id) ?? 0) : 0;
+
+        // score: prima recent, se 0 usa apps (presenze competizione)
+        const score = recent > 0 ? (recent * 1000 + apps) : apps;
+
+        return {
+          id: p.id,
+          name: p.name || "—",
+          number: p.number ?? "",
+          photo: p.photo || "",
+          pos: role,
+          apps,
+          score,
+        };
+      });
+
+    // se ho appsMap e ho abbastanza gente con apps>0, preferisco quella
+    if (appsMap) {
+      const nonZero = pool.filter((p) => (p.apps ?? 0) > 0);
+      if (nonZero.length >= 11) pool = nonZero;
+    }
+
+    // indicizza pool per ruolo
     const poolByRole = { GK: [], DEF: [], MID: [], ATT: [] };
     for (const p of pool) {
-      const r = macroRoleFromPos(p.pos); // già GK/DEF/MID/ATT
+      const r = macroRoleFromPos(p.pos);
       (poolByRole[r] || (poolByRole[r] = [])).push(p);
     }
-    for (const k of ["GK", "DEF", "MID", "ATT"]) {
-      poolByRole[k].sort(stableFallbackSort);
-    }
+    for (const k of ["GK", "DEF", "MID", "ATT"]) poolByRole[k].sort(stableFallbackSort);
 
-    // 2) prima prendo dai ranked (titolari recenti)
     const chosen = [];
     const chosenIds = new Set();
 
@@ -1058,20 +1115,16 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
           pos: role,
         });
         chosenIds.add(pl.id);
+
         if (chosen.filter((x) => x.pos === role).length >= n) break;
       }
     };
 
-    takeFromRanked("GK", need.GK);
-    takeFromRanked("DEF", need.DEF);
-    takeFromRanked("MID", need.MID);
-    takeFromRanked("ATT", need.ATT);
-
-    // 3) fill dai pool per settore (sostituti sensati)
     const fillRole = (role, n) => {
       while (chosen.filter((x) => x.pos === role).length < n) {
         const cand = (poolByRole[role] || []).find((p) => !chosenIds.has(p.id));
         if (!cand) break;
+
         chosen.push({
           id: cand.id,
           name: cand.name,
@@ -1083,13 +1136,19 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
       }
     };
 
+    // 1) prendo titolari “storici” per settore
+    takeFromRanked("GK", need.GK);
+    takeFromRanked("DEF", need.DEF);
+    takeFromRanked("MID", need.MID);
+    takeFromRanked("ATT", need.ATT);
+
+    // 2) riempio dal pool per settore
     fillRole("GK", need.GK);
     fillRole("DEF", need.DEF);
     fillRole("MID", need.MID);
     fillRole("ATT", need.ATT);
 
-    // 4) se ancora non siamo a 11, riempi con "migliori restanti" (sempre deterministico)
-    // prima MID, poi DEF, poi ATT, poi GK (non ideale ma evita buchi)
+    // 3) se mancano ancora, riempio con best restanti (deterministico)
     const order = ["MID", "DEF", "ATT", "GK"];
     while (chosen.length < 11) {
       let added = false;
@@ -1108,67 +1167,28 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
           break;
         }
       }
-      if (!added) break; // non c'è più nessuno
+      if (!added) break;
     }
 
-    // ordina finale per ruolo (GK, DEF, MID, ATT) così renderPitchFromEstimate è stabile
+    // ordina finale: GK, DEF, MID, ATT
     const roleRank = { GK: 1, DEF: 2, MID: 3, ATT: 4 };
     chosen.sort((a, b) => (roleRank[a.pos] || 9) - (roleRank[b.pos] || 9));
 
     return chosen.slice(0, 11);
   }
-    if (counts.size < 11 || usedMatches === 0) {
-    // ✅ fallback intelligente: mai "primi 11 a caso"
-    const sq = await apiGet(`/players/squads?team=${teamId}`, { retries: 1 });
-    const squadPlayers = sq?.arr?.[0]?.players || [];
 
-    // formazione: se non ho abbastanza match/lineups, uso una safe (4-4-2)
-    const fallbackForm = "4-4-2";
+  // ======= COSTRUZIONE OUTPUT =======
 
-    // rankedList: se usedMatches>0 uso ranked, altrimenti lista vuota (riempie da rosa per settori)
-    const rankedList = usedMatches > 0
-      ? Array.from(counts.values()).sort((a, b) => b.w - a.w)
-      : [];
+  // XI “principale” (se ho abbastanza dati recenti)
+  const XI_recent = rankedList.slice(0, 11).map((x) => x.player);
+  const XI_recent_sorted = sortByRole(XI_recent);
 
-    const XI = fillXIBySectors({
-      formationStr: fallbackForm,
-      rankedList,
-      squadPlayers,
-      injuredSet: injured,
-      squadIdsSet: squadIds || null,
-    });
+  // Se non ho 11 affidabili, costruisco XI per settori (con presenze backup)
+  const needSmart = (counts.size < 11 || usedMatches === 0);
 
-    const data = {
-      formation: fallbackForm,
-      startXI: XI,
-      coach: coachName,
-      injuredCount: injured.size,
-      badgeLabel: usedMatches > 0 ? `STIMA (${usedMatches}/${limit})` : "STIMA (ROSA)",
-      usedMatches,
-      candidates: { GK: [], DEF: [], MID: [], ATT: [] },
-    };
+  const XI = needSmart ? await buildXIBySectors() : XI_recent_sorted;
 
-    __EST_LINEUP_CACHE__.set(key, { ts: Date.now(), data });
-    return data;
-  }
-
-  // 3) XI = top 11 per peso
-  const ranked = Array.from(counts.values()).sort((a, b) => b.w - a.w);
-  const XI = sortByRole(ranked.slice(0, 11).map((x) => x.player));
-
-  // 4) modulo: “moda pesata”
-  const fm = new Map();
-  for (const x of formations) fm.set(x.f, (fm.get(x.f) || 0) + x.w);
-  let bestForm = "4-4-2",
-    bestW = 0;
-  for (const [k, v] of fm.entries()) {
-    if (v > bestW) {
-      bestW = v;
-      bestForm = k;
-    }
-  }
-
-  // 5) candidati per ruolo (top 6) con % su usedMatches (pesato -> normalizziamo su bestW)
+  // candidati (top 6)
   const roleKey = (pos) => {
     const p = String(pos || "").toUpperCase();
     if (p.startsWith("G")) return "GK";
@@ -1179,29 +1199,23 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
   };
 
   const cand = { GK: [], DEF: [], MID: [], ATT: [] };
-
-for (const it of ranked.slice(0, 40)) {
-  const r = roleKey(it.player.pos);
-
-  // % semplice e stabile (normalizzata su numero match con lineup trovate)
-  const pctRaw = Math.round((it.w / (usedMatches || 1)) * 100);
-  const pct = Math.max(0, Math.min(100, pctRaw));
-
-  // ✅ MANCAVA QUESTO: push nel bucket giusto
-  cand[r].push({ ...it.player, pct, score: it.w });
-}
-
-cand.GK = cand.GK.slice(0, 4);
-cand.DEF = cand.DEF.slice(0, 6);
-cand.MID = cand.MID.slice(0, 6);
-cand.ATT = cand.ATT.slice(0, 6);
+  for (const it of rankedList.slice(0, 40)) {
+    const r = roleKey(it.player.pos);
+    const pctRaw = Math.round((it.w / (usedMatches || 1)) * 100);
+    const pct = Math.max(0, Math.min(100, pctRaw));
+    cand[r].push({ ...it.player, pct, score: it.w });
+  }
+  cand.GK = cand.GK.slice(0, 4);
+  cand.DEF = cand.DEF.slice(0, 6);
+  cand.MID = cand.MID.slice(0, 6);
+  cand.ATT = cand.ATT.slice(0, 6);
 
   const data = {
     formation: bestForm || "4-4-2",
     startXI: XI,
     coach: coachName,
     injuredCount: injured.size,
-    badgeLabel: `STIMA (${usedMatches}/${limit})`,
+    badgeLabel: needSmart ? `STIMA (${usedMatches}/${limit})` : `STIMA (${usedMatches}/${limit})`,
     usedMatches,
     candidates: cand,
   };
