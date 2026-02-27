@@ -3,7 +3,7 @@ window.API_CONFIG = {
   headers: {},
 
   // --- CONTATTI / CTA (imposta i tuoi)
-  telegramUrl: "", // es: "https://t.me/statzone_italia"
+  telegramUrl: "https://t.me/+-BZkEGuZIVFlOWU0", // es: "https://t.me/statzone_italia"
   supportEmail: "", // es: "support@tuodominio.it"
 
   // --- PAGAMENTI
@@ -12,3 +12,4 @@ window.API_CONFIG = {
   paymentUrl: "",
   paypalUrl: "", // se vuoi separarlo da paymentUrl
 };
+
