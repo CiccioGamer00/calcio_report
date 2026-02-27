@@ -688,9 +688,12 @@ async function loadLineupsPitch() {
     const formation = parseFormation(formationStr);
     const players = startXI.map((x) => x?.player || {}).filter(Boolean);
 
-    // Identifica il portiere
-    let gk = players[0];
-    const outfield = players.filter((pl) => pl !== gk);
+    // Identifica il portiere (NON assumere ordine startXI)
+let gk = players.find(pl => String(pl?.pos || pl?.position || "").toUpperCase().startsWith("G"));
+if (!gk) gk = players.find(pl => String(pl?.pos || pl?.position || "").toLowerCase().includes("goal"));
+if (!gk) gk = players[0]; // ultimo fallback
+
+const outfield = players.filter((pl) => pl?.id !== gk?.id);
 
     // Fallback se manca il modulo
     const rows = formation || [4, 4, 2];
@@ -1251,7 +1254,8 @@ async function estimateLineupsForFixture() {
 function renderPitchFromEstimate(est) {
   if (!est || !est.home || !est.away)
     return '<p class="muted">Errore rendering.</p>';
-
+console.log("HOME XI", est.home.startXI.map(p=>`${p.name}(${p.pos})`).join(" | "));
+console.log("AWAY XI", est.away.startXI.map(p=>`${p.name}(${p.pos})`).join(" | "));
   const homeFormation = est.home.formation || "4-4-2";
   const awayFormation = est.away.formation || "4-4-2";
   const homeCoach = est.home.coach || "N/D";
@@ -1298,19 +1302,23 @@ function renderPitchFromEstimate(est) {
     let html = "";
     if (!players.length) return html;
 
-    html += makeDot(players[0], 50, finalY(ySteps[0]), side);
+    // GK: non assumere players[0]
+let gk = players.find(pl => String(pl?.pos || "").toUpperCase() === "GK" || String(pl?.pos || "").toUpperCase().startsWith("G"));
+if (!gk) gk = players[0];
 
-    let idx = 1;
-    rows.forEach((num, rIdx) => {
-      const xs = rowXs(num);
-      const y = finalY(ySteps[rIdx + 1] || 44);
-      for (let j = 0; j < num; j++) {
-        if (players[idx]) {
-          html += makeDot(players[idx], xs[j], y, side);
-        }
-        idx++;
-      }
-    });
+const outfield = players.filter(p => p?.id !== gk?.id);
+
+html += makeDot(gk, 50, finalY(ySteps[0]), side);
+
+let idx = 0;
+rows.forEach((num, rIdx) => {
+  const xs = rowXs(num);
+  const y = finalY(ySteps[rIdx + 1] || 44);
+  for (let j = 0; j < num; j++) {
+    if (outfield[idx]) html += makeDot(outfield[idx], xs[j], y, side);
+    idx++;
+  }
+});
     return html;
   }
   function candButton(p) {
