@@ -1778,3 +1778,7 @@ body[data-view-mode="single"] .card.is-focus{
   line-height: 18px;
   border-radius: 999px;
 }
+/* ===== STIMA: foto SEMPRE sopra i layer del campo ===== */
+.pitch-player { z-index: 20 !important; }
+.pp-photo-wrapper { z-index: 21 !important; }
+.pp-photo { display: block !important; }
