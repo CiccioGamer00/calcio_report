@@ -1754,3 +1754,27 @@ body[data-view-mode="single"] .card.is-focus{
 }
 .candName{ font-size: 12px; font-weight: 800; }
 .candPct{ font-size: 12px; opacity: 0.8; font-weight: 900; }
+/* ===== FIX BADGE NUMERO: MAI SOPRA LA FACCIA ===== */
+.pp-photo-wrapper{
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  width: 44px;
+}
+
+.pp-photo-wrapper .pp-badge{
+  position: static !important;   /* cancella l'assoluto */
+  transform: none !important;
+  margin: 0 !important;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 28px;
+  height: 18px;
+  padding: 0 8px;
+  font-size: 11px;
+  line-height: 18px;
+  border-radius: 999px;
+}
