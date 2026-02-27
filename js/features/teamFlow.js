@@ -357,7 +357,17 @@ window.activateIndicatorsAndLoad = async function () {
     }
   }
 };
-
+async function resolveLeagueSeason(leagueId, fallbackSeason) {
+  try {
+    const r = await apiGet(`/leagues?id=${leagueId}`, { retries: 1 });
+    const row =
+      r.ok && !r.errors && Array.isArray(r.arr) && r.arr[0] ? r.arr[0] : null;
+    const current = row?.seasons?.find?.((s) => s?.current)?.year ?? null;
+    return current || fallbackSeason;
+  } catch (e) {
+    return fallbackSeason;
+  }
+}
 async function showTeam() {
   const input = getTeamInputEl();
   const q = sanitizeSearch(input ? input.value : "");
@@ -440,7 +450,10 @@ async function showTeam() {
 
     referee: "—",
   };
-
+  selectedFixture.season = await resolveLeagueSeason(selectedFixture.leagueId, selectedFixture.season);
+  console.log("SEASON FIXED:", selectedFixture.season, "league", selectedFixture.leagueId);
+console.log("TEAM SEARCHED:", selectedTeam);
+console.log("FIXTURE:", selectedFixture);
   setMatch(renderMatchBasic(fx, fx2, oppNextAfter, team.id));
   // mini classifica (silenziosa): aggiorna le pill vicino alle squadre
   if (typeof window.loadStandingsMini === "function") {
@@ -622,7 +635,10 @@ async function loadLineupsPitch() {
 
   // Se non disponibili ufficialmente: provo STIMATA (storico + indisponibili)
   if (!r.ok || r.errors || !Array.isArray(r.arr) || r.arr.length === 0) {
-    const est = await estimateLineupsForFixture().catch(() => null);
+    const est = await estimateLineupsForFixture().catch((e) => {
+  console.error("estimateLineupsForFixture ERROR:", e);
+  return null;
+});
     if (est?.home && est?.away) {
       content.innerHTML = renderPitchFromEstimate(est);
       wirePitchClicks(); // abilita click players per popup stats
@@ -807,21 +823,31 @@ async function fetchCurrentCoach(teamId) {
 
 // 2. Recupera infortunati
 async function fetchInjuredPlayerIds(teamId, season) {
-  if (!teamId) return new Set();
-  const currentSeason = season || new Date().getFullYear();
+  // ✅ Nuova logica: indisponibili SOLO per la partita selezionata
+  // Usa lo stesso endpoint del pannello injuriesPanel: /injuries?fixture=...
+  const out = new Set();
+
+  const fxId = selectedFixture?.id ?? null;
+  if (!fxId || !teamId) return out;
+
   try {
-    const r = await apiGet(`/injuries?team=${teamId}&season=${currentSeason}`, {
-      retries: 1,
+    const r = await apiGet(`/injuries?fixture=${fxId}`, {
+      retries: 2,
+      delays: [400, 900],
     });
-    const out = new Set();
+
     if (!r.ok || r.errors || !Array.isArray(r.arr)) return out;
+
+    // filtra solo gli indisponibili della squadra richiesta
     for (const row of r.arr) {
+      if ((row?.team?.id ?? null) !== teamId) continue;
       const pid = row?.player?.id ?? null;
       if (pid) out.add(pid);
     }
+
     return out;
   } catch (e) {
-    return new Set();
+    return out;
   }
 }
 async function fetchSquadPlayerIds(teamId) {
@@ -1052,36 +1078,86 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
 
   async function buildXIBySectors() {
     const need = parseFormationCounts(bestForm || "4-4-2");
+    const countRole = (role) => chosen.filter((x) => x.pos === role).length;
+const missing = (role) => Math.max(0, (need[role] || 0) - countRole(role));
 
     const scoreById = new Map();
     for (const [pid, obj] of counts.entries()) scoreById.set(pid, obj?.w ?? 0);
 
-    // leggo rosa
-    const sq = await apiGet(`/players/squads?team=${teamId}`, { retries: 1 });
-    const squadPlayers = sq?.arr?.[0]?.players || [];
+    // ✅ pool “vero” dalla competizione: players?team&league&season (coerente con Serie A 2025)
+const teamPlayers = [];
+if (leagueId && season) {
+  let page = 1;
+  let safety = 0;
+  while (safety++ < 6) {
+    const r = await apiGet(
+      `/players?team=${teamId}&league=${leagueId}&season=${season}&page=${page}`,
+      { retries: 1, delays: [350] },
+    );
+    const arr = (r.ok && !r.errors && Array.isArray(r.arr)) ? r.arr : [];
+    if (!arr.length) break;
+    teamPlayers.push(...arr);
+    if (arr.length < 20) break;
+    page++;
+  }
+}
 
-    // pool disponibile (no injured) + (opzionale) solo ID presenti nella rosa attuale
-    let pool = (Array.isArray(squadPlayers) ? squadPlayers : [])
-      .filter((p) => p?.id && !injured.has(p.id))
-      .filter((p) => !squadIds || squadIds.has(p.id))
-      .map((p) => {
-        const role = macroRoleFromSquadPosition(p?.position);
-        const recent = scoreById.get(p.id) ?? 0;
-        const apps = appsMap ? (appsMap.get(p.id) ?? 0) : 0;
+// pool disponibile (no injured) basato su players della stagione/lega
+let pool = (teamPlayers || [])
+  .map((row) => {
+    const p = row?.player || {};
+    const statsArr = Array.isArray(row?.statistics) ? row.statistics : [];
+const stats =
+  statsArr.find((s) => String(s?.league?.id) === String(leagueId)) ||
+  statsArr[0] ||
+  null;
+    const posRaw = stats?.games?.position || "";     // "Goalkeeper/Defender/Midfielder/Attacker"
+    const apps = stats?.games?.appearences ?? stats?.games?.appearances ?? 0;
 
-        // score: prima recent, se 0 usa apps (presenze competizione)
-        const score = recent > 0 ? (recent * 1000 + apps) : apps;
+    const pid = p?.id ?? null;
+    if (!pid) return null;
+    if (injured.has(pid)) return null;
+   // if (squadIds && !squadIds.has(pid)) return null;
 
-        return {
-          id: p.id,
-          name: p.name || "—",
-          number: p.number ?? "",
-          photo: p.photo || "",
-          pos: role,
-          apps,
-          score,
-        };
-      });
+    const role = macroRoleFromSquadPosition(posRaw);
+    const recent = scoreById.get(pid) ?? 0;
+
+    // score: prima recent, poi presenze competizione
+    const score = recent > 0 ? (recent * 1000 + Number(apps || 0)) : Number(apps || 0);
+
+    return {
+      id: pid,
+      name: p?.name || "—",
+      number: p?.number ?? "",
+      photo: p?.photo || "",
+      pos: role,
+      apps: Number(apps || 0),
+      score,
+    };
+  })
+  .filter(Boolean);
+      
+      // FALLBACK: se /players è vuoto, usa rankedList (titolari reali recenti) come pool minimo
+if (!pool.length && rankedList && rankedList.length) {
+  pool = rankedList
+    .map((it) => {
+      const pl = it?.player;
+      if (!pl?.id) return null;
+      if (injured.has(pl.id)) return null;
+
+      const role = macroRoleFromPos(pl.pos);
+      return {
+        id: pl.id,
+        name: pl.name || "—",
+        number: pl.number ?? "",
+        photo: pl.photo || "",
+        pos: role,
+        apps: Number(appsMap?.get?.(pl.id) || 0),
+        score: (it.w || 0) * 1000 + Number(appsMap?.get?.(pl.id) || 0),
+      };
+    })
+    .filter(Boolean);
+}
 
     // se ho appsMap e ho abbastanza gente con apps>0, preferisco quella
     if (appsMap) {
@@ -1096,7 +1172,10 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
       (poolByRole[r] || (poolByRole[r] = [])).push(p);
     }
     for (const k of ["GK", "DEF", "MID", "ATT"]) poolByRole[k].sort(stableFallbackSort);
-
+console.log("POOL GK (top5):", (poolByRole.GK||[]).slice(0,5).map(p=>`${p.name} apps:${p.apps} score:${p.score}`));
+console.log("POOL MID (top8):", (poolByRole.MID||[]).slice(0,8).map(p=>`${p.name} apps:${p.apps} score:${p.score}`));
+// Se il pool GK è vuoto (bug API/players), prendo il GK dai lineups reali (rankedList)
+let forceGkFromRanked = (poolByRole.GK || []).length === 0;
     const chosen = [];
     const chosenIds = new Set();
 
@@ -1125,7 +1204,10 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
 
     const fillRole = (role, n) => {
       while (chosen.filter((x) => x.pos === role).length < n) {
-        const cand = (poolByRole[role] || []).find((p) => !chosenIds.has(p.id));
+        const listAll = (poolByRole[role] || []).filter(p => !chosenIds.has(p.id));
+const listNZ = listAll.filter(p => (p.apps ?? 0) > 0);
+const source = listNZ.length ? listNZ : listAll;
+const cand = source[0];
         if (!cand) break;
 
         chosen.push({
@@ -1139,39 +1221,67 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
       }
     };
 
-    // 1) prendo titolari “storici” per settore
-    takeFromRanked("GK", need.GK);
-    takeFromRanked("DEF", need.DEF);
-    takeFromRanked("MID", need.MID);
-    takeFromRanked("ATT", need.ATT);
+    // 1) titolari storici: sempre per DEF/MID/ATT
+takeFromRanked("DEF", need.DEF);
+takeFromRanked("MID", need.MID);
+takeFromRanked("ATT", need.ATT);
 
-    // 2) riempio dal pool per settore
-    fillRole("GK", need.GK);
-    fillRole("DEF", need.DEF);
-    fillRole("MID", need.MID);
-    fillRole("ATT", need.ATT);
+// 1b) GK: SOLO se il pool GK è vuoto (fallback deterministico)
+if (forceGkFromRanked) {
+  takeFromRanked("GK", need.GK);
+}
 
-    // 3) se mancano ancora, riempio con best restanti (deterministico)
-    const order = ["MID", "DEF", "ATT", "GK"];
-    while (chosen.length < 11) {
-      let added = false;
-      for (const role of order) {
-        const cand = (poolByRole[role] || []).find((p) => !chosenIds.has(p.id));
-        if (cand) {
-          chosen.push({
-            id: cand.id,
-            name: cand.name,
-            number: cand.number,
-            photo: cand.photo,
-            pos: role,
-          });
-          chosenIds.add(cand.id);
-          added = true;
-          break;
-        }
-      }
-      if (!added) break;
+// 2) fill dal pool rispettando il modulo
+fillRole("GK", need.GK);
+fillRole("DEF", need.DEF);
+fillRole("MID", need.MID);
+fillRole("ATT", need.ATT);
+
+   // 3) se mancano ancora, riempio SOLO i ruoli ancora mancanti secondo il modulo
+const order = ["GK", "DEF", "MID", "ATT"];
+
+while (chosen.length < 11) {
+  let added = false;
+
+  // prova a colmare i "buchi" del modulo
+  for (const role of order) {
+    if (missing(role) <= 0) continue; // ruolo già pieno: NON aggiungere
+
+    const listAll = (poolByRole[role] || []).filter(p => !chosenIds.has(p.id));
+    const listNZ = listAll.filter(p => (p.apps ?? 0) > 0);
+    const source = listNZ.length ? listNZ : listAll;
+    const cand = source[0];
+
+    if (cand) {
+      chosen.push({ id: cand.id, name: cand.name, number: cand.number, photo: cand.photo, pos: role });
+      chosenIds.add(cand.id);
+      added = true;
+      break;
     }
+  }
+
+  // se per quel ruolo non c'è nessuno nel pool, prendo il "best disponibile" da QUALSIASI ruolo
+  // ma lo assegno al ruolo che manca di più (così la formazione resta 3-5-2)
+  if (!added) {
+    const deficitRole =
+      order
+        .map(r => ({ r, m: missing(r) }))
+        .sort((a,b) => b.m - a.m)[0]?.r;
+
+    if (!deficitRole || missing(deficitRole) <= 0) break;
+
+    const any =
+      ["MID","DEF","ATT","GK"]
+        .flatMap(r => (poolByRole[r] || []))
+        .filter(p => !chosenIds.has(p.id))
+        .sort(stableFallbackSort)[0];
+
+    if (!any) break;
+
+    chosen.push({ id: any.id, name: any.name, number: any.number, photo: any.photo, pos: deficitRole });
+    chosenIds.add(any.id);
+  }
+}
 
     // ordina finale: GK, DEF, MID, ATT
     const roleRank = { GK: 1, DEF: 2, MID: 3, ATT: 4 };
@@ -1182,14 +1292,8 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
 
   // ======= COSTRUZIONE OUTPUT =======
 
-  // XI “principale” (se ho abbastanza dati recenti)
-  const XI_recent = rankedList.slice(0, 11).map((x) => x.player);
-  const XI_recent_sorted = sortByRole(XI_recent);
-
-  // Se non ho 11 affidabili, costruisco XI per settori (con presenze backup)
-  const needSmart = (counts.size < 11 || usedMatches === 0);
-
-  const XI = needSmart ? await buildXIBySectors() : XI_recent_sorted;
+  const XI = await buildXIBySectors();
+  const xiIds = new Set((XI || []).map(p => p?.id).filter(Boolean));
 
   // candidati (top 6)
   const roleKey = (pos) => {
@@ -1202,12 +1306,19 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
   };
 
   const cand = { GK: [], DEF: [], MID: [], ATT: [] };
-  for (const it of rankedList.slice(0, 40)) {
-    const r = roleKey(it.player.pos);
-    const pctRaw = Math.round((it.w / (usedMatches || 1)) * 100);
-    const pct = Math.max(0, Math.min(100, pctRaw));
-    cand[r].push({ ...it.player, pct, score: it.w });
-  }
+for (const it of rankedList.slice(0, 60)) { // 60 così compensiamo i "saltati"
+  const p = it?.player;
+  if (!p?.id) continue;
+
+  // ✅ NON mostrare nei probabili chi è già negli XI
+  if (xiIds.has(p.id)) continue;
+
+  const r = roleKey(p.pos);
+  const pctRaw = Math.round((it.w / (usedMatches || 1)) * 100);
+  const pct = Math.max(0, Math.min(100, pctRaw));
+
+  cand[r].push({ ...p, pct, score: it.w });
+}
   cand.GK = cand.GK.slice(0, 4);
   cand.DEF = cand.DEF.slice(0, 6);
   cand.MID = cand.MID.slice(0, 6);
@@ -1218,7 +1329,7 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
     startXI: XI,
     coach: coachName,
     injuredCount: injured.size,
-    badgeLabel: needSmart ? `STIMA (${usedMatches}/${limit})` : `STIMA (${usedMatches}/${limit})`,
+   badgeLabel: `STIMA (${usedMatches}/${limit})`,
     usedMatches,
     candidates: cand,
   };
