@@ -450,10 +450,18 @@ async function showTeam() {
 
     referee: "—",
   };
-  selectedFixture.season = await resolveLeagueSeason(selectedFixture.leagueId, selectedFixture.season);
-  console.log("SEASON FIXED:", selectedFixture.season, "league", selectedFixture.leagueId);
-console.log("TEAM SEARCHED:", selectedTeam);
-console.log("FIXTURE:", selectedFixture);
+  selectedFixture.season = await resolveLeagueSeason(
+    selectedFixture.leagueId,
+    selectedFixture.season,
+  );
+  console.log(
+    "SEASON FIXED:",
+    selectedFixture.season,
+    "league",
+    selectedFixture.leagueId,
+  );
+  console.log("TEAM SEARCHED:", selectedTeam);
+  console.log("FIXTURE:", selectedFixture);
   setMatch(renderMatchBasic(fx, fx2, oppNextAfter, team.id));
   // mini classifica (silenziosa): aggiorna le pill vicino alle squadre
   if (typeof window.loadStandingsMini === "function") {
@@ -494,10 +502,10 @@ function initTeamSearchUX() {
   const input = getTeamInputEl();
   if (!input) return;
   const box = getTeamSuggestBoxEl();
-// ✅ Se esiste la tendina custom, disattivo la datalist nativa del browser
-if (box) {
-  input.removeAttribute("list");
-}
+  // ✅ Se esiste la tendina custom, disattivo la datalist nativa del browser
+  if (box) {
+    input.removeAttribute("list");
+  }
   // click su un suggerimento
   box?.addEventListener("click", (e) => {
     const btn = e.target?.closest?.(".suggestItem");
@@ -636,9 +644,9 @@ async function loadLineupsPitch() {
   // Se non disponibili ufficialmente: provo STIMATA (storico + indisponibili)
   if (!r.ok || r.errors || !Array.isArray(r.arr) || r.arr.length === 0) {
     const est = await estimateLineupsForFixture().catch((e) => {
-  console.error("estimateLineupsForFixture ERROR:", e);
-  return null;
-});
+      console.error("estimateLineupsForFixture ERROR:", e);
+      return null;
+    });
     if (est?.home && est?.away) {
       content.innerHTML = renderPitchFromEstimate(est);
       wirePitchClicks(); // abilita click players per popup stats
@@ -692,15 +700,18 @@ async function loadLineupsPitch() {
     data-player-id="${safeHTML(pl?.id ?? "")}"
     data-player-name="${safeHTML(name)}"
   >
-   ${
-  photo
-    ? `<img class="pp-photo" src="${safeHTML(photo)}" alt=""
-         loading="lazy"
-         referrerpolicy="no-referrer"
-         onerror="this.style.display='none'">`
-    : ``
-}
-    <div class="pp-badge">${safeHTML(num)}</div>
+    <div class="pp-photo-wrapper">
+      ${
+        photo
+          ? `<img class="pp-photo" src="${safeHTML(photo)}" alt=""
+               loading="lazy"
+               referrerpolicy="no-referrer"
+               onerror="this.style.display='none'">`
+          : ``
+      }
+      <div class="pp-badge">${safeHTML(num)}</div>
+    </div>
+
     <div class="pp-name">${safeHTML(name)}</div>
   </button>
 `;
@@ -712,47 +723,52 @@ async function loadLineupsPitch() {
     const players = startXI.map((x) => x?.player || {}).filter(Boolean);
 
     // Identifica il portiere (NON assumere ordine startXI)
-let gk = players.find(pl => String(pl?.pos || pl?.position || "").toUpperCase().startsWith("G"));
-if (!gk) gk = players.find(pl => String(pl?.pos || pl?.position || "").toLowerCase().includes("goal"));
-if (!gk) gk = players[0]; // ultimo fallback
+    let gk = players.find((pl) =>
+      String(pl?.pos || pl?.position || "")
+        .toUpperCase()
+        .startsWith("G"),
+    );
+    if (!gk)
+      gk = players.find((pl) =>
+        String(pl?.pos || pl?.position || "")
+          .toLowerCase()
+          .includes("goal"),
+      );
+    if (!gk) gk = players[0]; // ultimo fallback
 
-const outfield = players.filter((pl) => pl?.id !== gk?.id);
+    const outfield = players.filter((pl) => pl?.id !== gk?.id);
 
     // Fallback se manca il modulo
     const rows = formation || [4, 4, 2];
 
-    // Y Levels per un campo verticale (0-100%)
-    const ySteps = [6, 20, 34, 46];
-
-    // Inverti la Y per la squadra di casa (che gioca in basso verso l'alto)
-    const finalY = (y) => (side === "home" ? 100 - y : y);
+    // Profondità su X, ma RESTA entro la metà campo (<=46 per sinistra)
+    const xSteps = [8, 22, 36, 46]; // GK, DEF, MID, ATT
+    // HOME a sinistra, AWAY a destra (mirror)
+    const finalX = (x) => (side === "home" ? x : 100 - x);
 
     const dots = [];
 
-    // Posiziona il Portiere
+    // GK centrato in Y
     if (gk) {
-      dots.push(makeDot(gk, 50, finalY(ySteps[0]), side));
+      dots.push(makeDot(gk, finalX(xSteps[0]), 50, side));
     }
 
-    // Posiziona i giocatori di movimento
     let idx = 0;
     for (let rIdx = 0; rIdx < rows.length; rIdx++) {
       const n = rows[rIdx];
-      const xs = rowXs(n); // Asse X (larghezza)
-      const yDepth = finalY(ySteps[rIdx + 1] || 46); // Asse Y (profondità)
+      const ys = rowXs(n); // qui riusiamo rowXs come “spalmatura” sulla larghezza
+      const xDepth = finalX(xSteps[rIdx + 1] || 56);
 
       for (let j = 0; j < n; j++) {
         const pl = outfield[idx++];
         if (!pl) break;
-        // QUI ERA IL BUG! Ora le X e Y sono assegnate correttamente dentro il ciclo
-        dots.push(makeDot(pl, xs[j], yDepth, side));
+        dots.push(makeDot(pl, xDepth, ys[j], side)); // <-- SWAP: X=profondità, Y=larghezza
       }
     }
 
-    // Giocatori extra (in caso di panchinari finiti per errore nei titolari)
     while (idx < outfield.length) {
       const pl = outfield[idx++];
-      dots.push(makeDot(pl, 50, finalY(50), side));
+      dots.push(makeDot(pl, 50, 50, side));
     }
 
     return dots.join("");
@@ -773,7 +789,11 @@ const outfield = players.filter((pl) => pl?.id !== gk?.id);
             ${homeDots}
           </div>
         </div>
-        <div class="pitch-legend" style="display:flex; justify-content:space-between; margin-top:10px; font-size:13px;">
+        <div class="pitch-legend" style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:10px; font-size:13px;">
+  <div class="pitch-toggle" id="pitchToggle">
+    <button type="button" data-side="home" class="is-active">Casa</button>
+    <button type="button" data-side="away">Trasferta</button>
+  </div>
           <div class="legend-team">
              <strong>${safeHTML(homeName)}</strong> <span class="pitch-badge pitch-badge--official">UFFICIALE</span><br>
              <span class="muted">${homeFormation ? `Modulo: ${safeHTML(homeFormation)}` : ""}</span>
@@ -804,6 +824,7 @@ const outfield = players.filter((pl) => pl?.id !== gk?.id);
   const awayDots = layoutTeamPlayers(awayXI, awayFormation, "away");
 
   content.innerHTML = renderPitch(homeDots, awayDots);
+  content.setAttribute("data-pitch-side", "home");
   wirePitchClicks();
 }
 // ====== STIMA FORMAZIONI E ALLENATORI (fallback) ======
@@ -894,7 +915,7 @@ async function fetchTeamLeagueAppearances(teamId, leagueId, season) {
       { retries: 1, delays: [350] },
     );
 
-    const arr = (r.ok && !r.errors && Array.isArray(r.arr)) ? r.arr : [];
+    const arr = r.ok && !r.errors && Array.isArray(r.arr) ? r.arr : [];
     if (!arr.length) break;
 
     for (const row of arr) {
@@ -1046,7 +1067,13 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
     if (s.includes("goal")) return "GK";
     if (s.includes("def")) return "DEF";
     if (s.includes("mid")) return "MID";
-    if (s.includes("forw") || s.includes("att") || s.includes("strik") || s.includes("wing")) return "ATT";
+    if (
+      s.includes("forw") ||
+      s.includes("att") ||
+      s.includes("strik") ||
+      s.includes("wing")
+    )
+      return "ATT";
     return "MID";
   }
 
@@ -1074,11 +1101,17 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
     if (hasNa && hasNb && na !== nb) return na - nb;
     if (hasNa !== hasNb) return hasNa ? -1 : 1;
 
-    return String(a?.name || "").localeCompare(String(b?.name || ""), "it", { sensitivity: "base" });
+    return String(a?.name || "").localeCompare(String(b?.name || ""), "it", {
+      sensitivity: "base",
+    });
   }
 
   // presenze competizione (bulk) -> evita 0 presenze quando possibile
-  const appsMap = await fetchTeamLeagueAppearances(teamId, leagueId, season).catch(() => null);
+  const appsMap = await fetchTeamLeagueAppearances(
+    teamId,
+    leagueId,
+    season,
+  ).catch(() => null);
 
   // lista ranked dai match recenti
   const rankedList = Array.from(counts.values()).sort((a, b) => b.w - a.w);
@@ -1086,85 +1119,87 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
   async function buildXIBySectors() {
     const need = parseFormationCounts(bestForm || "4-4-2");
     const countRole = (role) => chosen.filter((x) => x.pos === role).length;
-const missing = (role) => Math.max(0, (need[role] || 0) - countRole(role));
+    const missing = (role) => Math.max(0, (need[role] || 0) - countRole(role));
 
     const scoreById = new Map();
     for (const [pid, obj] of counts.entries()) scoreById.set(pid, obj?.w ?? 0);
 
     // ✅ pool “vero” dalla competizione: players?team&league&season (coerente con Serie A 2025)
-const teamPlayers = [];
-if (leagueId && season) {
-  let page = 1;
-  let safety = 0;
-  while (safety++ < 6) {
-    const r = await apiGet(
-      `/players?team=${teamId}&league=${leagueId}&season=${season}&page=${page}`,
-      { retries: 1, delays: [350] },
-    );
-    const arr = (r.ok && !r.errors && Array.isArray(r.arr)) ? r.arr : [];
-    if (!arr.length) break;
-    teamPlayers.push(...arr);
-    if (arr.length < 20) break;
-    page++;
-  }
-}
+    const teamPlayers = [];
+    if (leagueId && season) {
+      let page = 1;
+      let safety = 0;
+      while (safety++ < 6) {
+        const r = await apiGet(
+          `/players?team=${teamId}&league=${leagueId}&season=${season}&page=${page}`,
+          { retries: 1, delays: [350] },
+        );
+        const arr = r.ok && !r.errors && Array.isArray(r.arr) ? r.arr : [];
+        if (!arr.length) break;
+        teamPlayers.push(...arr);
+        if (arr.length < 20) break;
+        page++;
+      }
+    }
 
-// pool disponibile (no injured) basato su players della stagione/lega
-let pool = (teamPlayers || [])
-  .map((row) => {
-    const p = row?.player || {};
-    const statsArr = Array.isArray(row?.statistics) ? row.statistics : [];
-const stats =
-  statsArr.find((s) => String(s?.league?.id) === String(leagueId)) ||
-  statsArr[0] ||
-  null;
-    const posRaw = stats?.games?.position || "";     // "Goalkeeper/Defender/Midfielder/Attacker"
-    const apps = stats?.games?.appearences ?? stats?.games?.appearances ?? 0;
+    // pool disponibile (no injured) basato su players della stagione/lega
+    let pool = (teamPlayers || [])
+      .map((row) => {
+        const p = row?.player || {};
+        const statsArr = Array.isArray(row?.statistics) ? row.statistics : [];
+        const stats =
+          statsArr.find((s) => String(s?.league?.id) === String(leagueId)) ||
+          statsArr[0] ||
+          null;
+        const posRaw = stats?.games?.position || ""; // "Goalkeeper/Defender/Midfielder/Attacker"
+        const apps =
+          stats?.games?.appearences ?? stats?.games?.appearances ?? 0;
 
-    const pid = p?.id ?? null;
-    if (!pid) return null;
-    if (injured.has(pid)) return null;
-   // if (squadIds && !squadIds.has(pid)) return null;
+        const pid = p?.id ?? null;
+        if (!pid) return null;
+        if (injured.has(pid)) return null;
+        // if (squadIds && !squadIds.has(pid)) return null;
 
-    const role = macroRoleFromSquadPosition(posRaw);
-    const recent = scoreById.get(pid) ?? 0;
+        const role = macroRoleFromSquadPosition(posRaw);
+        const recent = scoreById.get(pid) ?? 0;
 
-    // score: prima recent, poi presenze competizione
-    const score = recent > 0 ? (recent * 1000 + Number(apps || 0)) : Number(apps || 0);
+        // score: prima recent, poi presenze competizione
+        const score =
+          recent > 0 ? recent * 1000 + Number(apps || 0) : Number(apps || 0);
 
-    return {
-      id: pid,
-      name: p?.name || "—",
-      number: p?.number ?? "",
-      photo: p?.photo || "",
-      pos: role,
-      apps: Number(apps || 0),
-      score,
-    };
-  })
-  .filter(Boolean);
-      
-      // FALLBACK: se /players è vuoto, usa rankedList (titolari reali recenti) come pool minimo
-if (!pool.length && rankedList && rankedList.length) {
-  pool = rankedList
-    .map((it) => {
-      const pl = it?.player;
-      if (!pl?.id) return null;
-      if (injured.has(pl.id)) return null;
+        return {
+          id: pid,
+          name: p?.name || "—",
+          number: p?.number ?? "",
+          photo: p?.photo || "",
+          pos: role,
+          apps: Number(apps || 0),
+          score,
+        };
+      })
+      .filter(Boolean);
 
-      const role = macroRoleFromPos(pl.pos);
-      return {
-        id: pl.id,
-        name: pl.name || "—",
-        number: pl.number ?? "",
-        photo: pl.photo || "",
-        pos: role,
-        apps: Number(appsMap?.get?.(pl.id) || 0),
-        score: (it.w || 0) * 1000 + Number(appsMap?.get?.(pl.id) || 0),
-      };
-    })
-    .filter(Boolean);
-}
+    // FALLBACK: se /players è vuoto, usa rankedList (titolari reali recenti) come pool minimo
+    if (!pool.length && rankedList && rankedList.length) {
+      pool = rankedList
+        .map((it) => {
+          const pl = it?.player;
+          if (!pl?.id) return null;
+          if (injured.has(pl.id)) return null;
+
+          const role = macroRoleFromPos(pl.pos);
+          return {
+            id: pl.id,
+            name: pl.name || "—",
+            number: pl.number ?? "",
+            photo: pl.photo || "",
+            pos: role,
+            apps: Number(appsMap?.get?.(pl.id) || 0),
+            score: (it.w || 0) * 1000 + Number(appsMap?.get?.(pl.id) || 0),
+          };
+        })
+        .filter(Boolean);
+    }
 
     // se ho appsMap e ho abbastanza gente con apps>0, preferisco quella
     if (appsMap) {
@@ -1178,11 +1213,22 @@ if (!pool.length && rankedList && rankedList.length) {
       const r = macroRoleFromPos(p.pos);
       (poolByRole[r] || (poolByRole[r] = [])).push(p);
     }
-    for (const k of ["GK", "DEF", "MID", "ATT"]) poolByRole[k].sort(stableFallbackSort);
-console.log("POOL GK (top5):", (poolByRole.GK||[]).slice(0,5).map(p=>`${p.name} apps:${p.apps} score:${p.score}`));
-console.log("POOL MID (top8):", (poolByRole.MID||[]).slice(0,8).map(p=>`${p.name} apps:${p.apps} score:${p.score}`));
-// Se il pool GK è vuoto (bug API/players), prendo il GK dai lineups reali (rankedList)
-let forceGkFromRanked = (poolByRole.GK || []).length === 0;
+    for (const k of ["GK", "DEF", "MID", "ATT"])
+      poolByRole[k].sort(stableFallbackSort);
+    console.log(
+      "POOL GK (top5):",
+      (poolByRole.GK || [])
+        .slice(0, 5)
+        .map((p) => `${p.name} apps:${p.apps} score:${p.score}`),
+    );
+    console.log(
+      "POOL MID (top8):",
+      (poolByRole.MID || [])
+        .slice(0, 8)
+        .map((p) => `${p.name} apps:${p.apps} score:${p.score}`),
+    );
+    // Se il pool GK è vuoto (bug API/players), prendo il GK dai lineups reali (rankedList)
+    let forceGkFromRanked = (poolByRole.GK || []).length === 0;
     const chosen = [];
     const chosenIds = new Set();
 
@@ -1211,10 +1257,12 @@ let forceGkFromRanked = (poolByRole.GK || []).length === 0;
 
     const fillRole = (role, n) => {
       while (chosen.filter((x) => x.pos === role).length < n) {
-        const listAll = (poolByRole[role] || []).filter(p => !chosenIds.has(p.id));
-const listNZ = listAll.filter(p => (p.apps ?? 0) > 0);
-const source = listNZ.length ? listNZ : listAll;
-const cand = source[0];
+        const listAll = (poolByRole[role] || []).filter(
+          (p) => !chosenIds.has(p.id),
+        );
+        const listNZ = listAll.filter((p) => (p.apps ?? 0) > 0);
+        const source = listNZ.length ? listNZ : listAll;
+        const cand = source[0];
         if (!cand) break;
 
         chosen.push({
@@ -1229,66 +1277,78 @@ const cand = source[0];
     };
 
     // 1) titolari storici: sempre per DEF/MID/ATT
-takeFromRanked("DEF", need.DEF);
-takeFromRanked("MID", need.MID);
-takeFromRanked("ATT", need.ATT);
+    takeFromRanked("DEF", need.DEF);
+    takeFromRanked("MID", need.MID);
+    takeFromRanked("ATT", need.ATT);
 
-// 1b) GK: SOLO se il pool GK è vuoto (fallback deterministico)
-if (forceGkFromRanked) {
-  takeFromRanked("GK", need.GK);
-}
-
-// 2) fill dal pool rispettando il modulo
-fillRole("GK", need.GK);
-fillRole("DEF", need.DEF);
-fillRole("MID", need.MID);
-fillRole("ATT", need.ATT);
-
-   // 3) se mancano ancora, riempio SOLO i ruoli ancora mancanti secondo il modulo
-const order = ["GK", "DEF", "MID", "ATT"];
-
-while (chosen.length < 11) {
-  let added = false;
-
-  // prova a colmare i "buchi" del modulo
-  for (const role of order) {
-    if (missing(role) <= 0) continue; // ruolo già pieno: NON aggiungere
-
-    const listAll = (poolByRole[role] || []).filter(p => !chosenIds.has(p.id));
-    const listNZ = listAll.filter(p => (p.apps ?? 0) > 0);
-    const source = listNZ.length ? listNZ : listAll;
-    const cand = source[0];
-
-    if (cand) {
-      chosen.push({ id: cand.id, name: cand.name, number: cand.number, photo: cand.photo, pos: role });
-      chosenIds.add(cand.id);
-      added = true;
-      break;
+    // 1b) GK: SOLO se il pool GK è vuoto (fallback deterministico)
+    if (forceGkFromRanked) {
+      takeFromRanked("GK", need.GK);
     }
-  }
 
-  // se per quel ruolo non c'è nessuno nel pool, prendo il "best disponibile" da QUALSIASI ruolo
-  // ma lo assegno al ruolo che manca di più (così la formazione resta 3-5-2)
-  if (!added) {
-    const deficitRole =
-      order
-        .map(r => ({ r, m: missing(r) }))
-        .sort((a,b) => b.m - a.m)[0]?.r;
+    // 2) fill dal pool rispettando il modulo
+    fillRole("GK", need.GK);
+    fillRole("DEF", need.DEF);
+    fillRole("MID", need.MID);
+    fillRole("ATT", need.ATT);
 
-    if (!deficitRole || missing(deficitRole) <= 0) break;
+    // 3) se mancano ancora, riempio SOLO i ruoli ancora mancanti secondo il modulo
+    const order = ["GK", "DEF", "MID", "ATT"];
 
-    const any =
-      ["MID","DEF","ATT","GK"]
-        .flatMap(r => (poolByRole[r] || []))
-        .filter(p => !chosenIds.has(p.id))
-        .sort(stableFallbackSort)[0];
+    while (chosen.length < 11) {
+      let added = false;
 
-    if (!any) break;
+      // prova a colmare i "buchi" del modulo
+      for (const role of order) {
+        if (missing(role) <= 0) continue; // ruolo già pieno: NON aggiungere
 
-    chosen.push({ id: any.id, name: any.name, number: any.number, photo: any.photo, pos: deficitRole });
-    chosenIds.add(any.id);
-  }
-}
+        const listAll = (poolByRole[role] || []).filter(
+          (p) => !chosenIds.has(p.id),
+        );
+        const listNZ = listAll.filter((p) => (p.apps ?? 0) > 0);
+        const source = listNZ.length ? listNZ : listAll;
+        const cand = source[0];
+
+        if (cand) {
+          chosen.push({
+            id: cand.id,
+            name: cand.name,
+            number: cand.number,
+            photo: cand.photo,
+            pos: role,
+          });
+          chosenIds.add(cand.id);
+          added = true;
+          break;
+        }
+      }
+
+      // se per quel ruolo non c'è nessuno nel pool, prendo il "best disponibile" da QUALSIASI ruolo
+      // ma lo assegno al ruolo che manca di più (così la formazione resta 3-5-2)
+      if (!added) {
+        const deficitRole = order
+          .map((r) => ({ r, m: missing(r) }))
+          .sort((a, b) => b.m - a.m)[0]?.r;
+
+        if (!deficitRole || missing(deficitRole) <= 0) break;
+
+        const any = ["MID", "DEF", "ATT", "GK"]
+          .flatMap((r) => poolByRole[r] || [])
+          .filter((p) => !chosenIds.has(p.id))
+          .sort(stableFallbackSort)[0];
+
+        if (!any) break;
+
+        chosen.push({
+          id: any.id,
+          name: any.name,
+          number: any.number,
+          photo: any.photo,
+          pos: deficitRole,
+        });
+        chosenIds.add(any.id);
+      }
+    }
 
     // ordina finale: GK, DEF, MID, ATT
     const roleRank = { GK: 1, DEF: 2, MID: 3, ATT: 4 };
@@ -1300,7 +1360,7 @@ while (chosen.length < 11) {
   // ======= COSTRUZIONE OUTPUT =======
 
   const XI = await buildXIBySectors();
-  const xiIds = new Set((XI || []).map(p => p?.id).filter(Boolean));
+  const xiIds = new Set((XI || []).map((p) => p?.id).filter(Boolean));
 
   // candidati (top 6)
   const roleKey = (pos) => {
@@ -1313,19 +1373,20 @@ while (chosen.length < 11) {
   };
 
   const cand = { GK: [], DEF: [], MID: [], ATT: [] };
-for (const it of rankedList.slice(0, 60)) { // 60 così compensiamo i "saltati"
-  const p = it?.player;
-  if (!p?.id) continue;
+  for (const it of rankedList.slice(0, 60)) {
+    // 60 così compensiamo i "saltati"
+    const p = it?.player;
+    if (!p?.id) continue;
 
-  // ✅ NON mostrare nei probabili chi è già negli XI
-  if (xiIds.has(p.id)) continue;
+    // ✅ NON mostrare nei probabili chi è già negli XI
+    if (xiIds.has(p.id)) continue;
 
-  const r = roleKey(p.pos);
-  const pctRaw = Math.round((it.w / (usedMatches || 1)) * 100);
-  const pct = Math.max(0, Math.min(100, pctRaw));
+    const r = roleKey(p.pos);
+    const pctRaw = Math.round((it.w / (usedMatches || 1)) * 100);
+    const pct = Math.max(0, Math.min(100, pctRaw));
 
-  cand[r].push({ ...p, pct, score: it.w });
-}
+    cand[r].push({ ...p, pct, score: it.w });
+  }
   cand.GK = cand.GK.slice(0, 4);
   cand.DEF = cand.DEF.slice(0, 6);
   cand.MID = cand.MID.slice(0, 6);
@@ -1336,7 +1397,7 @@ for (const it of rankedList.slice(0, 60)) { // 60 così compensiamo i "saltati"
     startXI: XI,
     coach: coachName,
     injuredCount: injured.size,
-   badgeLabel: `STIMA (${usedMatches}/${limit})`,
+    badgeLabel: `STIMA (${usedMatches}/${limit})`,
     usedMatches,
     candidates: cand,
   };
@@ -1372,8 +1433,14 @@ async function estimateLineupsForFixture() {
 function renderPitchFromEstimate(est) {
   if (!est || !est.home || !est.away)
     return '<p class="muted">Errore rendering.</p>';
-console.log("HOME XI", est.home.startXI.map(p=>`${p.name}(${p.pos})`).join(" | "));
-console.log("AWAY XI", est.away.startXI.map(p=>`${p.name}(${p.pos})`).join(" | "));
+  console.log(
+    "HOME XI",
+    est.home.startXI.map((p) => `${p.name}(${p.pos})`).join(" | "),
+  );
+  console.log(
+    "AWAY XI",
+    est.away.startXI.map((p) => `${p.name}(${p.pos})`).join(" | "),
+  );
   const homeFormation = est.home.formation || "4-4-2";
   const awayFormation = est.away.formation || "4-4-2";
   const homeCoach = est.home.coach || "N/D";
@@ -1402,8 +1469,14 @@ console.log("AWAY XI", est.away.startXI.map(p=>`${p.name}(${p.pos})`).join(" | "
       <button class="pitch-player ${side}" style="--x:${x}; --y:${y};" type="button"
         data-player-id="${safeHTML(pl?.id)}" data-player-name="${safeHTML(pl?.name)}" ${disabledAttr}>
         <div class="pp-photo-wrapper">
-            ${pl?.photo ? `<img class="pp-photo" src="${safeHTML(pl.photo)}" loading="lazy" onerror="this.style.display='none'" />` : '<div class="pp-photo-placeholder" style="width:100%;height:100%;background:#222;border-radius:50%;border:2px solid rgba(255,255,255,0.3);"></div>'}
-            <div class="pp-badge">${safeHTML(pl?.number || "")}</div>
+          ${
+            pl?.photo
+              ? `<img class="pp-photo" src="${safeHTML(pl.photo)}" alt=""
+  loading="lazy"
+  referrerpolicy="no-referrer"
+  onerror="this.style.display='none'">`
+              : '<div class="pp-photo-placeholder" style="width:100%;height:100%;background:#222;border-radius:50%;border:2px solid rgba(255,255,255,0.3);"></div>'
+          } <div class="pp-badge">${safeHTML(pl?.number || "")}</div>
         </div>
         <div class="pp-name">${safeHTML(pl?.name || "—")}</div>
       </button>
@@ -1411,32 +1484,33 @@ console.log("AWAY XI", est.away.startXI.map(p=>`${p.name}(${p.pos})`).join(" | "
   }
 
   function layout(teamData, side) {
-    const players = teamData.startXI || [];
-    const rows = parseFormation(teamData.formation);
+    const players = Array.isArray(teamData?.startXI) ? teamData.startXI : [];
+    const rows = parseFormation(teamData?.formation);
 
-    const ySteps = [6, 20, 32, 44];
-    const finalY = (y) => (side === "home" ? 100 - y : y);
+    let gk =
+      players.find((p) => String(p?.pos || "").toUpperCase() === "GK") || null;
+    if (!gk) gk = players[0] || null;
+
+    const outfield = players.filter((p) => p && p !== gk);
+
+    const xSteps = [8, 22, 36, 46];
+    const finalX = (x) => (side === "home" ? x : 100 - x);
 
     let html = "";
-    if (!players.length) return html;
 
-    // GK: non assumere players[0]
-let gk = players.find(pl => String(pl?.pos || "").toUpperCase() === "GK" || String(pl?.pos || "").toUpperCase().startsWith("G"));
-if (!gk) gk = players[0];
+    if (gk) html += makeDot(gk, finalX(xSteps[0]), 50, side);
 
-const outfield = players.filter(p => p?.id !== gk?.id);
+    let idx = 0;
+    rows.forEach((num, rIdx) => {
+      const ys = rowXs(num);
+      const x = finalX(xSteps[rIdx + 1] || 56);
+      for (let j = 0; j < num; j++) {
+        const pl = outfield[idx++];
+        if (!pl) break;
+        html += makeDot(pl, x, ys[j], side);
+      }
+    });
 
-html += makeDot(gk, 50, finalY(ySteps[0]), side);
-
-let idx = 0;
-rows.forEach((num, rIdx) => {
-  const xs = rowXs(num);
-  const y = finalY(ySteps[rIdx + 1] || 44);
-  for (let j = 0; j < num; j++) {
-    if (outfield[idx]) html += makeDot(outfield[idx], xs[j], y, side);
-    idx++;
-  }
-});
     return html;
   }
   function candButton(p) {
@@ -1485,10 +1559,17 @@ rows.forEach((num, rIdx) => {
             <span style="opacity:0.8">⚙️ Modulo: ${awayFormation}</span>
         </div>
 
-        ${layout(est.home, "home")}
-        ${layout(est.away, "away")}
+        <div class="pitch-grid">
+    ${layout(est.home, "home")}
+    ${layout(est.away, "away")}
+  </div>
+</div>
       </div>
       <div class="pitch-legend" style="display:flex; justify-content:space-between; margin-top:10px; font-size:13px; padding: 0 10px;">
+        <div class="pitch-toggle" id="pitchToggle">
+    <button type="button" data-side="home" class="is-active">Casa</button>
+    <button type="button" data-side="away">Trasferta</button>
+  </div>
         <div class="legend-team" style="text-align: left;">
             <strong>${safeHTML(selectedFixture?.home?.name || "Casa")}</strong> 
             <span class="pitch-badge pitch-badge--est" style="border-color:#ffb84d; background:rgba(255,184,77,0.15);">
@@ -1516,11 +1597,32 @@ function wirePitchClicks() {
   const root = document.getElementById("lineupsContent");
   if (!root || root.__wired) return;
   root.__wired = true;
+    // ===== Toggle mobile: Casa / Trasferta =====
+  // default: casa
+  root.setAttribute("data-pitch-side", root.getAttribute("data-pitch-side") || "home");
+
+  if (!root.__toggleWired) {
+    root.__toggleWired = true;
+
+    root.addEventListener("click", (e) => {
+      const btn = e.target?.closest?.("#pitchToggle button[data-side]");
+      if (!btn) return;
+
+      const side = btn.getAttribute("data-side");
+      if (!side) return;
+
+      root.setAttribute("data-pitch-side", side);
+
+      // aggiorna stile attivo
+      const wrap = root.querySelector("#pitchToggle");
+      wrap?.querySelectorAll("button").forEach((b) => b.classList.remove("is-active"));
+      btn.classList.add("is-active");
+    });
+  }
 
   root.addEventListener("click", async (e) => {
     const el =
-      e.target?.closest?.(".pitch-player") ||
-      e.target?.closest?.(".candChip");
+      e.target?.closest?.(".pitch-player") || e.target?.closest?.(".candChip");
 
     if (!el || el.hasAttribute("disabled")) return;
 
@@ -1602,5 +1704,3 @@ async function openPlayerModal(playerId, playerName) {
 }
 
 window.showTeam = showTeam;
-
-
