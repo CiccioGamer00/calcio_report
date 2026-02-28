@@ -101,14 +101,45 @@ function findSuggestedByName(name) {
     .trim()
     .toLowerCase();
   if (!n) return null;
-  return (
-    __LAST_SUGGEST_ITEMS__.find(
+
+  const list = Array.isArray(__LAST_SUGGEST_ITEMS__)
+    ? __LAST_SUGGEST_ITEMS__
+    : [];
+  if (!list.length) return null;
+
+  // 1) match ESATTO
+  const exact =
+    list.find(
       (x) =>
         String(x.name || "")
           .trim()
           .toLowerCase() === n,
-    ) || null
-  );
+    ) || null;
+  if (exact) return exact;
+
+  // 2) match "contiene" (es: "milan" -> "AC Milan")
+  // preferiamo:
+  // - quello che inizia con n
+  // - poi quello più corto (più "preciso")
+  const contains = list
+    .map((x) => ({
+      item: x,
+      name: String(x.name || "")
+        .trim()
+        .toLowerCase(),
+    }))
+    .filter((o) => o.name.includes(n));
+
+  if (!contains.length) return null;
+
+  contains.sort((a, b) => {
+    const aStarts = a.name.startsWith(n) ? 0 : 1;
+    const bStarts = b.name.startsWith(n) ? 0 : 1;
+    if (aStarts !== bStarts) return aStarts - bStarts;
+    return a.name.length - b.name.length;
+  });
+
+  return contains[0].item || null;
 }
 
 async function fetchSuggestions(q) {
@@ -169,6 +200,19 @@ async function fetchNextFixtures(teamId, count = 2) {
   );
   if (!r.ok || r.errors || !r.arr || r.arr.length === 0) return [];
   return r.arr;
+}
+// Ritorna i primi N fixture "validi" (id unico) per evitare casi strani (duplicati)
+function pickUniqueFixtures(arr, n = 2) {
+  const out = [];
+  const seen = new Set();
+  for (const fx of Array.isArray(arr) ? arr : []) {
+    const id = fx?.fixture?.id ?? null;
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push(fx);
+    if (out.length >= n) break;
+  }
+  return out;
 }
 
 function renderMatchBasic(fx, nextMy = null, nextOpp = null, myTeamId = null) {
@@ -237,7 +281,7 @@ function renderMatchBasic(fx, nextMy = null, nextOpp = null, myTeamId = null) {
         <div class="mh-team">
   <div class="mh-logoCol">
     ${home.logo ? `<img class="mh-logo" src="${safeHTML(home.logo)}" alt="logo" />` : ""}
-    ${fmtNextInline(homeNext, selectedFixture?.home?.id)}
+    ${fmtNextInline(homeNext, homeId)}
   </div>
 
   <div class="mh-textCol">
@@ -254,7 +298,7 @@ function renderMatchBasic(fx, nextMy = null, nextOpp = null, myTeamId = null) {
         <div class="mh-team right">
   <div class="mh-logoCol">
     ${away.logo ? `<img class="mh-logo" src="${safeHTML(away.logo)}" alt="logo" />` : ""}
-    ${fmtNextInline(awayNext, selectedFixture?.away?.id)}
+    ${fmtNextInline(awayNext, awayId)}
   </div>
 
   <div class="mh-textCol">
@@ -368,7 +412,7 @@ async function resolveLeagueSeason(leagueId, fallbackSeason) {
     return fallbackSeason;
   }
 }
-async function showTeam() {
+async function showTeam(forcedTeam = null) {
   const input = getTeamInputEl();
   const q = sanitizeSearch(input ? input.value : "");
   if (!q || q.length < 2) return;
@@ -389,7 +433,9 @@ async function showTeam() {
   setLoadingAll();
   setOnDemandPanelsPlaceholders();
 
-  const team = await pickTeamByName(q);
+  // Se arrivo da click sul suggerimento custom, uso l'ID scelto (anti-bug Milan/Millwall)
+  const team =
+    forcedTeam && forcedTeam.id ? forcedTeam : await pickTeamByName(q);
   if (!team || !team.id) {
     setMatch(
       `<p class="bad"><em>Nessuna squadra trovata per "${safeHTML(q)}".</em></p>`,
@@ -398,7 +444,9 @@ async function showTeam() {
   }
   selectedTeam = team;
 
-  const nextFx = await fetchNextFixtures(team.id, 2);
+  // A volte l'API può restituire meno risultati o duplicati: prendiamo 2 fixture con id unico.
+  const nextFxRaw = await fetchNextFixtures(team.id, 3);
+  const nextFx = pickUniqueFixtures(nextFxRaw, 2);
   const fx = nextFx[0] || null;
   const fx2 = nextFx[1] || null;
   // Prossimo impegno dell'altra squadra (dopo questo match)
@@ -506,26 +554,33 @@ function initTeamSearchUX() {
   if (box) {
     input.removeAttribute("list");
   }
-  // click su un suggerimento
-  box?.addEventListener("click", (e) => {
-    const btn = e.target?.closest?.(".suggestItem");
+  // ✅ selezione robusta: pointerdown (prima del blur) + preventDefault
+  box?.addEventListener("pointerdown", (e) => {
+    const path = (e.composedPath && e.composedPath()) || [];
+    const btn =
+      path.find(
+        (el) => el && el.classList && el.classList.contains("suggestItem"),
+      ) || e.target?.closest?.(".suggestItem");
+
     if (!btn) return;
 
+    e.preventDefault(); // evita blur/chiusure strane mentre clicchi
+
+    const id = Number(btn.getAttribute("data-team-id") || 0) || null;
     const name = btn.getAttribute("data-team-name") || "";
-    if (!name) return;
+    const logo = btn.getAttribute("data-team-logo") || "";
+
+    if (!id || !name) return;
 
     input.value = name;
 
-    suppress(700);
+    // blocco suggerimenti per pochissimo (solo per evitare riaperture)
+    suppress(250);
     cancelDebounce();
-    suggestReqId++;
+    suggestReqId++; // invalida richieste in volo
     hideSuggestBox();
 
-    // chiude anche la UI nativa se aperta
-    input.blur();
-    setTimeout(() => input.focus(), 0);
-
-    showTeam();
+    showTeam({ id, name, logo });
   });
 
   // chiusura quando perdi focus (con micro-delay per permettere click)
@@ -585,7 +640,7 @@ function initTeamSearchUX() {
       if (nowQ !== q) return;
 
       updateDatalist(items);
-    }, 250);
+    }, 180);
   });
 
   input.addEventListener("change", () => {
@@ -603,7 +658,7 @@ function initTeamSearchUX() {
       input.blur();
       setTimeout(() => input.focus(), 0);
 
-      showTeam();
+      showTeam({ id: exact.id, name: exact.name, logo: exact.logo || "" });
     }
   });
 
@@ -648,8 +703,51 @@ async function loadLineupsPitch() {
       return null;
     });
     if (est?.home && est?.away) {
+      // join foto da /players/squads (così le facce ci sono anche nella STIMATA)
+      async function fetchSquadPhotoMap(teamId) {
+        if (!teamId) return new Map();
+        try {
+          const rr = await apiGet(`/players/squads?team=${teamId}`, {
+            retries: 2,
+            delays: [350, 900],
+          });
+          const players =
+            rr.ok && !rr.errors && Array.isArray(rr.arr) && rr.arr[0]
+              ? rr.arr[0]?.players
+              : null;
+
+          const map = new Map();
+          if (Array.isArray(players)) {
+            for (const p of players) {
+              const pid = p?.id ?? null;
+              const photo = p?.photo ?? "";
+              if (pid && photo) map.set(pid, photo);
+            }
+          }
+          return map;
+        } catch (e) {
+          return new Map();
+        }
+      }
+
+      const homeId = selectedFixture?.home?.id ?? null;
+      const awayId = selectedFixture?.away?.id ?? null;
+
+      const [homePhotoMap, awayPhotoMap] = await Promise.all([
+        fetchSquadPhotoMap(homeId),
+        fetchSquadPhotoMap(awayId),
+      ]);
+
+      // applico foto a startXI stimata
+      (est.home.startXI || []).forEach((p) => {
+        if (!p?.photo && p?.id) p.photo = homePhotoMap.get(p.id) || "";
+      });
+      (est.away.startXI || []).forEach((p) => {
+        if (!p?.photo && p?.id) p.photo = awayPhotoMap.get(p.id) || "";
+      });
+
       content.innerHTML = renderPitchFromEstimate(est);
-      wirePitchClicks(); // abilita click players per popup stats
+      wirePitchClicks();
       return;
     }
     content.innerHTML = renderPitchPlaceholder(
@@ -669,6 +767,38 @@ async function loadLineupsPitch() {
 
   const homeFormation = String(home?.formation || "").trim();
   const awayFormation = String(away?.formation || "").trim();
+  // Alcuni lineups non includono la foto per tutti i giocatori.
+  // Facciamo un join leggero con /players/squads per ottenere le facce.
+  async function fetchSquadPhotoMap(teamId) {
+    if (!teamId) return new Map();
+    try {
+      const rr = await apiGet(`/players/squads?team=${teamId}`, {
+        retries: 2,
+        delays: [400, 900],
+      });
+      const players =
+        rr.ok && !rr.errors && Array.isArray(rr.arr) && rr.arr[0]
+          ? rr.arr[0]?.players
+          : null;
+
+      const map = new Map();
+      if (Array.isArray(players)) {
+        for (const p of players) {
+          const pid = p?.id ?? null;
+          const photo = p?.photo ?? "";
+          if (pid && photo) map.set(pid, photo);
+        }
+      }
+      return map;
+    } catch (e) {
+      return new Map();
+    }
+  }
+
+  const [homePhotoMap, awayPhotoMap] = await Promise.all([
+    fetchSquadPhotoMap(homeId),
+    fetchSquadPhotoMap(awayId),
+  ]);
 
   // ========== HELPERS ==========
 
@@ -692,12 +822,13 @@ async function loadLineupsPitch() {
   function makeDot(pl, xPct, yPct, sideClass) {
     const num = pl?.number ?? "";
     const name = pl?.name || "—";
-    const photo = pl?.photo || "";
     const pid = pl?.id ?? "";
+    const fallbackMap = sideClass === "home" ? homePhotoMap : awayPhotoMap;
+    const photo = pl?.photo || (pid ? fallbackMap.get(pid) : "") || "";
 
     return `
   <button class="pitch-player ${sideClass}" style="--x:${xPct};--y:${yPct};" type="button"
-    data-player-id="${safeHTML(pl?.id ?? "")}"
+    data-player-id="${safeHTML(pid)}"
     data-player-name="${safeHTML(name)}"
   >
     <div class="pp-photo-wrapper">
@@ -741,8 +872,19 @@ async function loadLineupsPitch() {
     // Fallback se manca il modulo
     const rows = formation || [4, 4, 2];
 
-    // Profondità su X, ma RESTA entro la metà campo (<=46 per sinistra)
-    const xSteps = [8, 22, 36, 46]; // GK, DEF, MID, ATT
+    // X steps dinamici: più linee = più “compresso” ma sempre entro la metà campo
+    function buildXSteps(lines) {
+      const gk = 8;
+      const start = 20; // prima linea difensiva
+      const end = 44; // massimo attacco (non oltre metà)
+      if (lines <= 1) return [gk, 34];
+      const step = (end - start) / (lines - 1);
+      const arr = [gk];
+      for (let i = 0; i < lines; i++) arr.push(start + step * i);
+      return arr; // lunghezza = 1 + lines
+    }
+
+    const xSteps = buildXSteps(rows.length);
     // HOME a sinistra, AWAY a destra (mirror)
     const finalX = (x) => (side === "home" ? x : 100 - x);
 
@@ -1493,7 +1635,18 @@ function renderPitchFromEstimate(est) {
 
     const outfield = players.filter((p) => p && p !== gk);
 
-    const xSteps = [8, 22, 36, 46];
+    function buildXSteps(lines) {
+      const gk = 8;
+      const start = 20;
+      const end = 44;
+      if (lines <= 1) return [gk, 34];
+      const step = (end - start) / (lines - 1);
+      const arr = [gk];
+      for (let i = 0; i < lines; i++) arr.push(start + step * i);
+      return arr;
+    }
+
+    const xSteps = buildXSteps(rows.length);
     const finalX = (x) => (side === "home" ? x : 100 - x);
 
     let html = "";
@@ -1597,9 +1750,12 @@ function wirePitchClicks() {
   const root = document.getElementById("lineupsContent");
   if (!root || root.__wired) return;
   root.__wired = true;
-    // ===== Toggle mobile: Casa / Trasferta =====
+  // ===== Toggle mobile: Casa / Trasferta =====
   // default: casa
-  root.setAttribute("data-pitch-side", root.getAttribute("data-pitch-side") || "home");
+  root.setAttribute(
+    "data-pitch-side",
+    root.getAttribute("data-pitch-side") || "home",
+  );
 
   if (!root.__toggleWired) {
     root.__toggleWired = true;
@@ -1615,7 +1771,9 @@ function wirePitchClicks() {
 
       // aggiorna stile attivo
       const wrap = root.querySelector("#pitchToggle");
-      wrap?.querySelectorAll("button").forEach((b) => b.classList.remove("is-active"));
+      wrap
+        ?.querySelectorAll("button")
+        .forEach((b) => b.classList.remove("is-active"));
       btn.classList.add("is-active");
     });
   }
