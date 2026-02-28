@@ -1020,7 +1020,7 @@ body[data-view-mode="single"] .card.is-focus{
 }
 
 /* player: posizionamento a percentuale */
-.pitch-player{
+/*.pitch-player{
   position:absolute;
   left: calc(var(--x, 50) * 1%);
   top:  calc(var(--y, 50) * 1%);
@@ -1036,7 +1036,7 @@ body[data-view-mode="single"] .card.is-focus{
   background: transparent;
   padding:0;
   cursor:pointer;
-}
+}*/
 
 .pitch-player:disabled{
   cursor: default;
@@ -1140,12 +1140,12 @@ body[data-view-mode="single"] .card.is-focus{
   opacity: .72;
 }
 .nm-muted{ font-size: 12px; opacity: .75; }
-.pitch-player{
+/*.pitch-player{
   pointer-events: auto !important;
   cursor: pointer;
   border: none;
   background: transparent;
-}
+}*/
 
 .pp-tag{
   font-size: 10px;
@@ -1593,7 +1593,7 @@ body[data-view-mode="single"] .card.is-focus{
 
 
 /* Giocatori Mobile */
-.pitch-player {
+/*.pitch-player {
     position: absolute;
     left: calc(var(--x) * 1%);
     top: calc(var(--y) * 1%);
@@ -1601,7 +1601,7 @@ body[data-view-mode="single"] .card.is-focus{
     background: none; border: none; padding: 0;
     display: flex; flex-direction: column; align-items: center;
     z-index: 10; width: 65px; cursor: pointer;
-}
+}*/
 
 .pp-photo-wrapper { position: relative; width: 36px; height: 36px; }
 .pp-photo {
@@ -1637,7 +1637,7 @@ body[data-view-mode="single"] .card.is-focus{
     .pitch-area-bottom { right: 10px; left: auto; border-right: none; border-top: 2px solid rgba(255,255,255,0.3); border-bottom: 2px solid rgba(255,255,255,0.3); border-left: 2px solid rgba(255,255,255,0.3); }
 
     /* Inverte le assi per i giocatori */
-    .pitch-player { left: calc((100 - var(--y)) * 1%); top: calc(var(--x) * 1%); }
+   /* .pitch-player { left: calc((100 - var(--y)) * 1%); top: calc(var(--x) * 1%); }*/
 }
 
 /* =========================
@@ -1778,7 +1778,41 @@ body[data-view-mode="single"] .card.is-focus{
   line-height: 18px;
   border-radius: 999px;
 }
+/* =========================
+   PITCH • PLAYER DOT
+   (unica fonte di verità)
+========================= */
+
+.pitch-player{
+  position:absolute;
+  left: calc(var(--x, 50) * 1%);
+  top:  calc(var(--y, 50) * 1%);
+  transform: translate(-50%, -50%);
+  display:grid;
+  grid-auto-rows: min-content;
+  justify-items:center;
+  gap:8px;
+  width:110px;
+  z-index:20;
+  pointer-events:auto;
+  border:0;
+  background:transparent;
+  padding:0;
+  cursor:pointer;
+}
+
+.pitch-player:disabled{
+  cursor:default;
+  opacity:.7;
+}
+
+.pitch-player .pp-badge,
+.pitch-player .pp-name{
+  display:block;
+  line-height:1.1;
+}
 /* ===== STIMA: foto SEMPRE sopra i layer del campo ===== */
-.pitch-player { z-index: 20 !important; }
+/*.pitch-player { z-index: 20 !important; }*/
 .pp-photo-wrapper { z-index: 21 !important; }
 .pp-photo { display: block !important; }
+
