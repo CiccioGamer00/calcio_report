@@ -310,6 +310,25 @@ function goToPayment() {
   // fallback: se non configurato, apri login
   openAuthModal();
 }
+// =========================
+// PRO upsell (Telegram group)
+// =========================
+function showProUpsell(featureName = "questa sezione") {
+  const tg = window.API_CONFIG?.telegramUrl || "";
+  const msg =
+    `🔒 ${featureName} è riservata agli utenti PRO.\n\n` +
+    `Vuoi sbloccarla? Scrivimi nel gruppo Telegram e chiedi info in privato:\n` +
+    `ti spiego attivazione + pagamento e ti abilito subito.`;
+
+  // se abbiamo il link gruppo, proponiamo apertura
+  if (tg) {
+    const ok = confirm(msg + "\n\nAprire Telegram adesso?");
+    if (ok) window.open(tg, "_blank", "noopener");
+    return;
+  }
+
+  alert(msg + "\n\n(Errore: link Telegram non configurato in config.js)");
+}
 
 function setupProLockCTA() {
   // Clic su una sezione PRO bloccata -> pagamento (se configurato) oppure login
@@ -649,9 +668,11 @@ function setupTabs() {
   const isProTab = btn.getAttribute("data-pro-tab") === "1";
 
   if (isProTab && !__IS_PRO__) {
-    if (typeof goToPayment === "function") goToPayment();
-    return;
-  }
+  const name = (view === "predictionPanel") ? "Predizione 🧠" : "Indicatori 📊";
+  showProUpsell(name);
+  if (typeof goToPayment === "function") goToPayment();
+  return;
+}
 
   nav.querySelectorAll(".tab").forEach((b) => b.classList.remove("is-active"));
   btn.classList.add("is-active");
@@ -679,6 +700,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupPayPalButton();
   // Tabs
   setupTabs();
+   // ✅ Welcome "Come funziona?"
+  document.getElementById("btnWelcomeHow")?.addEventListener("click", () => {
+    showToast({
+      key: "hint_welcome",
+      title: "Come funziona 🚀",
+      text:
+        "1) Cerca una squadra → 2) Apri Match → 3) Esplora le schede.\n",
+      allowDisable: true
+    });
+  });
 
   // Loader (da api.js)
   window.addEventListener("cr:loading", (e) => {
@@ -705,5 +736,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const me = await fetchMe();
   if (me?.json?.ok) applyProLocks(me.json);
 });
+
 
 
