@@ -398,6 +398,106 @@ function setupPayPalButton() {
 // =========================
 let __LOADER_COUNT__ = 0;
 let __IS_PRO__ = false;
+// =========================
+// HELP / TOAST (panel hints)
+// =========================
+const LS_HINTS = "CR_HINTS_OFF"; // JSON: { [key]: true }
+function getHintsOff() {
+  try { return JSON.parse(localStorage.getItem(LS_HINTS) || "{}"); }
+  catch { return {}; }
+}
+function setHintOff(key) {
+  const m = getHintsOff();
+  m[key] = true;
+  localStorage.setItem(LS_HINTS, JSON.stringify(m));
+}
+
+function showToast({ key = "", title = "", text = "", allowDisable = true } = {}) {
+  const el = document.getElementById("crToast");
+  if (!el) return;
+
+  // se disattivato per quel key, non mostrare
+  if (key) {
+    const off = getHintsOff();
+    if (off[key]) return;
+  }
+
+  el.innerHTML = `
+    <div class="tTop">
+      <div>
+        <div class="tTitle">${title}</div>
+        <div class="tText">${text}</div>
+      </div>
+      <button type="button" class="tClose" data-tclose="1">Chiudi</button>
+    </div>
+    <div class="tActions">
+      ${allowDisable && key ? `<button type="button" class="tLink" data-tdisable="1" data-key="${key}">Non mostrare più</button>` : ``}
+    </div>
+  `;
+
+  el.classList.remove("hidden");
+
+  // click handlers (semplici)
+  el.querySelector("[data-tclose='1']")?.addEventListener("click", () => {
+    el.classList.add("hidden");
+    el.innerHTML = "";
+  });
+
+  el.querySelector("[data-tdisable='1']")?.addEventListener("click", (e) => {
+    const k = e.currentTarget?.getAttribute("data-key") || "";
+    if (k) setHintOff(k);
+    el.classList.add("hidden");
+    el.innerHTML = "";
+  });
+}
+
+const PANEL_HINTS = {
+  matchView: {
+    key: "hint_match",
+    title: "Scheda Match ⚽",
+    text: "Qui trovi il prossimo match (data, stadio) e le info principali. Le formazioni compaiono quando disponibili."
+  },
+  referee: {
+    key: "hint_referee",
+    title: "Scheda Arbitro 🧑‍⚖️",
+    text: "Dettagli dell’arbitro e storico recente: utile per capire lo “stile” della partita."
+  },
+  teamsPanel: {
+    key: "hint_teams",
+    title: "Scheda Squadre 👥",
+    text: "Forma e trend delle due squadre sulle ultime partite selezionate (menu Partite)."
+  },
+  cornersPanel: {
+    key: "hint_corners",
+    title: "Scheda Corner 🚩",
+    text: "Statistiche corner delle due squadre (ultime partite): ritmo, pressione, propensione offensiva."
+  },
+  shotsPanel: {
+    key: "hint_shots",
+    title: "Scheda Tiri 🎯",
+    text: "Tiri totali e tiri in porta: misura pericolosità e volume offensivo."
+  },
+  injuriesPanel: {
+    key: "hint_injuries",
+    title: "Scheda Indisponibili 🩹",
+    text: "Infortunati/squalificati e (quando possibile) ruolo: impatta molto lettura match."
+  },
+  standingsPanel: {
+    key: "hint_standings",
+    title: "Scheda Classifica 🏆",
+    text: "Posizione, punti e contesto in campionato: utile per motivazioni e obiettivi."
+  },
+  indicatorsPanel: {
+    key: "hint_indicators",
+    title: "Scheda Indicatori 📊 (PRO)",
+    text: "Indicatori stile bookmaker con hit-rate e dettagli: pensati per una lettura rapida e “da betting”."
+  },
+  predictionPanel: {
+    key: "hint_prediction",
+    title: "Scheda Predizione 🧠 (PRO)",
+    text: "Stime e percentuali avanzate (modello): da usare come supporto, non come verità assoluta."
+  }
+};
 
 function showLoader(msg) {
   __LOADER_COUNT__++;
@@ -600,3 +700,4 @@ document.addEventListener("DOMContentLoaded", async () => {
   const me = await fetchMe();
   if (me?.json?.ok) applyProLocks(me.json);
 });
+
