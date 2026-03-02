@@ -141,7 +141,7 @@ async function authPost(path, body) {
     body: JSON.stringify(body),
   });
   const j = await res.json().catch(() => ({}));
- 
+
   return { ok: res.ok, status: res.status, json: j };
 }
 
@@ -150,7 +150,9 @@ async function showRemainingInPopup() {
   const json = me?.json;
 
   if (!json?.ok) {
-    setAuthMsg("Accedi o registrati per iniziare la prova gratuita di 7 giorni.");
+    setAuthMsg(
+      "Accedi o registrati per iniziare la prova gratuita di 7 giorni.",
+    );
     return;
   }
 
@@ -241,7 +243,7 @@ function setupAuthActions() {
           `TRIAL attivo: ${d} giorni rimanenti.\n\n` +
           `In TRIAL vedi: Match, Arbitro, Squadre, Corner, Tiri, Falli, Indisponibili.\n` +
           `🔒 SOLO ABBONAMENTO: Predizione Poisson e percentuali avanzate negli Indicatori.\n\n` +
-          `Quando vuoi, inserisci un codice attivazione (30 giorni) per sbloccare tutto.`
+          `Quando vuoi, inserisci un codice attivazione (30 giorni) per sbloccare tutto.`,
       );
 
       await refreshTopAuthUI();
@@ -290,7 +292,9 @@ function setupAuthActions() {
 }
 
 function setupModalClose() {
-  document.getElementById("btnCloseAuth")?.addEventListener("click", closeAuthModal);
+  document
+    .getElementById("btnCloseAuth")
+    ?.addEventListener("click", closeAuthModal);
   document.getElementById("authModal")?.addEventListener("click", (e) => {
     if (e.target?.id === "authModal") closeAuthModal();
   });
@@ -298,9 +302,7 @@ function setupModalClose() {
 
 function goToPayment() {
   const url =
-    window.API_CONFIG?.paypalUrl ||
-    window.API_CONFIG?.paymentUrl ||
-    "";
+    window.API_CONFIG?.paypalUrl || window.API_CONFIG?.paymentUrl || "";
 
   if (url) {
     window.open(url, "_blank", "noopener");
@@ -360,7 +362,9 @@ function setupTabsStage() {
 
   function show(viewId) {
     // match non è nello stage: quando clicchi "Match", chiudiamo tutto nello stage
-    document.querySelectorAll("#stage .stageView").forEach(el => el.classList.add("hidden"));
+    document
+      .querySelectorAll("#stage .stageView")
+      .forEach((el) => el.classList.add("hidden"));
 
     if (viewId === "match") return;
 
@@ -376,12 +380,18 @@ function setupTabsStage() {
     const isProTab = btn.getAttribute("data-pro-tab") === "1";
 
     // gate PRO (se già hai __IS_PRO__ / goToPayment, usa quelli)
-    if (isProTab && typeof window.__IS_PRO__ !== "undefined" && !window.__IS_PRO__) {
+    if (
+      isProTab &&
+      typeof window.__IS_PRO__ !== "undefined" &&
+      !window.__IS_PRO__
+    ) {
       if (typeof goToPayment === "function") goToPayment();
       return;
     }
 
-    nav.querySelectorAll(".tab").forEach(b => b.classList.remove("is-active"));
+    nav
+      .querySelectorAll(".tab")
+      .forEach((b) => b.classList.remove("is-active"));
     btn.classList.add("is-active");
 
     show(view);
@@ -421,9 +431,30 @@ let __IS_PRO__ = false;
 // HELP / TOAST (panel hints)
 // =========================
 const LS_HINTS = "CR_HINTS_OFF"; // JSON: { [key]: true }
+// =========================
+// Welcome card: nascondi dopo prima ricerca
+// =========================
+const LS_WELCOME_DONE = "CR_WELCOME_DONE"; // "1" = ha già fatto almeno una ricerca
+
+function hideWelcomeCard() {
+  const w = document.getElementById("welcomeCard");
+  if (w) w.classList.add("hidden");
+}
+
+function isWelcomeDone() {
+  return localStorage.getItem(LS_WELCOME_DONE) === "1";
+}
+
+function markWelcomeDone() {
+  localStorage.setItem(LS_WELCOME_DONE, "1");
+  hideWelcomeCard();
+}
 function getHintsOff() {
-  try { return JSON.parse(localStorage.getItem(LS_HINTS) || "{}"); }
-  catch { return {}; }
+  try {
+    return JSON.parse(localStorage.getItem(LS_HINTS) || "{}");
+  } catch {
+    return {};
+  }
 }
 function setHintOff(key) {
   const m = getHintsOff();
@@ -431,7 +462,14 @@ function setHintOff(key) {
   localStorage.setItem(LS_HINTS, JSON.stringify(m));
 }
 
-function showToast({ key = "", title = "", text = "", allowDisable = true, ctaLabel = "", ctaUrl = "" } = {}) {
+function showToast({
+  key = "",
+  title = "",
+  text = "",
+  allowDisable = true,
+  ctaLabel = "",
+  ctaUrl = "",
+} = {}) {
   const el = document.getElementById("crToast");
   if (!el) return;
 
@@ -462,7 +500,7 @@ function showToast({ key = "", title = "", text = "", allowDisable = true, ctaLa
     el.classList.add("hidden");
     el.innerHTML = "";
   });
-    el.querySelector("[data-tcta='1']")?.addEventListener("click", () => {
+  el.querySelector("[data-tcta='1']")?.addEventListener("click", () => {
     if (ctaUrl) window.open(ctaUrl, "_blank", "noopener");
     el.classList.add("hidden");
     el.innerHTML = "";
@@ -480,48 +518,48 @@ const PANEL_HINTS = {
   matchView: {
     key: "hint_match",
     title: "Scheda Match ⚽",
-    text: "Qui trovi il prossimo match (data, stadio) e le info principali. Le formazioni compaiono quando disponibili."
+    text: "Qui trovi il prossimo match (data, stadio) e le info principali. Le formazioni compaiono quando disponibili.",
   },
   referee: {
     key: "hint_referee",
     title: "Scheda Arbitro 🧑‍⚖️",
-    text: "Dettagli dell’arbitro e storico recente: utile per capire lo “stile” della partita."
+    text: "Dettagli dell’arbitro e storico recente: utile per capire lo “stile” della partita.",
   },
   teamsPanel: {
     key: "hint_teams",
     title: "Scheda Squadre 👥",
-    text: "Forma e trend delle due squadre sulle ultime partite selezionate (menu Partite)."
+    text: "Forma e trend delle due squadre sulle ultime partite selezionate (menu Partite).",
   },
   cornersPanel: {
     key: "hint_corners",
     title: "Scheda Corner 🚩",
-    text: "Statistiche corner delle due squadre (ultime partite): ritmo, pressione, propensione offensiva."
+    text: "Statistiche corner delle due squadre (ultime partite): ritmo, pressione, propensione offensiva.",
   },
   shotsPanel: {
     key: "hint_shots",
     title: "Scheda Tiri 🎯",
-    text: "Tiri totali e tiri in porta: misura pericolosità e volume offensivo."
+    text: "Tiri totali e tiri in porta: misura pericolosità e volume offensivo.",
   },
   injuriesPanel: {
     key: "hint_injuries",
     title: "Scheda Indisponibili 🩹",
-    text: "Infortunati/squalificati e (quando possibile) ruolo: impatta molto lettura match."
+    text: "Infortunati/squalificati e (quando possibile) ruolo: impatta molto lettura match.",
   },
   standingsPanel: {
     key: "hint_standings",
     title: "Scheda Classifica 🏆",
-    text: "Posizione, punti e contesto in campionato: utile per motivazioni e obiettivi."
+    text: "Posizione, punti e contesto in campionato: utile per motivazioni e obiettivi.",
   },
   indicatorsPanel: {
     key: "hint_indicators",
     title: "Scheda Indicatori 📊 (PRO)",
-    text: "Indicatori stile bookmaker con hit-rate e dettagli: pensati per una lettura rapida e “da betting”."
+    text: "Indicatori stile bookmaker con hit-rate e dettagli: pensati per una lettura rapida e “da betting”.",
   },
   predictionPanel: {
     key: "hint_prediction",
     title: "Scheda Predizione 🧠 (PRO)",
-    text: "Stime e percentuali avanzate (modello): da usare come supporto, non come verità assoluta."
-  }
+    text: "Stime e percentuali avanzate (modello): da usare come supporto, non come verità assoluta.",
+  },
 };
 
 function showLoader(msg) {
@@ -539,7 +577,9 @@ function showLoader(msg) {
     "Parata del server… quasi! 🧤",
   ];
 
-  if (msgEl) msgEl.textContent = msg || phrases[Math.floor(Math.random() * phrases.length)];
+  if (msgEl)
+    msgEl.textContent =
+      msg || phrases[Math.floor(Math.random() * phrases.length)];
   el.classList.remove("hidden");
 }
 
@@ -553,7 +593,9 @@ function hideLoader() {
 function setViewAll() {
   document.body.dataset.viewMode = "all";
   document.body.removeAttribute("data-view-mode");
-  document.querySelectorAll(".card.is-focus").forEach((c) => c.classList.remove("is-focus"));
+  document
+    .querySelectorAll(".card.is-focus")
+    .forEach((c) => c.classList.remove("is-focus"));
 }
 
 function setViewSingleById(contentId) {
@@ -566,7 +608,9 @@ function setViewSingleById(contentId) {
   document.body.setAttribute("data-view-mode", "single");
 
   // reset focus
-  document.querySelectorAll(".card.is-focus").forEach((c) => c.classList.remove("is-focus"));
+  document
+    .querySelectorAll(".card.is-focus")
+    .forEach((c) => c.classList.remove("is-focus"));
   card.classList.add("is-focus");
 
   // scroll carino
@@ -574,7 +618,9 @@ function setViewSingleById(contentId) {
 }
 
 function markActiveTab(btn) {
-  document.querySelectorAll("#panelTabs .tab").forEach((b) => b.classList.remove("is-active"));
+  document
+    .querySelectorAll("#panelTabs .tab")
+    .forEach((b) => b.classList.remove("is-active"));
   btn.classList.add("is-active");
 }
 
@@ -591,24 +637,34 @@ function setupTabs() {
     injuriesPanel: false,
     indicatorsPanel: false,
     predictionPanel: false,
-    standingsPanel:false
+    standingsPanel: false,
   };
 
   function showView(viewId) {
-    document.querySelectorAll(".stageView").forEach((el) => el.classList.add("hidden"));
+    document
+      .querySelectorAll(".stageView")
+      .forEach((el) => el.classList.add("hidden"));
     const el = document.getElementById(viewId);
     if (el) el.classList.remove("hidden");
 
-    document.getElementById("viewportCard")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    // scroll automatico SOLO prima volta (poi basta, per non essere fastidioso)
+    window.__SCROLLED_TO_VIEWPORT__ = window.__SCROLLED_TO_VIEWPORT__ || false;
+
+    if (!window.__SCROLLED_TO_VIEWPORT__) {
+      document
+        .getElementById("viewportCard")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      window.__SCROLLED_TO_VIEWPORT__ = true;
+    }
   }
 
   async function autoLoadFor(viewId) {
     // Match: niente fetch extra qui
     if (viewId === "matchView") return;
     if (viewId === "standingsPanel" && typeof loadStandings === "function") {
-  window.__PANEL_LOADED__.standingsPanel = true;
-  await loadStandings();
-}
+      window.__PANEL_LOADED__.standingsPanel = true;
+      await loadStandings();
+    }
 
     // PRO gate
     const isProTab =
@@ -645,7 +701,10 @@ function setupTabs() {
         await loadInjuries();
       }
 
-      if (viewId === "predictionPanel" && typeof window.loadPrediction === "function") {
+      if (
+        viewId === "predictionPanel" &&
+        typeof window.loadPrediction === "function"
+      ) {
         window.__PANEL_LOADED__.predictionPanel = true;
         await window.loadPrediction();
       }
@@ -667,49 +726,52 @@ function setupTabs() {
   }
 
   nav.addEventListener("click", async (e) => {
-  const btn = e.target?.closest?.(".tab");
-  if (!btn) return;
+    const btn = e.target?.closest?.(".tab");
+    if (!btn) return;
 
-  const view = btn.getAttribute("data-view");
-  const isProTab = btn.getAttribute("data-pro-tab") === "1";
+    const view = btn.getAttribute("data-view");
+    const isProTab = btn.getAttribute("data-pro-tab") === "1";
 
-  if (isProTab && !__IS_PRO__) {
-  const name = (view === "predictionPanel") ? "Predizione 🧠" : "Indicatori 📊";
-  const tg = window.API_CONFIG?.telegramUrl || "";
+    if (isProTab && !__IS_PRO__) {
+      const name =
+        view === "predictionPanel" ? "Predizione 🧠" : "Indicatori 📊";
+      const tg = window.API_CONFIG?.telegramUrl || "";
 
-  showToast({
-    key: "hint_pro_gate",
-    title: `🔒 ${name} è PRO`,
-    text:
-      "Questa sezione è riservata agli utenti PRO.\n" +
-      "Vuoi sbloccarla? Entra nel gruppo Telegram e scrivimi in privato: ti spiego tutto e ti attivo l’accesso.",
-    allowDisable: true,
-    ctaLabel: tg ? "Apri Telegram" : "",
-    ctaUrl: tg
+      showToast({
+        key: "hint_pro_gate",
+        title: `🔒 ${name} è PRO`,
+        text:
+          "Questa sezione è riservata agli utenti PRO.\n" +
+          "Vuoi sbloccarla? Entra nel gruppo Telegram e scrivimi in privato: ti spiego tutto e ti attivo l’accesso.",
+        allowDisable: true,
+        ctaLabel: tg ? "Apri Telegram" : "",
+        ctaUrl: tg,
+      });
+
+      if (typeof goToPayment === "function") goToPayment();
+      return;
+    }
+
+    nav
+      .querySelectorAll(".tab")
+      .forEach((b) => b.classList.remove("is-active"));
+    btn.classList.add("is-active");
+
+    const viewId = view === "match" ? "matchView" : view;
+    showView(viewId);
+
+    const h = PANEL_HINTS[viewId];
+    if (h) showToast(h);
+
+    await autoLoadFor(viewId);
   });
-
-  if (typeof goToPayment === "function") goToPayment(); // pagamento se configurato, altrimenti login
-  return;
-}
-
-
-  nav.querySelectorAll(".tab").forEach((b) => b.classList.remove("is-active"));
-  btn.classList.add("is-active");
-
-  const viewId = (view === "match") ? "matchView" : view;
-  showView(viewId);
-
-  // ✅ help “cordiale” all’apertura scheda (disattivabile)
-  const h = PANEL_HINTS[viewId];
-  if (h) showToast(h);
-
-  await autoLoadFor(viewId);
-});
 
   // default: Match
   showView("matchView");
 }
 document.addEventListener("DOMContentLoaded", async () => {
+    // Se l'utente ha già usato la ricerca, non mostrare più la welcome
+  if (isWelcomeDone()) hideWelcomeCard();
   setupTopButton();
   setupAuthActions();
   setupModalClose();
@@ -719,15 +781,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupPayPalButton();
   // Tabs
   setupTabs();
-   // ✅ Welcome "Come funziona?"
+  // ✅ Welcome "Come funziona?"
   document.getElementById("btnWelcomeHow")?.addEventListener("click", () => {
     showToast({
       key: "hint_welcome",
       title: "Come funziona 🚀",
-      text:
-        "1) Cerca una squadra → 2) Apri Match → 3) Esplora le schede.\n",
-      allowDisable: true
+      text: "1) Cerca una squadra → 2) Apri Match → 3) Esplora le schede.\n",
+      allowDisable: true,
     });
+  });
+    // Quando l’utente fa la prima ricerca, la welcome non serve più
+  document.getElementById("btnSearch")?.addEventListener("click", () => markWelcomeDone());
+
+  document.getElementById("teamSearchInput")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") markWelcomeDone();
   });
 
   // Loader (da api.js)
@@ -755,8 +822,3 @@ document.addEventListener("DOMContentLoaded", async () => {
   const me = await fetchMe();
   if (me?.json?.ok) applyProLocks(me.json);
 });
-
-
-
-
-
