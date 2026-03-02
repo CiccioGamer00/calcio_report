@@ -449,6 +449,18 @@ function markWelcomeDone() {
   localStorage.setItem(LS_WELCOME_DONE, "1");
   hideWelcomeCard();
 }
+// Rende disponibile anche agli altri file
+window.markWelcomeDone = markWelcomeDone;
+
+// Hook: qualsiasi “ricerca vera” passa da showTeam() (anche click su suggerimenti)
+if (typeof window.showTeam === "function" && !window.__CR_SHOWTEAM_WRAPPED__) {
+  window.__CR_SHOWTEAM_WRAPPED__ = true;
+  const __origShowTeam = window.showTeam;
+  window.showTeam = async function (...args) {
+    try { markWelcomeDone(); } catch {}
+    return __origShowTeam.apply(this, args);
+  };
+}
 function getHintsOff() {
   try {
     return JSON.parse(localStorage.getItem(LS_HINTS) || "{}");
