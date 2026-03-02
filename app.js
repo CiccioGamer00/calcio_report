@@ -642,24 +642,29 @@ function setupTabs() {
   }
 
   nav.addEventListener("click", async (e) => {
-    const btn = e.target?.closest?.(".tab");
-    if (!btn) return;
+  const btn = e.target?.closest?.(".tab");
+  if (!btn) return;
 
-    const view = btn.getAttribute("data-view");
-    const isProTab = btn.getAttribute("data-pro-tab") === "1";
+  const view = btn.getAttribute("data-view");
+  const isProTab = btn.getAttribute("data-pro-tab") === "1";
 
-    if (isProTab && !__IS_PRO__) {
-      if (typeof goToPayment === "function") goToPayment();
-      return;
-    }
+  if (isProTab && !__IS_PRO__) {
+    if (typeof goToPayment === "function") goToPayment();
+    return;
+  }
 
-    nav.querySelectorAll(".tab").forEach((b) => b.classList.remove("is-active"));
-    btn.classList.add("is-active");
+  nav.querySelectorAll(".tab").forEach((b) => b.classList.remove("is-active"));
+  btn.classList.add("is-active");
 
-    const viewId = (view === "match") ? "matchView" : view;
-    showView(viewId);
-    await autoLoadFor(viewId);
-  });
+  const viewId = (view === "match") ? "matchView" : view;
+  showView(viewId);
+
+  // ✅ help “cordiale” all’apertura scheda (disattivabile)
+  const h = PANEL_HINTS[viewId];
+  if (h) showToast(h);
+
+  await autoLoadFor(viewId);
+});
 
   // default: Match
   showView("matchView");
@@ -700,4 +705,5 @@ document.addEventListener("DOMContentLoaded", async () => {
   const me = await fetchMe();
   if (me?.json?.ok) applyProLocks(me.json);
 });
+
 
