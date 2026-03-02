@@ -691,7 +691,7 @@ function setupTabs() {
   if (typeof goToPayment === "function") goToPayment(); // pagamento se configurato, altrimenti login
   return;
 }
-}
+
 
   nav.querySelectorAll(".tab").forEach((b) => b.classList.remove("is-active"));
   btn.classList.add("is-active");
@@ -755,6 +755,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const me = await fetchMe();
   if (me?.json?.ok) applyProLocks(me.json);
 });
+
 
 
 
