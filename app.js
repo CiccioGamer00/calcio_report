@@ -431,7 +431,7 @@ function setHintOff(key) {
   localStorage.setItem(LS_HINTS, JSON.stringify(m));
 }
 
-function showToast({ key = "", title = "", text = "", allowDisable = true } = {}) {
+function showToast({ key = "", title = "", text = "", allowDisable = true, ctaLabel = "", ctaUrl = "" } = {}) {
   const el = document.getElementById("crToast");
   if (!el) return;
 
@@ -449,7 +449,8 @@ function showToast({ key = "", title = "", text = "", allowDisable = true } = {}
       </div>
       <button type="button" class="tClose" data-tclose="1">Chiudi</button>
     </div>
-    <div class="tActions">
+       <div class="tActions">
+      ${ctaLabel && ctaUrl ? `<button type="button" class="tClose" data-tcta="1">${ctaLabel}</button>` : ``}
       ${allowDisable && key ? `<button type="button" class="tLink" data-tdisable="1" data-key="${key}">Non mostrare più</button>` : ``}
     </div>
   `;
@@ -458,6 +459,11 @@ function showToast({ key = "", title = "", text = "", allowDisable = true } = {}
 
   // click handlers (semplici)
   el.querySelector("[data-tclose='1']")?.addEventListener("click", () => {
+    el.classList.add("hidden");
+    el.innerHTML = "";
+  });
+    el.querySelector("[data-tcta='1']")?.addEventListener("click", () => {
+    if (ctaUrl) window.open(ctaUrl, "_blank", "noopener");
     el.classList.add("hidden");
     el.innerHTML = "";
   });
@@ -669,9 +675,22 @@ function setupTabs() {
 
   if (isProTab && !__IS_PRO__) {
   const name = (view === "predictionPanel") ? "Predizione 🧠" : "Indicatori 📊";
-  showProUpsell(name);
-  if (typeof goToPayment === "function") goToPayment();
+  const tg = window.API_CONFIG?.telegramUrl || "";
+
+  showToast({
+    key: "hint_pro_gate",
+    title: `🔒 ${name} è PRO`,
+    text:
+      "Questa sezione è riservata agli utenti PRO.\n" +
+      "Vuoi sbloccarla? Entra nel gruppo Telegram e scrivimi in privato: ti spiego tutto e ti attivo l’accesso.",
+    allowDisable: true,
+    ctaLabel: tg ? "Apri Telegram" : "",
+    ctaUrl: tg
+  });
+
+  if (typeof goToPayment === "function") goToPayment(); // pagamento se configurato, altrimenti login
   return;
+}
 }
 
   nav.querySelectorAll(".tab").forEach((b) => b.classList.remove("is-active"));
@@ -736,6 +755,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const me = await fetchMe();
   if (me?.json?.ok) applyProLocks(me.json);
 });
+
 
 
 
