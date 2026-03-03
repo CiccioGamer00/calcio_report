@@ -3,13 +3,12 @@ window.API_CONFIG = {
   headers: {},
 
   // --- CONTATTI / CTA (imposta i tuoi)
-  telegramUrl: "https://t.me/+-BZkEGuZIVFlOWU0", // es: "https://t.me/statzone_italia"
+  telegramUrl: "", // es: "https://t.me/statzone_italia"
   supportEmail: "", // es: "support@tuodominio.it"
 
   // --- PAGAMENTI
   // Link PayPal (es. PayPal.Me o pagina Checkout) oppure link Stripe Checkout
   // Se vuoto, i pulsanti PRO aprono il login.
-  paymentUrl: "",
+  paymentUrl: "https://buy.stripe.com/dRm6oIbhW4qA6jW0Bg6Vq00",
   paypalUrl: "", // se vuoi separarlo da paymentUrl
 };
-
