@@ -576,7 +576,7 @@ async function buildTeamForm(team, limit) {
       : { total: 0, yellow: 0, red: 0 };
     sumCards += cards.total;
 
-    perFixture.push({
+   perFixture.push({
   fixtureId,
   date,
   home,
@@ -586,6 +586,7 @@ async function buildTeamForm(team, limit) {
   comp,
   gf: g.gf,
   ga: g.ga,
+  isHome: g.isHome, // <-- serve per capire casa/trasferta in modo affidabile
   goalHalves,
   cards,
 });
@@ -717,9 +718,17 @@ function renderTeamFormCard(form, lastN = 5) {
   const body = rows.length
     ? rows
         .map((x) => {
-          const isHome = (x.home || "").toLowerCase() === (t.name || "").toLowerCase();
-          const oppName = isHome ? x.away : x.home;
-          const oppLogo = isHome ? x.awayLogo : x.homeLogo;
+          const isHome = (typeof x.isHome === "boolean")
+  ? x.isHome
+  : (x.home || "").toLowerCase() === (t.name || "").toLowerCase(); // fallback se manca
+
+const oppName = isHome ? x.away : x.home;
+const oppLogo = isHome ? x.awayLogo : x.homeLogo;
+
+// Avversaria in grassetto SOLO se era in casa (cioè noi eravamo fuori casa)
+const oppNameHtml = (isHome === false)
+  ? `<strong>${safeHTML(oppName)}</strong>`
+  : `${safeHTML(oppName)}`;
 
           let res = "D";
           let resClass = "res-d";
@@ -735,7 +744,7 @@ function renderTeamFormCard(form, lastN = 5) {
               <td class="td-opp">
                 <span class="opp">
                   ${oppLogo ? `<img class="oppLogo" src="${safeHTML(oppLogo)}" alt="">` : ``}
-                  <span class="oppName">${safeHTML(oppName)}</span>
+                  <span class="oppName">${oppNameHtml}</span>
                 </span>
               </td>
               <td class="td-res"><span class="resBadge ${resClass}">${res}</span></td>
@@ -798,16 +807,21 @@ function sum(rows, key) {
 }
 
 function renderTeamMatchesList(form) {
-  const t = form.team;
   const items = form.fixtures
-    .map((x) => {
-      return `<li>${safeHTML(x.date)} — ${safeHTML(x.home)} vs ${safeHTML(
-        x.away,
-      )} <em>(${safeHTML(x.comp)})</em> — GF <strong>${safeHTML(
-        x.gf,
-      )}</strong> / GS <strong>${safeHTML(x.ga)}</strong></li>`;
-    })
-    .join("");
+  .map((x) => {
+    const isHome = (typeof x.isHome === "boolean")
+      ? x.isHome
+      : (x.home || "").toLowerCase() === (t.name || "").toLowerCase();
+
+    // Bold solo l’avversaria quando è lei ad essere in casa (noi fuori)
+    const homeHtml = (isHome === false) ? `<strong>${safeHTML(x.home)}</strong>` : safeHTML(x.home);
+    const awayHtml = safeHTML(x.away);
+
+    return `<li>${safeHTML(x.date)} — ${homeHtml} vs ${awayHtml} <em>(${safeHTML(x.comp)})</em> — GF <strong>${safeHTML(
+      x.gf,
+    )}</strong> / GS <strong>${safeHTML(x.ga)}</strong></li>`;
+  })
+  .join("");
 
   return `
     <hr />
@@ -1095,4 +1109,5 @@ document.getElementById("optShowTeamList")?.addEventListener("change", () => {
 document.getElementById("optShowTeamCardsDetail")?.addEventListener("change", () => {
   if (selectedFixture?.home?.id && selectedFixture?.away?.id) loadTeamsForm();
 });
+
 
