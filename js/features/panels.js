@@ -909,9 +909,7 @@ async function buildTeamCorners(team, limit) {
   for (const f of fixtures) {
     const fixtureId = f.fixture?.id ?? null;
     const date = f.fixture?.date ? new Date(f.fixture.date).toLocaleDateString("it-IT") : "—";
-    const homeId = f.teams?.home?.id ?? null;
-    const awayId = f.teams?.away?.id ?? null;
-    const home = f.teams?.home?.name ?? "—";
+        const home = f.teams?.home?.name ?? "—";
     const away = f.teams?.away?.name ?? "—";
      const homeId = f.teams?.home?.id ?? null;
 const awayId = f.teams?.away?.id ?? null;
@@ -1137,6 +1135,7 @@ document.getElementById("optShowTeamList")?.addEventListener("change", () => {
 document.getElementById("optShowTeamCardsDetail")?.addEventListener("change", () => {
   if (selectedFixture?.home?.id && selectedFixture?.away?.id) loadTeamsForm();
 });
+
 
 
 
