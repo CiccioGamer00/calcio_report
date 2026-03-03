@@ -2427,3 +2427,19 @@ body {
   padding: 6px 10px;
   cursor:pointer;
 }
+
+.btnUpgrade{
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(82,255,168,.28);
+  background: rgba(82,255,168,.10);
+  color: rgba(255,255,255,.92);
+  cursor: pointer;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.btnUpgrade:hover{
+  background: rgba(82,255,168,.14);
+  border-color: rgba(82,255,168,.40);
+}
+.btnUpgrade.hidden{ display:none; }
