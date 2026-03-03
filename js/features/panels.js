@@ -726,7 +726,7 @@ const oppLogo = isHome ? x.awayLogo : x.homeLogo;
 
 // Avversaria in grassetto SOLO se era in casa (cioè noi eravamo fuori casa)
 const oppNameHtml = (isHome === false)
-  ? `<strong>${safeHTML(oppName)}</strong>`
+  ? `<span class="oppHome">${safeHTML(oppName)}</span>`
   : `${safeHTML(oppName)}`;
 
           let res = "D";
@@ -1125,6 +1125,7 @@ document.getElementById("optShowTeamList")?.addEventListener("change", () => {
 document.getElementById("optShowTeamCardsDetail")?.addEventListener("change", () => {
   if (selectedFixture?.home?.id && selectedFixture?.away?.id) loadTeamsForm();
 });
+
 
 
 
