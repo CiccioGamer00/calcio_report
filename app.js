@@ -192,7 +192,14 @@ function setupTopButton() {
     openAuthModal();
   });
 }
-
+function setupUpgradeButton() {
+  const btn = document.getElementById("btnUpgrade");
+  if (!btn) return;
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    goToPayment({ noLoginFallback: true });
+  });
+}
 function setupAuthActions() {
   const loginBtn = document.getElementById("btnLogin");
   const registerBtn = document.getElementById("btnRegister");
@@ -300,16 +307,32 @@ function setupModalClose() {
   });
 }
 
-function goToPayment() {
+function goToPayment(opts = {}) {
+  const { noLoginFallback = false } = opts || {};
+
   const url =
-    window.API_CONFIG?.paypalUrl || window.API_CONFIG?.paymentUrl || "";
+    window.API_CONFIG?.paypalUrl ||
+    window.API_CONFIG?.paymentUrl ||
+    "";
 
   if (url) {
     window.open(url, "_blank", "noopener");
     return;
   }
 
-  // fallback: se non configurato, apri login
+  // fallback: se non configurato
+  if (noLoginFallback) {
+    showToast({
+      key: "hint_payment_missing",
+      title: "Pagamento non configurato",
+      text: "Il link di pagamento non è ancora impostato. Contattami su Telegram per attivazione.",
+      allowDisable: true,
+      ctaLabel: (window.API_CONFIG?.telegramUrl ? "Apri Telegram" : ""),
+      ctaUrl: (window.API_CONFIG?.telegramUrl || "")
+    });
+    return;
+  }
+
   openAuthModal();
 }
 // =========================
@@ -791,6 +814,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupTelegramHeader();
   setupSupportEmailFooter();
   setupPayPalButton();
+  setupUpgradeButton();
   // Tabs
   setupTabs();
   // ✅ Welcome "Come funziona?"
@@ -834,3 +858,4 @@ document.addEventListener("DOMContentLoaded", async () => {
   const me = await fetchMe();
   if (me?.json?.ok) applyProLocks(me.json);
 });
+
