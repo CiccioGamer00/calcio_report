@@ -70,6 +70,7 @@ async function buildTeamCorners(team, limit) {
   comp,
   cornersFor,
   cornersAgainst,
+  isHome: Number(team.id) === Number(homeId) ? true : Number(team.id) === Number(awayId) ? false : null,
 });
   }
 
@@ -165,9 +166,13 @@ function renderTeamCornersCard(form, lastN) {
 
   const body = rows.length
     ? rows.map((x) => {
-        const isHome = String(x.home || "").toLowerCase() === String(t.name || "").toLowerCase();
-        const oppName = isHome ? x.away : x.home;
-        const oppLogo = isHome ? x.awayLogo : x.homeLogo;
+        const isHome = (typeof x.isHome === "boolean") ? x.isHome : null;
+const oppName = isHome ? x.away : x.home;
+const oppLogo = isHome ? x.awayLogo : x.homeLogo;
+
+const oppNameHtml = (isHome === false)
+  ? `<span class="oppHome">${safeHTML(oppName)}</span>`
+  : `${safeHTML(oppName)}`;
 
         return `
           <tr>
@@ -175,7 +180,7 @@ function renderTeamCornersCard(form, lastN) {
             <td class="td-opp">
               <span class="opp">
                 ${oppLogo ? `<img class="oppLogo" src="${safeHTML(oppLogo)}" alt="">` : ``}
-                <span class="oppName">${safeHTML(oppName)}</span>
+                <span class="oppName">${oppNameHtml}</span>
               </span>
             </td>
             <td class="td-score"><strong>${safeHTML(x.cornersFor)}</strong></td>
@@ -268,5 +273,6 @@ setCorners(`
 }
 
 }
+
 
 
