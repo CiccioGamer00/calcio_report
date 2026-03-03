@@ -2445,7 +2445,8 @@ body {
 .btnUpgrade.hidden{ display:none; }
 
 /* Avversaria era in casa (noi fuori) */
+
 .oppHome{
-  font-weight: 800;
-  color: var(--accent);
+  font-weight: 900 !important;
+  text-decoration: underline;
 }
