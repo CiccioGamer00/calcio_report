@@ -816,8 +816,8 @@ function renderTeamMatchesList(form) {
 
       // Bold solo l’avversaria quando è lei ad essere in casa (noi fuori)
       const homeHtml = (isHome === false)
-        ? `<strong>${safeHTML(x.home)}</strong>`
-        : safeHTML(x.home);
+  ? `<span class="oppHome">${safeHTML(x.home)}</span>`
+  : safeHTML(x.home);
 
       const awayHtml = safeHTML(x.away);
 
@@ -1125,6 +1125,7 @@ document.getElementById("optShowTeamList")?.addEventListener("change", () => {
 document.getElementById("optShowTeamCardsDetail")?.addEventListener("change", () => {
   if (selectedFixture?.home?.id && selectedFixture?.away?.id) loadTeamsForm();
 });
+
 
 
 
