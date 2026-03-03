@@ -200,9 +200,25 @@ function setupTopButton() {
 function setupUpgradeButton() {
   const btn = document.getElementById("btnUpgrade");
   if (!btn) return;
+
   btn.addEventListener("click", (e) => {
     e.preventDefault();
-    goToPayment({ noLoginFallback: true });
+
+    const pay = window.API_CONFIG?.paymentUrl || window.API_CONFIG?.paypalUrl || "";
+    const tg = window.API_CONFIG?.telegramUrl || "";
+
+    showToast({
+      key: "hint_pay_email",
+      title: "Passa a PRO ⚡",
+      text:
+        "Per attivazione automatica: paga con la STESSA email con cui fai login nell’app.\n" +
+        "Se usi un’email diversa, scrivimi su Telegram e ti abilito io.",
+      allowDisable: true,
+      ctaLabel: pay ? "Vai al pagamento" : (tg ? "Apri Telegram" : ""),
+      ctaUrl: pay || tg
+    });
+
+    // non apriamo Stripe “a tradimento”, ci pensa il bottone del toast
   });
 }
 function setupAuthActions() {
@@ -872,6 +888,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const me = await fetchMe();
   if (me?.json?.ok) applyProLocks(me.json);
 });
+
 
 
 
