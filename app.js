@@ -100,6 +100,7 @@ async function refreshTopAuthUI() {
     btn.classList.remove("pro-active", "trial-active", "expired");
     setBadge(null, "");
     __IS_PRO__ = false;
+    if (up) up.classList.remove("hidden");
     return;
   }
 
@@ -366,7 +367,7 @@ function setupProLockCTA() {
     if (!locked) return;
     e.preventDefault();
     e.stopPropagation();
-    goToPayment();
+    goToPayment({ noLoginFallback: true });
   });
 }
 
@@ -863,5 +864,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const me = await fetchMe();
   if (me?.json?.ok) applyProLocks(me.json);
 });
+
 
 
