@@ -134,11 +134,13 @@ async function buildTeamShots(team, limit) {
     sumAg += shotsAgainst;
     sumAgOT += shotsAgainstOT;
 
-    perFixture.push({
+   perFixture.push({
   fixtureId,
   date,
   home,
   away,
+  homeId,
+  awayId,
   homeLogo: f.teams?.home?.logo ?? "",
   awayLogo: f.teams?.away?.logo ?? "",
   comp,
@@ -146,6 +148,11 @@ async function buildTeamShots(team, limit) {
   shotsForOT,
   shotsAgainst,
   shotsAgainstOT,
+
+  // ✅ casa/trasferta robusto via ID
+  isHome: Number(team.id) === Number(homeId) ? true
+       : Number(team.id) === Number(awayId) ? false
+       : null,
 });
   }
 
@@ -247,9 +254,13 @@ function renderTeamShotsCard(form, lastN) {
 
   const body = rows.length
     ? rows.map((x) => {
-        const isHome = String(x.home || "").toLowerCase() === String(t.name || "").toLowerCase();
-        const oppName = isHome ? x.away : x.home;
-        const oppLogo = isHome ? x.awayLogo : x.homeLogo;
+      const isHome = (typeof x.isHome === "boolean") ? x.isHome : null;
+const oppName = isHome ? x.away : x.home;
+const oppLogo = isHome ? x.awayLogo : x.homeLogo;
+
+const oppNameHtml = (isHome === false)
+  ? `<span class="oppHome">${safeHTML(oppName)}</span>`
+  : `${safeHTML(oppName)}`;
 
         return `
           <tr>
@@ -257,7 +268,7 @@ function renderTeamShotsCard(form, lastN) {
             <td class="td-opp">
               <span class="opp">
                 ${oppLogo ? `<img class="oppLogo" src="${safeHTML(oppLogo)}" alt="">` : ``}
-                <span class="oppName">${safeHTML(oppName)}</span>
+                <span class="oppName">${oppNameHtml}</span>
               </span>
             </td>
             <td class="td-score"><strong>${safeHTML(x.shotsFor)}</strong></td>
@@ -357,4 +368,5 @@ try {
   console.error("publish indicators shots", e);
 }
 }
+
 
