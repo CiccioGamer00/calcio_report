@@ -328,6 +328,8 @@ async function loadRefereeHistory() {
             const date = f.fixture?.date ? new Date(f.fixture.date).toLocaleDateString("it-IT") : "—";
             const home = f.teams?.home?.name ?? "—";
             const away = f.teams?.away?.name ?? "—";
+             const homeId = f.teams?.home?.id ?? null;
+const awayId = f.teams?.away?.id ?? null;
             const comp = f.league?.name ?? "—";
             const fixtureId = f.fixture?.id;
             const c = cardMap.get(fixtureId) || { yellow: 0, red: 0, total: 0 };
@@ -581,12 +583,23 @@ async function buildTeamForm(team, limit) {
   date,
   home,
   away,
+  homeId,
+  awayId,
+  teamId: team.id,
+
   homeLogo: f.teams?.home?.logo ?? "",
   awayLogo: f.teams?.away?.logo ?? "",
   comp,
+
   gf: g.gf,
   ga: g.ga,
-  isHome: g.isHome, // <-- serve per capire casa/trasferta in modo affidabile
+
+  // ✅ calcolato SOLO da ID (robusto, niente nomi)
+  isHome:
+    Number(team.id) === Number(homeId) ? true :
+    Number(team.id) === Number(awayId) ? false :
+    null,
+
   goalHalves,
   cards,
 });
@@ -717,9 +730,7 @@ function renderTeamFormCard(form, lastN = 5) {
   const body = rows.length
     ? rows
         .map((x) => {
-          const isHome = (typeof x.isHome === "boolean")
-  ? x.isHome
-  : (x.home || "").toLowerCase() === (t.name || "").toLowerCase(); // fallback se manca
+          const isHome = (typeof x.isHome === "boolean") ? x.isHome : null;
 
 const oppName = isHome ? x.away : x.home;
 const oppLogo = isHome ? x.awayLogo : x.homeLogo;
@@ -810,9 +821,7 @@ function renderTeamMatchesList(form) {
 
   const items = (form.fixtures || [])
     .map((x) => {
-      const isHome = (typeof x.isHome === "boolean")
-        ? x.isHome
-        : (x.home || "").toLowerCase() === (t.name || "").toLowerCase();
+      const isHome = (typeof x.isHome === "boolean") ? x.isHome : null;
 
       // Bold solo l’avversaria quando è lei ad essere in casa (noi fuori)
       const homeHtml = (isHome === false)
@@ -1125,6 +1134,7 @@ document.getElementById("optShowTeamList")?.addEventListener("change", () => {
 document.getElementById("optShowTeamCardsDetail")?.addEventListener("change", () => {
   if (selectedFixture?.home?.id && selectedFixture?.away?.id) loadTeamsForm();
 });
+
 
 
 
