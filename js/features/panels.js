@@ -328,6 +328,7 @@ async function loadRefereeHistory() {
             const date = f.fixture?.date ? new Date(f.fixture.date).toLocaleDateString("it-IT") : "—";
             const home = f.teams?.home?.name ?? "—";
             const away = f.teams?.away?.name ?? "—";
+             
              const homeId = f.teams?.home?.id ?? null;
 const awayId = f.teams?.away?.id ?? null;
             const comp = f.league?.name ?? "—";
@@ -558,6 +559,8 @@ async function buildTeamForm(team, limit) {
     const date = f.fixture?.date ? new Date(f.fixture.date).toLocaleDateString("it-IT") : "—";
     const home = f.teams?.home?.name ?? "—";
     const away = f.teams?.away?.name ?? "—";
+     const homeId = f.teams?.home?.id ?? null;
+const awayId = f.teams?.away?.id ?? null;
     const comp = f.league?.name ?? "—";
 
     const g = calcGoalsForAgainst(team.id, f);
@@ -850,12 +853,10 @@ function renderTeamCardsList(form) {
   const items = form.fixtures
     .map((x) => {
       const c = x.cards || { yellow: 0, red: 0, total: 0 };
-      const isHome = (typeof x.isHome === "boolean")
-  ? x.isHome
-  : (x.home || "").toLowerCase() === (t.name || "").toLowerCase();
+      const isHome = (typeof x.isHome === "boolean") ? x.isHome : null;
 
 const homeHtml = (isHome === false)
-  ? `<strong>${safeHTML(x.home)}</strong>`
+  ? `<span class="oppHome">${safeHTML(x.home)}</span>`
   : safeHTML(x.home);
 
 const awayHtml = safeHTML(x.away);
@@ -912,6 +913,8 @@ async function buildTeamCorners(team, limit) {
     const awayId = f.teams?.away?.id ?? null;
     const home = f.teams?.home?.name ?? "—";
     const away = f.teams?.away?.name ?? "—";
+     const homeId = f.teams?.home?.id ?? null;
+const awayId = f.teams?.away?.id ?? null;
     const comp = f.league?.name ?? "—";
 
     let cornersFor = 0;
@@ -1134,6 +1137,7 @@ document.getElementById("optShowTeamList")?.addEventListener("change", () => {
 document.getElementById("optShowTeamCardsDetail")?.addEventListener("change", () => {
   if (selectedFixture?.home?.id && selectedFixture?.away?.id) loadTeamsForm();
 });
+
 
 
 
