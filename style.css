@@ -2443,3 +2443,9 @@ body {
   border-color: rgba(82,255,168,.40);
 }
 .btnUpgrade.hidden{ display:none; }
+
+/* Avversaria era in casa (noi fuori) */
+.oppHome{
+  font-weight: 800;
+  color: var(--accent);
+}
