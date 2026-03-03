@@ -834,6 +834,34 @@ function setupTabs() {
   // default: Match
   showView("matchView");
 }
+let __PING_TIMER__ = null;
+
+function startTelemetryPing() {
+  if (__PING_TIMER__) return;
+
+  const baseUrl = window.API_CONFIG?.baseUrl;
+  if (!baseUrl) return;
+
+  async function pingOnce() {
+    const token = getToken(); // già esiste in app.js
+    if (!token) return;
+
+    try {
+      await fetch(baseUrl + "/telemetry/ping", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch {
+      // silenzioso
+    }
+  }
+
+  // primo ping subito
+  pingOnce();
+
+  // poi ogni 75s
+  __PING_TIMER__ = setInterval(pingOnce, 75_000);
+}
 document.addEventListener("DOMContentLoaded", async () => {
     // Se l'utente ha già usato la ricerca, non mostrare più la welcome
   if (isWelcomeDone()) hideWelcomeCard();
@@ -887,8 +915,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const me = await fetchMe();
   if (me?.json?.ok) applyProLocks(me.json);
+  startTelemetryPing();
 });
-
 
 
 
