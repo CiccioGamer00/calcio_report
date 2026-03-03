@@ -84,6 +84,7 @@ function applyProLocks(meJson) {
 async function refreshTopAuthUI() {
   const btn = document.getElementById("btnOpenAuth");
   if (!btn) return;
+  const up = document.getElementById("btnUpgrade");
 
   // sessione scaduta localmente
   if (getToken() && isSessionExpired()) {
@@ -115,6 +116,7 @@ async function refreshTopAuthUI() {
     btn.classList.remove("trial-active", "expired");
     setBadge("pro", `PRO • ${daysLeft(paidUntil)}g rim.`);
     __IS_PRO__ = true;
+    if (up) up.classList.add("hidden");
     return;
   }
 
@@ -124,6 +126,7 @@ async function refreshTopAuthUI() {
     btn.classList.remove("pro-active", "expired");
     setBadge("trial", `TRIAL • ${daysLeft(trialEndsAt)}g rim.`);
     __IS_PRO__ = false;
+    if (up) up.classList.remove("hidden");
     return;
   }
 
@@ -131,6 +134,7 @@ async function refreshTopAuthUI() {
   btn.classList.add("expired");
   btn.classList.remove("pro-active", "trial-active");
   setBadge("expired", "SCADUTO");
+  if (up) up.classList.remove("hidden");
 }
 
 async function authPost(path, body) {
@@ -767,25 +771,26 @@ function setupTabs() {
     const view = btn.getAttribute("data-view");
     const isProTab = btn.getAttribute("data-pro-tab") === "1";
 
-    if (isProTab && !__IS_PRO__) {
-      const name =
-        view === "predictionPanel" ? "Predizione 🧠" : "Indicatori 📊";
-      const tg = window.API_CONFIG?.telegramUrl || "";
+   if (isProTab && !__IS_PRO__) {
+  const name = (view === "predictionPanel") ? "Predizione 🧠" : "Indicatori 📊";
+  const pay = window.API_CONFIG?.paymentUrl || window.API_CONFIG?.paypalUrl || "";
+  const tg = window.API_CONFIG?.telegramUrl || "";
 
-      showToast({
-        key: "hint_pro_gate",
-        title: `🔒 ${name} è PRO`,
-        text:
-          "Questa sezione è riservata agli utenti PRO.\n" +
-          "Vuoi sbloccarla? Entra nel gruppo Telegram e scrivimi in privato: ti spiego tutto e ti attivo l’accesso.",
-        allowDisable: true,
-        ctaLabel: tg ? "Apri Telegram" : "",
-        ctaUrl: tg,
-      });
+  showToast({
+    key: "hint_pro_gate",
+    title: `🔒 ${name} è PRO`,
+    text:
+      "Questa sezione è riservata agli utenti PRO.\n" +
+      "Passa a PRO per sbloccare statistiche avanzate e predizioni.",
+    allowDisable: true,
+    ctaLabel: pay ? "⚡ Passa a PRO" : (tg ? "Apri Telegram" : ""),
+    ctaUrl: pay || tg
+  });
 
-      if (typeof goToPayment === "function") goToPayment();
-      return;
-    }
+  // NON aprire login qui: solo pagamento (se configurato)
+  if (typeof goToPayment === "function") goToPayment({ noLoginFallback: true });
+  return;
+}
 
     nav
       .querySelectorAll(".tab")
@@ -858,4 +863,5 @@ document.addEventListener("DOMContentLoaded", async () => {
   const me = await fetchMe();
   if (me?.json?.ok) applyProLocks(me.json);
 });
+
 
