@@ -652,16 +652,15 @@ setTeams(`
     ${renderTeamFormCard(homeForm, lastN)}
     ${renderTeamFormCard(awayForm, lastN)}
   </div>
+
+  <p style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+    <button type="button" class="btn" id="btnToggleTeamList">Mostra/Nascondi ultime partite</button>
+    <button type="button" class="btn" id="btnToggleTeamCards">Mostra/Nascondi cartellini per match</button>
+  </p>
+
+  <div id="teamList" style="display:${showList ? "block" : "none"};"></div>
+  <div id="teamCardsDetail" style="display:${showCardsDetail ? "block" : "none"};"></div>
 `);
-
-    <p style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
-      <button type="button" class="btn" id="btnToggleTeamList">Mostra/Nascondi ultime partite</button>
-      <button type="button" class="btn" id="btnToggleTeamCards">Mostra/Nascondi cartellini per match</button>
-    </p>
-
-    <div id="teamList" style="display:${showList ? "block" : "none"};"></div>
-    <div id="teamCardsDetail" style="display:${showCardsDetail ? "block" : "none"};"></div>
-  `);
 
   const btnList = document.getElementById("btnToggleTeamList");
   const btnCards = document.getElementById("btnToggleTeamCards");
@@ -807,21 +806,28 @@ function sum(rows, key) {
 }
 
 function renderTeamMatchesList(form) {
-  const items = form.fixtures
-  .map((x) => {
-    const isHome = (typeof x.isHome === "boolean")
-      ? x.isHome
-      : (x.home || "").toLowerCase() === (t.name || "").toLowerCase();
+  const t = form.team;
 
-    // Bold solo l’avversaria quando è lei ad essere in casa (noi fuori)
-    const homeHtml = (isHome === false) ? `<strong>${safeHTML(x.home)}</strong>` : safeHTML(x.home);
-    const awayHtml = safeHTML(x.away);
+  const items = (form.fixtures || [])
+    .map((x) => {
+      const isHome = (typeof x.isHome === "boolean")
+        ? x.isHome
+        : (x.home || "").toLowerCase() === (t.name || "").toLowerCase();
 
-    return `<li>${safeHTML(x.date)} — ${homeHtml} vs ${awayHtml} <em>(${safeHTML(x.comp)})</em> — GF <strong>${safeHTML(
-      x.gf,
-    )}</strong> / GS <strong>${safeHTML(x.ga)}</strong></li>`;
-  })
-  .join("");
+      // Bold solo l’avversaria quando è lei ad essere in casa (noi fuori)
+      const homeHtml = (isHome === false)
+        ? `<strong>${safeHTML(x.home)}</strong>`
+        : safeHTML(x.home);
+
+      const awayHtml = safeHTML(x.away);
+
+      return `<li>${safeHTML(x.date)} — ${homeHtml} vs ${awayHtml} <em>(${safeHTML(
+        x.comp,
+      )})</em> — GF <strong>${safeHTML(x.gf)}</strong> / GS <strong>${safeHTML(
+        x.ga,
+      )}</strong></li>`;
+    })
+    .join("");
 
   return `
     <hr />
@@ -835,11 +841,21 @@ function renderTeamCardsList(form) {
   const items = form.fixtures
     .map((x) => {
       const c = x.cards || { yellow: 0, red: 0, total: 0 };
-      return `<li>${safeHTML(x.date)} — ${safeHTML(x.home)} vs ${safeHTML(
-        x.away,
-      )} <em>(${safeHTML(x.comp)})</em> — 🟨 ${safeHTML(
-        c.yellow,
-      )} / 🟥 ${safeHTML(c.red)} (Tot ${safeHTML(c.total)})</li>`;
+      const isHome = (typeof x.isHome === "boolean")
+  ? x.isHome
+  : (x.home || "").toLowerCase() === (t.name || "").toLowerCase();
+
+const homeHtml = (isHome === false)
+  ? `<strong>${safeHTML(x.home)}</strong>`
+  : safeHTML(x.home);
+
+const awayHtml = safeHTML(x.away);
+
+return `<li>${safeHTML(x.date)} — ${homeHtml} vs ${awayHtml} <em>(${safeHTML(
+  x.comp,
+)})</em> — 🟨 ${safeHTML(c.yellow)} / 🟥 ${safeHTML(c.red)} (Tot ${safeHTML(
+  c.total,
+)})</li>`;
     })
     .join("");
 
@@ -1109,5 +1125,6 @@ document.getElementById("optShowTeamList")?.addEventListener("change", () => {
 document.getElementById("optShowTeamCardsDetail")?.addEventListener("change", () => {
   if (selectedFixture?.home?.id && selectedFixture?.away?.id) loadTeamsForm();
 });
+
 
 
