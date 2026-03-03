@@ -107,8 +107,10 @@ async function buildTeamForm(team, limit) {
     const fixtureId = f.fixture?.id ?? null;
     const date = f.fixture?.date ? new Date(f.fixture.date).toLocaleDateString("it-IT") : "—";
     const home = f.teams?.home?.name ?? "—";
-    const away = f.teams?.away?.name ?? "—";
-    const comp = f.league?.name ?? "—";
+const away = f.teams?.away?.name ?? "—";
+const homeId = f.teams?.home?.id ?? null;
+const awayId = f.teams?.away?.id ?? null;
+const comp = f.league?.name ?? "—";
 
     const g = calcGoalsForAgainst(team.id, f);
     sumGF += g.gf;
@@ -128,16 +130,19 @@ async function buildTeamForm(team, limit) {
       : { total: 0, yellow: 0, red: 0 };
     sumCards += cards.total;
 
-    perFixture.push({
+   perFixture.push({
   fixtureId,
   date,
   home,
   away,
+  homeId,
+  awayId,
   homeLogo: f.teams?.home?.logo ?? "",
   awayLogo: f.teams?.away?.logo ?? "",
   comp,
   gf: g.gf,
   ga: g.ga,
+  isHome: g.isHome, // ✅ chiave: casa/trasferta affidabile
   goalHalves,
   cards,
 });
@@ -284,9 +289,13 @@ function renderTeamFormCard(form, lastN) {
 
   const body = rows.length
     ? rows.map((x) => {
-        const isHome = String(x.home || "").toLowerCase() === String(t.name || "").toLowerCase();
-        const oppName = isHome ? x.away : x.home;
-        const oppLogo = isHome ? x.awayLogo : x.homeLogo;
+        const isHome = (typeof x.isHome === "boolean") ? x.isHome : null;
+const oppName = isHome ? x.away : x.home;
+const oppLogo = isHome ? x.awayLogo : x.homeLogo;
+
+const oppNameHtml = (isHome === false)
+  ? `<span class="oppHome">${safeHTML(oppName)}</span>`
+  : `${safeHTML(oppName)}`;
 
         let r = "D", rClass = "res-d";
         if ((x.gf ?? 0) > (x.ga ?? 0)) { r = "W"; rClass = "res-w"; }
@@ -301,7 +310,7 @@ function renderTeamFormCard(form, lastN) {
             <td class="td-opp">
               <span class="opp">
                 ${oppLogo ? `<img class="oppLogo" src="${safeHTML(oppLogo)}" alt="">` : ``}
-                <span class="oppName">${safeHTML(oppName)}</span>
+                <span class="oppName">${oppNameHtml}</span>
               </span>
             </td>
             <td class="td-res"><span class="resBadge ${rClass}">${r}</span></td>
@@ -383,6 +392,7 @@ function renderTeamCardsList(form) {
   `;
 
 }
+
 
 
 
