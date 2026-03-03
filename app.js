@@ -772,11 +772,16 @@ function setupTabs() {
     const view = btn.getAttribute("data-view");
     const isProTab = btn.getAttribute("data-pro-tab") === "1";
 
-   if (isProTab && !__IS_PRO__) {
+ if (isProTab && !__IS_PRO__) {
   const name = (view === "predictionPanel") ? "Predizione 🧠" : "Indicatori 📊";
   const pay = window.API_CONFIG?.paymentUrl || window.API_CONFIG?.paypalUrl || "";
   const tg = window.API_CONFIG?.telegramUrl || "";
 
+  // 1) mostra comunque la view (così vedi blur + badge PRO)
+  const viewIdLocked = (view === "match") ? "matchView" : view;
+  showView(viewIdLocked);
+
+  // 2) toast con CTA
   showToast({
     key: "hint_pro_gate",
     title: `🔒 ${name} è PRO`,
@@ -788,8 +793,11 @@ function setupTabs() {
     ctaUrl: pay || tg
   });
 
-  // NON aprire login qui: solo pagamento (se configurato)
-  if (typeof goToPayment === "function") goToPayment({ noLoginFallback: true });
+  // 3) evidenzia tab attiva (così resta selezionata)
+  nav.querySelectorAll(".tab").forEach((b) => b.classList.remove("is-active"));
+  btn.classList.add("is-active");
+
+  // 4) NON fare autoLoadFor: tanto è PRO. Esci.
   return;
 }
 
@@ -864,6 +872,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const me = await fetchMe();
   if (me?.json?.ok) applyProLocks(me.json);
 });
+
 
 
 
