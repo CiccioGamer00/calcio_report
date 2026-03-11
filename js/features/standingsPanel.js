@@ -15,14 +15,37 @@ async function loadStandings() {
   const season = selectedFixture.season;
 
   const r = await apiGet(`/standings?league=${leagueId}&season=${season}`, { retries: 2, delays: [500, 1000] });
-  if (!r.ok || r.errors || !Array.isArray(r.arr) || r.arr.length === 0) {
-    setStandings(`<p class="bad"><em>Errore classifica: HTTP ${safeHTML(r.status)}</em></p>`);
-    return;
-  }
+
+if (!r.ok) {
+  setStandings(`<p class="bad"><em>Errore classifica: HTTP ${safeHTML(r.status || 0)}</em></p>`);
+  return;
+}
+
+if (r.errors) {
+  const msg =
+    r.errors?.message ||
+    r.errors?.requests ||
+    r.errors?.league ||
+    r.errors?.season ||
+    (typeof r.errors === "string" ? r.errors : "Classifica non disponibile per questa competizione.");
+  setStandings(`<p class="muted"><em>${safeHTML(msg)}</em></p>`);
+  return;
+}
+
+if (!Array.isArray(r.arr) || r.arr.length === 0) {
+  setStandings(`<p class="muted"><em>Classifica non disponibile per questa competizione.</em></p>`);
+  return;
+}
 
   // struttura tipica: response[0].league.standings[0] = array team rows
   const league = r.arr[0]?.league || {};
-  const rows = league?.standings?.[0] || [];
+  const rowsRaw = Array.isArray(league?.standings) ? league.standings : [];
+const rows = Array.isArray(rowsRaw[0]) ? rowsRaw[0] : [];
+
+if (!rows.length) {
+  setStandings(`<p class="muted"><em>Classifica non disponibile o non supportata per questa competizione.</em></p>`);
+  return;
+}
 
   const homeId = selectedFixture?.home?.id;
   const awayId = selectedFixture?.away?.id;
