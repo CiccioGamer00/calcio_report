@@ -14,51 +14,52 @@ async function loadStandings() {
   const leagueId = selectedFixture.leagueId;
   const season = selectedFixture.season;
 
-  const r = await apiGet(`/standings?league=${leagueId}&season=${season}`, { retries: 2, delays: [500, 1000] });
+  const r = await apiGet(`/standings?league=${leagueId}&season=${season}`, {
+    retries: 2,
+    delays: [500, 1000],
+  });
 
-if (!r.ok) {
-  setStandings(`<p class="bad"><em>Errore classifica: HTTP ${safeHTML(r.status || 0)}</em></p>`);
-  return;
-}
+  if (!r.ok) {
+    setStandings(`<p class="bad"><em>Errore classifica: HTTP ${safeHTML(r.status || 0)}</em></p>`);
+    return;
+  }
 
-if (r.errors) {
-  const msg =
-    r.errors?.message ||
-    r.errors?.requests ||
-    r.errors?.league ||
-    r.errors?.season ||
-    (typeof r.errors === "string" ? r.errors : "Classifica non disponibile per questa competizione.");
-  setStandings(`<p class="muted"><em>${safeHTML(msg)}</em></p>`);
-  return;
-}
+  if (r.errors) {
+    const msg =
+      r.errors?.message ||
+      r.errors?.requests ||
+      r.errors?.league ||
+      r.errors?.season ||
+      (typeof r.errors === "string" ? r.errors : "Classifica non disponibile per questa competizione.");
+    setStandings(`<p class="muted"><em>${safeHTML(msg)}</em></p>`);
+    return;
+  }
 
-if (!Array.isArray(r.arr) || r.arr.length === 0) {
-  setStandings(`<p class="muted"><em>Classifica non disponibile per questa competizione.</em></p>`);
-  return;
-}
+  if (!Array.isArray(r.arr) || r.arr.length === 0) {
+    setStandings(`<p class="muted"><em>Classifica non disponibile per questa competizione.</em></p>`);
+    return;
+  }
 
-  // struttura tipica: response[0].league.standings[0] = array team rows
   const league = r.arr[0]?.league || {};
   const rowsRaw = Array.isArray(league?.standings) ? league.standings : [];
-const rows = Array.isArray(rowsRaw[0]) ? rowsRaw[0] : [];
+  const rows = Array.isArray(rowsRaw[0]) ? rowsRaw[0] : [];
 
-if (!rows.length) {
-  setStandings(`<p class="muted"><em>Classifica non disponibile o non supportata per questa competizione.</em></p>`);
-  return;
-}
+  if (!rows.length) {
+    setStandings(`<p class="muted"><em>Classifica non disponibile o non supportata per questa competizione.</em></p>`);
+    return;
+  }
 
   const homeId = selectedFixture?.home?.id;
   const awayId = selectedFixture?.away?.id;
 
-  // salva mini posizione per match hero
-const homeRow = rows.find(r => (r?.team?.id ?? null) === homeId) || null;
-const awayRow = rows.find(r => (r?.team?.id ?? null) === awayId) || null;
+  const homeRow = rows.find(x => (x?.team?.id ?? null) === homeId) || null;
+  const awayRow = rows.find(x => (x?.team?.id ?? null) === awayId) || null;
 
-selectedFixture.standingsMini = {
-  leagueName: league?.name || "",
-  home: homeRow ? { rank: homeRow.rank, points: homeRow.points } : null,
-  away: awayRow ? { rank: awayRow.rank, points: awayRow.points } : null,
-};
+  selectedFixture.standingsMini = {
+    leagueName: league?.name || "",
+    home: homeRow ? { rank: homeRow.rank, points: homeRow.points } : null,
+    away: awayRow ? { rank: awayRow.rank, points: awayRow.points } : null,
+  };
 
   function rowHtml(x) {
     const team = x?.team || {};
@@ -67,8 +68,8 @@ selectedFixture.standingsMini = {
     const gf = x?.all?.goals?.for ?? "—";
     const ga = x?.all?.goals?.against ?? "—";
     const played = x?.all?.played ?? "—";
-    const diff = (Number(gf) - Number(ga));
-    const isFocus = (team?.id === homeId || team?.id === awayId);
+    const diff = Number(gf) - Number(ga);
+    const isFocus = team?.id === homeId || team?.id === awayId;
 
     return `
       <div class="st-row ${isFocus ? "is-focus" : ""}">
@@ -114,17 +115,25 @@ selectedFixture.standingsMini = {
     </p>
   `);
 }
+
 async function loadStandingsMini() {
   if (!selectedFixture?.leagueId || !selectedFixture?.season) return null;
 
   const leagueId = selectedFixture.leagueId;
   const season = selectedFixture.season;
 
-  const r = await apiGet(`/standings?league=${leagueId}&season=${season}`, { retries: 2, delays: [500, 1000] });
+  const r = await apiGet(`/standings?league=${leagueId}&season=${season}`, {
+    retries: 2,
+    delays: [500, 1000],
+  });
+
   if (!r.ok || r.errors || !Array.isArray(r.arr) || r.arr.length === 0) return null;
 
   const league = r.arr[0]?.league || {};
-  const rows = league?.standings?.[0] || [];
+  const rowsRaw = Array.isArray(league?.standings) ? league.standings : [];
+  const rows = Array.isArray(rowsRaw[0]) ? rowsRaw[0] : [];
+
+  if (!rows.length) return null;
 
   const homeId = selectedFixture?.home?.id;
   const awayId = selectedFixture?.away?.id;
@@ -142,5 +151,4 @@ async function loadStandingsMini() {
 }
 
 window.loadStandingsMini = loadStandingsMini;
-
 window.loadStandings = loadStandings;
