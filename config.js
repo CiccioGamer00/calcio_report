@@ -1,10 +1,10 @@
 window.API_CONFIG = {
-  baseUrl: "https://calcio-report-proxy.stemoro84.workers.dev",
+  baseUrl: "https://api.calcioreport.com",
   headers: {},
 
   // --- CONTATTI / CTA (imposta i tuoi)
   telegramUrl: "", // es: "https://t.me/statzone_italia"
-  supportEmail: "", // es: "support@tuodominio.it"
+  supportEmail: "support@calcioreport.com", // es: "support@tuodominio.it"
 
   // --- PAGAMENTI
   // Link PayPal (es. PayPal.Me o pagina Checkout) oppure link Stripe Checkout
