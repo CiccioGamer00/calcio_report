@@ -29,32 +29,31 @@
   let lastSuggestItems = [];
   let pointerGesture = null;
 
-  const MAJOR_TEAMS = new Set([
-    "ac milan",
-    "inter",
-    "inter milan",
-    "internazionale",
-    "juventus",
-    "napoli",
-    "roma",
-    "lazio",
-    "atalanta",
-    "bologna",
-    "fiorentina",
-    "torino",
-    "real madrid",
-    "barcelona",
-    "atletico madrid",
-    "manchester city",
-    "manchester united",
-    "liverpool",
-    "arsenal",
-    "chelsea",
-    "tottenham",
-    "bayern munich",
-    "borussia dortmund",
-    "paris saint germain",
-    "paris saint-germain",
+  // Priorità locale: nessuna chiamata API aggiuntiva.
+  // Nome + paese evitano che un club minore con nome identico vinca sul club atteso.
+  const PREFERRED_CLUBS = new Set([
+    "italy|ac milan",
+    "italy|inter",
+    "italy|juventus",
+    "italy|napoli",
+    "italy|as roma",
+    "italy|lazio",
+    "italy|atalanta",
+    "italy|bologna",
+    "italy|fiorentina",
+    "italy|torino",
+    "spain|real madrid",
+    "spain|barcelona",
+    "spain|atletico madrid",
+    "england|manchester city",
+    "england|manchester united",
+    "england|liverpool",
+    "england|arsenal",
+    "england|chelsea",
+    "england|tottenham",
+    "germany|bayern munich",
+    "germany|borussia dortmund",
+    "france|paris saint germain",
   ]);
 
   const MAJOR_COUNTRIES = new Set([
@@ -91,9 +90,54 @@
       .replaceAll("'", "&#039;");
   }
 
+  function isLocalDebug() {
+    return ["localhost", "127.0.0.1"].includes(location.hostname);
+  }
+
   function debug(label, data) {
-    if (!window.DEBUG && !window.API_CONFIG?.debug) return;
+    if (!isLocalDebug() && !window.DEBUG && !window.API_CONFIG?.debug) return;
     console.debug(`[CR V2] ${label}`, data || "");
+  }
+
+  function compactErrors(errors) {
+    if (!errors) return "—";
+    try {
+      const raw = typeof errors === "string" ? errors : JSON.stringify(errors);
+      return raw.length > 220 ? `${raw.slice(0, 217)}...` : raw;
+    } catch {
+      return String(errors);
+    }
+  }
+
+  function localDiagnostic({ phase, result, team = null, searchId = null }) {
+    if (!isLocalDebug()) return "";
+
+    const parts = [
+      `fase=${phase}`,
+      `searchId=${searchId ?? "—"}`,
+      `tipo=${result?.kind || "—"}`,
+      `http=${result?.status ?? "—"}`,
+      `cache=${result?.cache || result?.frontendCache || "—"}`,
+    ];
+
+    if (team) {
+      parts.push(`team=${team.name || "—"}`);
+      parts.push(`id=${team.id || "—"}`);
+      parts.push(`paese=${team.country || "—"}`);
+    }
+
+    if (result?.errors) parts.push(`errors=${compactErrors(result.errors)}`);
+
+    const text = parts.join(" • ");
+    window.__CR_LAST_SEARCH_DEBUG__ = {
+      phase,
+      searchId,
+      team,
+      result,
+      text,
+    };
+
+    return `<div class="muted" style="margin-top:10px;font-size:12px;line-height:1.4;word-break:break-word"><code>${safe(text)}</code></div>`;
   }
 
   function setMatch(html) {
@@ -124,6 +168,11 @@
       .filter((team) => team.id && team.name);
   }
 
+  function preferredClubBoost(team) {
+    const key = `${norm(team?.country)}|${norm(team?.name)}`;
+    return PREFERRED_CLUBS.has(key) ? 25000 : 0;
+  }
+
   function suggestionScore(team, query) {
     const q = norm(query);
     const name = norm(team?.name);
@@ -137,8 +186,9 @@
     else if (name.includes(q)) score += 3000;
     else return -Infinity;
 
-    if (MAJOR_TEAMS.has(name)) score += 3000;
+    score += preferredClubBoost(team);
     if (MAJOR_COUNTRIES.has(country)) score += 300;
+
     return score - Math.min(name.length, 100);
   }
 
@@ -195,11 +245,6 @@
     box.classList.remove("hidden");
   }
 
-  function bestVisibleSuggestion(query) {
-    if (norm(lastSuggestQuery) !== norm(query) || !lastSuggestItems.length) return null;
-    return rankTeams(lastSuggestItems, query)[0] || null;
-  }
-
   function getSuggestCache(query) {
     const key = norm(query);
     const hit = suggestCache.get(key);
@@ -209,6 +254,19 @@
       return null;
     }
     return hit.items;
+  }
+
+  function bestKnownSuggestion(query) {
+    const q = norm(query);
+
+    if (norm(lastSuggestQuery) === q && lastSuggestItems.length) {
+      return rankTeams(lastSuggestItems, query)[0] || null;
+    }
+
+    const cached = getSuggestCache(query);
+    if (cached?.length) return rankTeams(cached, query)[0] || null;
+
+    return null;
   }
 
   async function loadSuggestions(query) {
@@ -375,14 +433,10 @@
     }
   }
 
-  async function resolveTeam(query, forcedTeam, searchId, signal) {
-    if (forcedTeam?.id && forcedTeam?.name) {
-      return { team: forcedTeam };
-    }
-
-    const suggested = bestVisibleSuggestion(query);
-    if (suggested?.id) {
-      return { team: suggested };
+  async function resolveTeam(query, forcedTeam, preResolvedTeam, searchId, signal) {
+    if (forcedTeam?.id && forcedTeam?.name) return { team: forcedTeam, source: "click" };
+    if (preResolvedTeam?.id && preResolvedTeam?.name) {
+      return { team: preResolvedTeam, source: "suggestion-cache" };
     }
 
     const result = await window.apiGetV2(`/teams?search=${encodeURIComponent(query)}`, {
@@ -405,12 +459,17 @@
     if (result.kind !== "success") return { result };
 
     const team = rankTeams(mapTeams(result.arr), query)[0] || null;
-    return team ? { team } : { result: { ...result, kind: "empty" } };
+    return team
+      ? { team, source: "team-api" }
+      : { result: { ...result, kind: "empty" } };
   }
 
   async function startTeamSearch(forcedTeam = null) {
     const query = String(forcedTeam?.name || currentQuery()).trim();
     if (query.length < 2) return;
+
+    // Prima di chiudere/abortire i suggerimenti salviamo l'eventuale scelta migliore.
+    const preResolvedTeam = forcedTeam || bestKnownSuggestion(query);
 
     clearTimeout(suggestTimer);
     ++suggestSeq;
@@ -436,7 +495,14 @@
     }
 
     try {
-      const teamResolved = await resolveTeam(query, forcedTeam, searchId, signal);
+      const teamResolved = await resolveTeam(
+        query,
+        forcedTeam,
+        preResolvedTeam,
+        searchId,
+        signal,
+      );
+
       if (!window.crIsSearchActive(searchId) || teamResolved?.stale) return;
 
       if (!teamResolved?.team) {
@@ -446,17 +512,25 @@
         if (result.kind === "empty") {
           window.crSetSearchFailure(searchId, "empty", null);
           setMatch(
-            `<p class="bad"><em>Nessuna squadra trovata per "${safe(query)}".</em></p>`,
+            `<p class="bad"><em>Nessuna squadra trovata per "${safe(query)}".</em></p>${localDiagnostic({ phase: "team", result, searchId })}`,
           );
         } else {
           window.crSetSearchFailure(searchId, "error", result);
-          setMatch(`<p class="bad"><em>${safe(errorMessage(result, "team"))}</em></p>`);
+          setMatch(
+            `<p class="bad"><em>${safe(errorMessage(result, "team"))}</em></p>${localDiagnostic({ phase: "team", result, searchId })}`,
+          );
         }
         return;
       }
 
       const team = teamResolved.team;
       input.value = team.name;
+
+      debug("team selected", {
+        searchId,
+        source: teamResolved.source,
+        team,
+      });
 
       const fixtureResult = await window.apiGetV2(
         `/fixtures?team=${encodeURIComponent(team.id)}&next=2&timezone=Europe/Rome`,
@@ -471,7 +545,7 @@
 
       debug("main fixture", {
         searchId,
-        team: team.name,
+        team,
         kind: fixtureResult.kind,
         status: fixtureResult.status,
         results: fixtureResult.arr?.length || 0,
@@ -485,7 +559,7 @@
       if (fixtureResult.kind === "empty") {
         window.crSetSearchFailure(searchId, "empty", null);
         setMatch(
-          `<p class="bad"><em>Nessun prossimo match trovato per "${safe(team.name)}".</em></p>`,
+          `<p class="bad"><em>Nessun prossimo match trovato per "${safe(team.name)}".</em></p>${localDiagnostic({ phase: "fixture", result: fixtureResult, team, searchId })}`,
         );
         return;
       }
@@ -493,7 +567,7 @@
       if (fixtureResult.kind !== "success") {
         window.crSetSearchFailure(searchId, "error", fixtureResult);
         setMatch(
-          `<p class="bad"><em>${safe(errorMessage(fixtureResult, "fixture"))}</em></p>`,
+          `<p class="bad"><em>${safe(errorMessage(fixtureResult, "fixture"))}</em></p>${localDiagnostic({ phase: "fixture", result: fixtureResult, team, searchId })}`,
         );
         return;
       }
@@ -513,24 +587,31 @@
       const fixture = normalizeFixture(rawFixture);
 
       if (!rawFixture || !validFixture(fixture)) {
-        window.crSetSearchFailure(searchId, "error", {
-          kind: "invalid_fixture",
-          fixture,
-        });
+        const result = { kind: "invalid_fixture", status: fixtureResult.status };
+        window.crSetSearchFailure(searchId, "error", result);
         setMatch(
-          `<p class="bad"><em>Il prossimo match ricevuto non contiene tutti i dati necessari.</em></p>`,
+          `<p class="bad"><em>Il prossimo match ricevuto non contiene tutti i dati necessari.</em></p>${localDiagnostic({ phase: "fixture-validate", result, team, searchId })}`,
         );
         return;
       }
 
-      // Solo qui la nuova selezione diventa visibile al resto dell'app.
+      // Commit atomico: solo una fixture valida rende globale la nuova selezione.
       if (!window.crCommitSelection(searchId, team, fixture)) return;
 
       window.CR_STATE.matchExtras.nextTeam = nextTeamFixture;
       renderMainFixture(rawFixture, nextTeamFixture, team);
 
+      window.__CR_LAST_SEARCH_DEBUG__ = {
+        phase: "success",
+        searchId,
+        team,
+        fixture,
+        source: teamResolved.source,
+      };
+
       debug("selection committed", {
         searchId,
+        source: teamResolved.source,
         teamId: team.id,
         fixtureId: fixture.id,
       });
@@ -539,10 +620,13 @@
 
       const failure = {
         kind: "controller_error",
-        message: String(err?.message || err || "unknown error"),
+        status: 0,
+        errors: { message: String(err?.message || err || "unknown error") },
       };
       window.crSetSearchFailure(searchId, "error", failure);
-      setMatch(`<p class="bad"><em>Errore imprevisto durante la ricerca.</em></p>`);
+      setMatch(
+        `<p class="bad"><em>Errore imprevisto durante la ricerca.</em></p>${localDiagnostic({ phase: "controller", result: failure, searchId })}`,
+      );
       console.error("CR V2 search", err);
     } finally {
       if (window.crIsSearchActive(searchId) && btnSearch) {
@@ -553,8 +637,7 @@
     }
   }
 
-  // I listener capture vengono registrati prima di teamFlow.js e neutralizzano
-  // i vecchi ingressi senza dover smontare subito quel file enorme.
+  // Listener in capture: registrati prima di teamFlow.js, neutralizzano i vecchi ingressi.
   input.addEventListener(
     "input",
     (event) => {
@@ -683,7 +766,7 @@
   window.startTeamSearch = startTeamSearch;
 
   // teamFlow.js viene caricato subito dopo e ridefinisce showTeam().
-  // Terminato il parsing, questo diventa l'unico ingresso pubblico.
+  // Terminato il parsing, questo controller riprende l'unico ingresso pubblico.
   setTimeout(() => {
     window.showTeam = (forcedTeam = null) => startTeamSearch(forcedTeam);
   }, 0);
