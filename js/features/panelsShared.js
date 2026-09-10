@@ -40,30 +40,11 @@ function pct(part, total) {
   return Math.round((p / t) * 100);
 }
 
-// Limite “safe” per non far esplodere le chiamate (puoi cambiarlo quando vuoi)
 function getLimitForTeams() {
   const sel = document.getElementById("refHistoryCount");
   const requested = parseInt(sel?.value || "10", 10) || 10;
-
-  // cap fisso per performance (non infinito)
   const CAP = 15;
   return Math.min(requested, CAP);
-}
-
-/* =========================
-   FIXTURES (last N) per team
-   ========================= */
-function isFinishedFixtureRow(fx) {
-  const st = String(fx?.fixture?.status?.short || "").toUpperCase();
-  return st === "FT" || st === "AET" || st === "PEN";
-}
-
-function sortFixturesNewestFirst(rows) {
-  return [...(rows || [])].sort((a, b) => {
-    const ta = Number(a?.fixture?.timestamp || 0);
-    const tb = Number(b?.fixture?.timestamp || 0);
-    return tb - ta;
-  });
 }
 
 function uniqueFixtures(rows) {
@@ -78,55 +59,91 @@ function uniqueFixtures(rows) {
   return out;
 }
 
+function sortFixturesNewestFirst(rows) {
+  return [...(rows || [])].sort((a, b) => {
+    const ta = Number(a?.fixture?.timestamp || 0);
+    const tb = Number(b?.fixture?.timestamp || 0);
+    return tb - ta;
+  });
+}
+
 function dateOnlyUTC(d) {
   return d.toISOString().slice(0, 10);
 }
 
+/* =========================
+   FIXTURES (last N) per team
+   ========================= */
 async function fetchTeamLastFixtures(teamId, limit) {
   if (!teamId) return [];
 
   const n = Math.max(1, Number(limit) || 10);
 
-  // Pattern ufficiale API-Football: team + last.
-  // Filtriamo noi i risultati realmente conclusi per evitare combinazioni fragili
-  // tipo last=N&status=FT che possono restituire vuoti anomali.
-  const r = await apiGet(
-    `/fixtures?team=${teamId}&last=${Math.max(n, 5)}&timezone=Europe/Rome`,
+  // API-Football documenta team + last come pattern per i risultati recenti.
+  // Non rifiltriamo lo status lato client: "last" ci deve già restituire i match recenti.
+  const primary = await apiGet(
+    `/fixtures?team=${teamId}&last=${n}&timezone=Europe/Rome`,
     { retries: 2, delays: [400, 900] },
   );
 
   let rows =
-    r.ok && !r.errors && Array.isArray(r.arr)
-      ? r.arr.filter(isFinishedFixtureRow)
+    primary.ok && !primary.errors && Array.isArray(primary.arr)
+      ? uniqueFixtures(primary.arr)
       : [];
 
-  rows = sortFixturesNewestFirst(uniqueFixtures(rows));
-  if (rows.length >= n) return rows.slice(0, n);
+  if (rows.length) {
+    return sortFixturesNewestFirst(rows).slice(0, n);
+  }
 
-  // Fallback robusto: se "last" arriva vuoto/incompleto, recupera un intervallo
-  // storico e filtra lato frontend. Query diversa = non rimaniamo bloccati da
-  // un eventuale risultato vuoto in cache sulla query "last".
-  const to = new Date();
-  const from = new Date(to.getTime() - 370 * 24 * 60 * 60 * 1000);
+  // Fallback: stessa competizione del match selezionato.
+  // Serve soprattutto quando una risposta "last" vuota rimane nella cache del Worker.
+  const leagueId =
+    typeof selectedFixture !== "undefined" ? selectedFixture?.leagueId : null;
+  const season =
+    typeof selectedFixture !== "undefined" ? Number(selectedFixture?.season) : null;
 
-  const rf = await apiGet(
-    `/fixtures?team=${teamId}&from=${dateOnlyUTC(from)}&to=${dateOnlyUTC(to)}&timezone=Europe/Rome`,
-    { retries: 1, delays: [500] },
-  );
+  if (!leagueId || !Number.isFinite(season)) {
+    console.warn("fetchTeamLastFixtures: primary empty and no league/season fallback", teamId);
+    return [];
+  }
 
-  const fallbackRows =
-    rf.ok && !rf.errors && Array.isArray(rf.arr)
-      ? rf.arr.filter(isFinishedFixtureRow)
-      : [];
+  const seasonQueries = [season, season - 1];
+  for (const s of seasonQueries) {
+    const r = await apiGet(
+      `/fixtures?league=${leagueId}&season=${s}&team=${teamId}&timezone=Europe/Rome`,
+      { retries: 1, delays: [500] },
+    );
 
-  rows = sortFixturesNewestFirst(uniqueFixtures([...rows, ...fallbackRows]));
+    if (r.ok && !r.errors && Array.isArray(r.arr) && r.arr.length) {
+      rows = rows.concat(
+        r.arr.filter((fx) => {
+          const ts = Number(fx?.fixture?.timestamp || 0);
+          const status = String(fx?.fixture?.status?.short || "").toUpperCase();
+          const finished = status === "FT" || status === "AET" || status === "PEN";
+          return finished || (ts > 0 && ts < Math.floor(Date.now() / 1000));
+        }),
+      );
+    }
+
+    rows = sortFixturesNewestFirst(uniqueFixtures(rows));
+    if (rows.length >= n) break;
+  }
+
+  if (!rows.length) {
+    console.warn("fetchTeamLastFixtures: no historical fixtures found", {
+      teamId,
+      leagueId,
+      season,
+    });
+  }
+
   return rows.slice(0, n);
 }
 
 /* =========================
    CACHE: EVENTS per fixture
    ========================= */
-const __EVENTS_CACHE__ = new Map(); // fixtureId -> events[]
+const __EVENTS_CACHE__ = new Map();
 
 async function getFixtureEventsCached(fixtureId) {
   if (!fixtureId) return [];
@@ -146,7 +163,6 @@ async function getFixtureEventsCached(fixtureId) {
    CORNERS per fixture teams
    ========================= */
 function normalizeCornersStats(statArray) {
-  // API spesso usa "Corner Kicks"
   const lower = (s) => String(s || "").toLowerCase();
   const map = new Map();
   for (const s of statArray || []) map.set(lower(s?.type), s?.value);
@@ -166,7 +182,6 @@ function normalizeCornersStats(statArray) {
 }
 
 async function getCornersForFixtureTeams(fixtureId, homeId, awayId) {
-  // ritorna Map(teamId -> corners)
   const out = new Map();
   out.set(homeId, 0);
   out.set(awayId, 0);
@@ -236,8 +251,6 @@ function installResilientNextFixtures() {
 
     if (primary.length >= wanted) return primary.slice(0, wanted);
 
-    // Se next=N torna vuoto o incompleto, usiamo una query diversa e quindi
-    // anche una cache-key diversa sul Worker.
     const from = new Date();
     const to = new Date(from.getTime() + 180 * 24 * 60 * 60 * 1000);
 
@@ -264,5 +277,4 @@ function installResilientNextFixtures() {
   console.info("Calcio Report resilient next-fixtures attivo");
 }
 
-// teamFlow viene caricato dopo questo file: differiamo l'aggancio.
 setTimeout(installResilientNextFixtures, 0);
