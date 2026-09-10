@@ -152,12 +152,3 @@ async function loadStandingsMini() {
 
 window.loadStandingsMini = loadStandingsMini;
 window.loadStandings = loadStandings;
-
-// Hotfix loader: tenuto separato per poterlo rimuovere facilmente dopo il test.
-(() => {
-  if (document.querySelector('script[data-cr-hotfix="2026"]')) return;
-  const s = document.createElement("script");
-  s.src = "js/hotfix-2026.js?v=1";
-  s.dataset.crHotfix = "2026";
-  document.head.appendChild(s);
-})();
