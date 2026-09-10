@@ -236,15 +236,16 @@ Completed:
 - initial SSH login completed;
 - temporary password changed;
 - SSH login with new password confirmed;
-- `sudo apt update && sudo apt upgrade -y` completed.
+- `sudo apt update && sudo apt upgrade -y` completed;
+- UFW firewall enabled and verified active;
+- default incoming policy is `deny`;
+- OpenSSH/22 explicitly allowed for IPv4 and IPv6;
+- UFW enabled on system startup.
 
-Pending verification:
+Current note:
 
-- UFW/firewall command was attempted, but the SSH session reset immediately afterward. Do not assume UFW state. First check on next session with:
-
-```bash
-sudo ufw status verbose
-```
+- the server reports `System restart required` after package updates;
+- do not reboot casually: perform a controlled reboot and verify SSH access in the next session.
 
 Security hardening still pending:
 
@@ -253,6 +254,7 @@ Security hardening still pending:
 - only after successful key login, disable SSH password authentication;
 - disable root SSH login;
 - review SSH config;
+- perform controlled reboot after updates and verify connectivity;
 - install required runtime/reverse proxy;
 - keep internal service ports closed;
 - security update policy/logging review.
