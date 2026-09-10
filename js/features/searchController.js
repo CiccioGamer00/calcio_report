@@ -24,6 +24,7 @@
   let suggestTimer = null;
   let suggestSeq = 0;
   let suggestAbort = null;
+  let pendingSuggestion = null;
   let activeSearchAbort = null;
   let lastSuggestQuery = "";
   let lastSuggestItems = [];
@@ -290,14 +291,24 @@
     }
 
     suggestAbort?.abort();
-    suggestAbort = new AbortController();
+    const controller = new AbortController();
+    suggestAbort = controller;
 
-    const result = await window.apiGetV2(`/teams?search=${encodeURIComponent(q)}`, {
+    const promise = window.apiGetV2(`/teams?search=${encodeURIComponent(q)}`, {
       retries: 0,
-      signal: suggestAbort.signal,
+      signal: controller.signal,
       cache: true,
     });
 
+    pendingSuggestion = {
+      key: norm(q),
+      promise,
+      controller,
+    };
+
+    const result = await promise;
+
+    if (pendingSuggestion?.promise === promise) pendingSuggestion = null;
     if (seq !== suggestSeq || norm(currentQuery()) !== norm(q)) return;
 
     debug("suggest", {
@@ -332,6 +343,7 @@
     if (q.length < 2) {
       ++suggestSeq;
       suggestAbort?.abort();
+      pendingSuggestion = null;
       hideSuggestions(true);
       return;
     }
@@ -433,10 +445,33 @@
     }
   }
 
-  async function resolveTeam(query, forcedTeam, preResolvedTeam, searchId, signal) {
+  function teamFromApiResult(result, query) {
+    if (result?.kind !== "success") return null;
+    return rankTeams(mapTeams(result.arr), query)[0] || null;
+  }
+
+  async function resolveTeam(
+    query,
+    forcedTeam,
+    preResolvedTeam,
+    pendingTeamPromise,
+    searchId,
+    signal,
+  ) {
     if (forcedTeam?.id && forcedTeam?.name) return { team: forcedTeam, source: "click" };
     if (preResolvedTeam?.id && preResolvedTeam?.name) {
       return { team: preResolvedTeam, source: "suggestion-cache" };
+    }
+
+    if (pendingTeamPromise) {
+      const pendingResult = await pendingTeamPromise;
+      if (!window.crIsSearchActive(searchId)) return { stale: true };
+
+      const pendingTeam = teamFromApiResult(pendingResult, query);
+      if (pendingTeam) return { team: pendingTeam, source: "suggestion-inflight" };
+      if (pendingResult?.kind && pendingResult.kind !== "aborted") {
+        return { result: pendingResult };
+      }
     }
 
     const result = await window.apiGetV2(`/teams?search=${encodeURIComponent(query)}`, {
@@ -468,12 +503,24 @@
     const query = String(forcedTeam?.name || currentQuery()).trim();
     if (query.length < 2) return;
 
-    // Prima di chiudere/abortire i suggerimenti salviamo l'eventuale scelta migliore.
+    const queryKey = norm(query);
+
+    // Prima di chiudere i suggerimenti salviamo sia la scelta migliore già pronta,
+    // sia l'eventuale richiesta identica ancora in corso.
     const preResolvedTeam = forcedTeam || bestKnownSuggestion(query);
+    const pendingTeamPromise =
+      pendingSuggestion?.key === queryKey ? pendingSuggestion.promise : null;
 
     clearTimeout(suggestTimer);
     ++suggestSeq;
-    suggestAbort?.abort();
+
+    // Se la richiesta suggerimenti è la stessa ricerca, NON la abortiamo:
+    // la riutilizziamo per evitare due chiamate /teams?search identiche.
+    if (!pendingTeamPromise) {
+      suggestAbort?.abort();
+      pendingSuggestion = null;
+    }
+
     hideSuggestions(true);
 
     activeSearchAbort?.abort();
@@ -499,6 +546,7 @@
         query,
         forcedTeam,
         preResolvedTeam,
+        pendingTeamPromise,
         searchId,
         signal,
       );
