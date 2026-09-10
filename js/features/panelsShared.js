@@ -53,18 +53,74 @@ function getLimitForTeams() {
 /* =========================
    FIXTURES (last N) per team
    ========================= */
+function isFinishedFixtureRow(fx) {
+  const st = String(fx?.fixture?.status?.short || "").toUpperCase();
+  return st === "FT" || st === "AET" || st === "PEN";
+}
+
+function sortFixturesNewestFirst(rows) {
+  return [...(rows || [])].sort((a, b) => {
+    const ta = Number(a?.fixture?.timestamp || 0);
+    const tb = Number(b?.fixture?.timestamp || 0);
+    return tb - ta;
+  });
+}
+
+function uniqueFixtures(rows) {
+  const out = [];
+  const seen = new Set();
+  for (const fx of rows || []) {
+    const id = fx?.fixture?.id ?? null;
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push(fx);
+  }
+  return out;
+}
+
+function dateOnlyUTC(d) {
+  return d.toISOString().slice(0, 10);
+}
+
 async function fetchTeamLastFixtures(teamId, limit) {
   if (!teamId) return [];
 
   const n = Math.max(1, Number(limit) || 10);
-  // Ultime N partite finite
+
+  // Pattern ufficiale API-Football: team + last.
+  // Filtriamo noi i risultati realmente conclusi per evitare combinazioni fragili
+  // tipo last=N&status=FT che possono restituire vuoti anomali.
   const r = await apiGet(
-    `/fixtures?team=${teamId}&last=${n}&status=FT&timezone=Europe/Rome`,
+    `/fixtures?team=${teamId}&last=${Math.max(n, 5)}&timezone=Europe/Rome`,
     { retries: 2, delays: [400, 900] },
   );
 
-  if (!r.ok || r.errors || !Array.isArray(r.arr)) return [];
-  return r.arr;
+  let rows =
+    r.ok && !r.errors && Array.isArray(r.arr)
+      ? r.arr.filter(isFinishedFixtureRow)
+      : [];
+
+  rows = sortFixturesNewestFirst(uniqueFixtures(rows));
+  if (rows.length >= n) return rows.slice(0, n);
+
+  // Fallback robusto: se "last" arriva vuoto/incompleto, recupera un intervallo
+  // storico e filtra lato frontend. Query diversa = non rimaniamo bloccati da
+  // un eventuale risultato vuoto in cache sulla query "last".
+  const to = new Date();
+  const from = new Date(to.getTime() - 370 * 24 * 60 * 60 * 1000);
+
+  const rf = await apiGet(
+    `/fixtures?team=${teamId}&from=${dateOnlyUTC(from)}&to=${dateOnlyUTC(to)}&timezone=Europe/Rome`,
+    { retries: 1, delays: [500] },
+  );
+
+  const fallbackRows =
+    rf.ok && !rf.errors && Array.isArray(rf.arr)
+      ? rf.arr.filter(isFinishedFixtureRow)
+      : [];
+
+  rows = sortFixturesNewestFirst(uniqueFixtures([...rows, ...fallbackRows]));
+  return rows.slice(0, n);
 }
 
 /* =========================
