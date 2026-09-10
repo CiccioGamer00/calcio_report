@@ -67,8 +67,11 @@ function sortFixturesNewestFirst(rows) {
   });
 }
 
-function dateOnlyUTC(d) {
-  return d.toISOString().slice(0, 10);
+function isFinishedOrPast(fx) {
+  const status = String(fx?.fixture?.status?.short || "").toUpperCase();
+  if (["FT", "AET", "PEN"].includes(status)) return true;
+  const ts = Number(fx?.fixture?.timestamp || 0);
+  return ts > 0 && ts < Math.floor(Date.now() / 1000);
 }
 
 /* =========================
@@ -78,55 +81,46 @@ async function fetchTeamLastFixtures(teamId, limit) {
   if (!teamId) return [];
 
   const n = Math.max(1, Number(limit) || 10);
+  const attempts = [...new Set([n, Math.max(n + 2, 7), Math.max(n + 5, 10)])];
 
-  // API-Football documenta team + last come pattern per i risultati recenti.
-  // Non rifiltriamo lo status lato client: "last" ci deve già restituire i match recenti.
-  const primary = await apiGet(
-    `/fixtures?team=${teamId}&last=${n}&timezone=Europe/Rome`,
-    { retries: 2, delays: [400, 900] },
-  );
+  // Prima usiamo il pattern ufficiale team + last.
+  // Se una specifica cache-key contiene un vuoto temporaneo, cambiare N ci permette
+  // di usare una seconda cache-key senza inventare parametri non necessari.
+  for (const lastN of attempts) {
+    const r = await apiGet(
+      `/fixtures?team=${teamId}&last=${lastN}&timezone=Europe/Rome`,
+      { retries: 1, delays: [700] },
+    );
 
-  let rows =
-    primary.ok && !primary.errors && Array.isArray(primary.arr)
-      ? uniqueFixtures(primary.arr)
-      : [];
-
-  if (rows.length) {
-    return sortFixturesNewestFirst(rows).slice(0, n);
+    if (r.ok && !r.errors && Array.isArray(r.arr) && r.arr.length) {
+      const rows = sortFixturesNewestFirst(uniqueFixtures(r.arr));
+      if (rows.length) return rows.slice(0, n);
+    }
   }
 
-  // Fallback: stessa competizione del match selezionato.
-  // Serve soprattutto quando una risposta "last" vuota rimane nella cache del Worker.
+  // Ultimo fallback: stessa lega del match selezionato, stagione corrente e precedente.
   const leagueId =
     typeof selectedFixture !== "undefined" ? selectedFixture?.leagueId : null;
   const season =
     typeof selectedFixture !== "undefined" ? Number(selectedFixture?.season) : null;
 
   if (!leagueId || !Number.isFinite(season)) {
-    console.warn("fetchTeamLastFixtures: primary empty and no league/season fallback", teamId);
+    console.warn("fetchTeamLastFixtures: no league/season fallback", teamId);
     return [];
   }
 
-  const seasonQueries = [season, season - 1];
-  for (const s of seasonQueries) {
+  let rows = [];
+  for (const s of [season, season - 1]) {
     const r = await apiGet(
       `/fixtures?league=${leagueId}&season=${s}&team=${teamId}&timezone=Europe/Rome`,
-      { retries: 1, delays: [500] },
+      { retries: 1, delays: [800] },
     );
 
     if (r.ok && !r.errors && Array.isArray(r.arr) && r.arr.length) {
-      rows = rows.concat(
-        r.arr.filter((fx) => {
-          const ts = Number(fx?.fixture?.timestamp || 0);
-          const status = String(fx?.fixture?.status?.short || "").toUpperCase();
-          const finished = status === "FT" || status === "AET" || status === "PEN";
-          return finished || (ts > 0 && ts < Math.floor(Date.now() / 1000));
-        }),
-      );
+      rows.push(...r.arr.filter(isFinishedOrPast));
+      rows = sortFixturesNewestFirst(uniqueFixtures(rows));
+      if (rows.length >= n) break;
     }
-
-    rows = sortFixturesNewestFirst(uniqueFixtures(rows));
-    if (rows.length >= n) break;
   }
 
   if (!rows.length) {
@@ -151,7 +145,7 @@ async function getFixtureEventsCached(fixtureId) {
 
   const r = await apiGet(`/fixtures/events?fixture=${fixtureId}`, {
     retries: 2,
-    delays: [400, 900],
+    delays: [500, 1100],
   });
 
   const arr = r.ok && !r.errors && Array.isArray(r.arr) ? r.arr : [];
@@ -188,7 +182,7 @@ async function getCornersForFixtureTeams(fixtureId, homeId, awayId) {
 
   const r = await apiGet(`/fixtures/statistics?fixture=${fixtureId}`, {
     retries: 2,
-    delays: [500, 1000],
+    delays: [650, 1300],
   });
   if (!r.ok || r.errors || !Array.isArray(r.arr) || r.arr.length === 0) return out;
 
@@ -214,8 +208,6 @@ function installResilientNextFixtures() {
   }
   if (window.fetchNextFixtures.__crResilientNext) return;
 
-  const original = window.fetchNextFixtures;
-
   function isUsableFutureFixture(fx) {
     const status = String(fx?.fixture?.status?.short || "").toUpperCase();
     const blocked = new Set(["FT", "AET", "PEN", "CANC", "ABD", "AWD", "WO"]);
@@ -223,7 +215,6 @@ function installResilientNextFixtures() {
 
     const ts = Number(fx?.fixture?.timestamp || 0);
     if (!ts) return false;
-
     return ts >= Math.floor(Date.now() / 1000) - 6 * 60 * 60;
   }
 
@@ -237,44 +228,33 @@ function installResilientNextFixtures() {
 
   window.fetchNextFixtures = async function (teamId, count = 2) {
     const wanted = Math.max(1, Number(count) || 2);
-    let primary = [];
+    const attempts = [...new Set([
+      Math.max(wanted, 3),
+      Math.max(wanted + 2, 5),
+      10,
+    ])];
 
-    try {
-      primary = await original.call(this, teamId, Math.max(wanted, 3));
-    } catch (err) {
-      console.warn("Primary next fixtures failed", teamId, err);
-    }
-
-    primary = sortSoonest(
-      uniqueFixtures((primary || []).filter(isUsableFutureFixture)),
-    );
-
-    if (primary.length >= wanted) return primary.slice(0, wanted);
-
-    const from = new Date();
-    const to = new Date(from.getTime() + 180 * 24 * 60 * 60 * 1000);
-
-    try {
-      const rf = await apiGet(
-        `/fixtures?team=${encodeURIComponent(teamId)}&from=${dateOnlyUTC(from)}&to=${dateOnlyUTC(to)}&timezone=Europe/Rome`,
-        { retries: 1, delays: [500] },
+    for (const nextN of attempts) {
+      const r = await apiGet(
+        `/fixtures?team=${encodeURIComponent(teamId)}&next=${nextN}&timezone=Europe/Rome`,
+        { retries: 1, delays: [750] },
       );
 
-      const fallbackRows =
-        rf.ok && !rf.errors && Array.isArray(rf.arr)
-          ? rf.arr.filter(isUsableFutureFixture)
-          : [];
-
-      const merged = sortSoonest(uniqueFixtures([...primary, ...fallbackRows]));
-      return merged.slice(0, wanted);
-    } catch (err) {
-      console.warn("Fallback next fixtures failed", teamId, err);
-      return primary.slice(0, wanted);
+      if (r.ok && !r.errors && Array.isArray(r.arr) && r.arr.length) {
+        const rows = sortSoonest(
+          uniqueFixtures(r.arr.filter(isUsableFutureFixture)),
+        );
+        if (rows.length) return rows.slice(0, wanted);
+      }
     }
+
+    console.warn("fetchNextFixtures: no future fixtures found", teamId);
+    return [];
   };
 
   window.fetchNextFixtures.__crResilientNext = true;
   console.info("Calcio Report resilient next-fixtures attivo");
 }
 
+// teamFlow viene caricato dopo panelsShared.
 setTimeout(installResilientNextFixtures, 0);
