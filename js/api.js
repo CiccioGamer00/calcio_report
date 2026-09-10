@@ -40,12 +40,16 @@ function hasApiErrors(json) {
 function classifyResult({ status, ok, json, parseError, aborted, networkError }) {
   if (aborted) return "aborted";
   if (networkError) return "network_error";
-  if (parseError) return "parse_error";
+
+  // Prima il contratto HTTP: anche se un 401/500 non contiene JSON valido,
+  // deve restare un errore auth/server e non diventare un falso parse_error.
   if (status === 401) return "auth";
   if (status === 402) return "paywall";
   if (status === 403) return "forbidden";
   if (status === 429) return "rate_limit";
   if (!ok) return status >= 500 ? "server_error" : "http_error";
+
+  if (parseError) return "parse_error";
   if (hasApiErrors(json)) return "api_error";
 
   const response = json?.response;
