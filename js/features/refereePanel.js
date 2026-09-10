@@ -11,11 +11,19 @@ async function loadFixtureDetails() {
   const r = await apiGet(`/fixtures?id=${selectedFixture.id}&timezone=Europe/Rome`);
   if (!r.ok) {
     setReferee(
-      `<p class="bad"><em>Errore API (fixture details): HTTP ${r.status}</em></p>`,
+      `<p class="bad"><em>Errore API (fixture details): HTTP ${safeHTML(r.status)}</em></p>`,
     );
     return;
   }
-  if (!r.arr || r.arr.length === 0) {
+
+  if (r.errors) {
+    setReferee(
+      `<p class="bad"><em>Errore nel recupero dettagli arbitro.</em></p>`,
+    );
+    return;
+  }
+
+  if (!Array.isArray(r.arr) || r.arr.length === 0) {
     setReferee(
       `<p class="muted"><em>Nessun dettaglio trovato per questo match.</em></p>`,
     );
@@ -27,21 +35,21 @@ async function loadFixtureDetails() {
   const venueName = f.fixture?.venue?.name ?? "—";
   const venueCity = f.fixture?.venue?.city ?? "—";
 
-  // Salvo SEMPRE ciò che arriva dall’API, senza inventare arbitri
   selectedFixture.referee = referee || "—";
 
   if (!selectedFixture.referee || selectedFixture.referee === "—") {
-  const now = new Date().toLocaleString("it-IT");
-  setReferee(`
-    <p class="muted"><em>Arbitro non ancora assegnato (ultima verifica: ${safeHTML(now)}).</em></p>
-    <p style="margin-top:10px;">
-      <button type="button" class="btn" id="btnRefRetry">Riprova ora</button>
-    </p>
-  `);
-  const btn = document.getElementById("btnRefRetry");
-  if (btn) btn.onclick = () => loadFixtureDetails();
-  return;
-}
+    const now = new Date().toLocaleString("it-IT");
+    setReferee(`
+      <p class="muted"><em>Arbitro non ancora assegnato (ultima verifica: ${safeHTML(now)}).</em></p>
+      <p style="margin-top:10px;">
+        <button type="button" class="btn" id="btnRefRetry">Riprova ora</button>
+      </p>
+    `);
+
+    const btn = document.getElementById("btnRefRetry");
+    if (btn) btn.onclick = () => loadFixtureDetails();
+    return;
+  }
 
   setReferee(`
     <div class="kv">
@@ -74,59 +82,6 @@ async function loadRefereeHistory() {
     return m >= 7 ? y : y - 1;
   }
 
-  async function countCardsFromEventsDetailed(fixtureId, homeId, awayId) {
-    const r = await apiGet(`/fixtures/events?fixture=${fixtureId}`);
-    if (!r.ok || r.errors) {
-      return {
-        yellow: 0,
-        red: 0,
-        total: 0,
-        homeYellow: 0,
-        homeRed: 0,
-        awayYellow: 0,
-        awayRed: 0,
-      };
-    }
-
-    let yellow = 0,
-      red = 0;
-    let homeYellow = 0,
-      homeRed = 0,
-      awayYellow = 0,
-      awayRed = 0;
-
-    for (const e of r.arr) {
-      if (e?.type !== "Card") continue;
-
-      const detail = String(e?.detail || "").toLowerCase();
-      const isYellow = detail.includes("yellow");
-      const isRed = detail.includes("red");
-      if (!isYellow && !isRed) continue;
-
-      const teamId = e?.team?.id ?? null;
-
-      if (isYellow) {
-        yellow += 1;
-        if (teamId === homeId) homeYellow += 1;
-        else if (teamId === awayId) awayYellow += 1;
-      } else if (isRed) {
-        red += 1;
-        if (teamId === homeId) homeRed += 1;
-        else if (teamId === awayId) awayRed += 1;
-      }
-    }
-
-    return {
-      yellow,
-      red,
-      total: yellow + red,
-      homeYellow,
-      homeRed,
-      awayYellow,
-      awayRed,
-    };
-  }
-
   function normalizeRefName(name) {
     const beforeComma = String(name || "").split(",")[0];
     const raw = beforeComma
@@ -134,11 +89,14 @@ async function loadRefereeHistory() {
       .replaceAll(".", " ")
       .replace(/\s+/g, " ")
       .trim();
+
     if (!raw) return { raw: "", initial: "", last: "" };
+
     const parts = raw.split(" ").filter(Boolean);
     const first = parts[0] || "";
     const last = parts.length >= 2 ? parts[parts.length - 1] : "";
     const initial = first ? first[0] : "";
+
     return { raw, initial, last };
   }
 
@@ -153,37 +111,87 @@ async function loadRefereeHistory() {
         (A.raw === B.raw || A.raw.includes(B.raw) || B.raw.includes(A.raw))
       );
     }
+
     if (A.last !== B.last) return false;
     if (A.initial && B.initial && A.initial !== B.initial) return false;
     return true;
   }
 
-  function fmt(d) {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
+  function isPastOrFinishedFixture(f) {
+    const status = String(f?.fixture?.status?.short || "").toUpperCase();
+    if (status === "FT" || status === "AET" || status === "PEN") return true;
+
+    const ts = Number(f?.fixture?.timestamp || 0);
+    const cutoff = selectedFixture?.date
+      ? Math.floor(new Date(selectedFixture.date).getTime() / 1000)
+      : Math.floor(Date.now() / 1000);
+
+    return ts > 0 && ts < cutoff;
   }
 
-  function bucketForFixture(f) {
-    const leagueName = f.league?.name || "—";
-    const leagueCountry = f.league?.country || "—";
-    const leagueId = f.league?.id ?? null;
+  async function countCardsFromEventsDetailed(fixtureId, homeId, awayId) {
+    let events = [];
 
-    if (leagueId && selectedFixture?.leagueId && leagueId === selectedFixture.leagueId) {
-      return `Stessa competizione: ${selectedFixture.leagueName || leagueName}`;
+    try {
+      if (typeof getFixtureEventsCached === "function") {
+        events = await getFixtureEventsCached(fixtureId);
+      } else {
+        const r = await apiGet(`/fixtures/events?fixture=${fixtureId}`);
+        events = r.ok && !r.errors && Array.isArray(r.arr) ? r.arr : [];
+      }
+    } catch (_) {
+      events = [];
     }
-    if (leagueCountry.toLowerCase() === "italy") return "Altre competizioni in Italia";
-    if (leagueCountry.toLowerCase() === "world" || leagueCountry.toLowerCase() === "europe")
-      return "Competizioni internazionali";
-    return "Estero / altre leghe";
+
+    let yellow = 0;
+    let red = 0;
+    let homeYellow = 0;
+    let homeRed = 0;
+    let awayYellow = 0;
+    let awayRed = 0;
+
+    for (const e of events) {
+      if (String(e?.type || "").toLowerCase() !== "card") continue;
+
+      const detail = String(e?.detail || "").toLowerCase();
+      const isYellow = detail.includes("yellow");
+      const isRed = detail.includes("red");
+      if (!isYellow && !isRed) continue;
+
+      const teamId = e?.team?.id ?? null;
+
+      if (isYellow) {
+        yellow += 1;
+        if (Number(teamId) === Number(homeId)) homeYellow += 1;
+        else if (Number(teamId) === Number(awayId)) awayYellow += 1;
+      } else {
+        red += 1;
+        if (Number(teamId) === Number(homeId)) homeRed += 1;
+        else if (Number(teamId) === Number(awayId)) awayRed += 1;
+      }
+    }
+
+    return {
+      yellow,
+      red,
+      total: yellow + red,
+      homeYellow,
+      homeRed,
+      awayYellow,
+      awayRed,
+    };
   }
 
   try {
     const refereeName = selectedFixture.referee;
-    const season = seasonStartYearFromFixtureDate(selectedFixture.date);
-    if (!season) {
-      refDiv.innerHTML = `<p class="bad"><em>Non riesco a ricavare la stagione dal match.</em></p>`;
+    const leagueId = selectedFixture?.leagueId ?? null;
+    const seasonFromFixture = Number(selectedFixture?.season);
+    const season = Number.isFinite(seasonFromFixture)
+      ? seasonFromFixture
+      : seasonStartYearFromFixtureDate(selectedFixture.date);
+
+    if (!leagueId || !Number.isFinite(Number(season))) {
+      refDiv.innerHTML = `<p class="bad"><em>Non riesco a ricavare lega o stagione per lo storico arbitro.</em></p>`;
       return;
     }
 
@@ -192,58 +200,57 @@ async function loadRefereeHistory() {
     if (Number.isNaN(limit) || limit < 1) limit = 10;
     if (limit > 50) limit = 50;
 
-    const showList = UI_STATE.refList;
-    const showTeamDetail = UI_STATE.refTeam;
+    const showList = !!UI_STATE?.refList;
+    const showTeamDetail = !!UI_STATE?.refTeam;
 
-    const baseDate = selectedFixture.date ? new Date(selectedFixture.date) : new Date();
-    const fromDate = new Date(baseDate);
-    fromDate.setDate(fromDate.getDate() - 365);
-
-    const from = fmt(fromDate);
-    const to = fmt(baseDate);
-
-    const ref = normalizeRefName(refereeName).raw;
-    const q = encodeURIComponent(ref);
-
-    const all1 = await apiGet(
-      `/fixtures?referee=${q}&season=${season}&from=${from}&to=${to}&status=FT&timezone=Europe/Rome`,
-    );
-    const all2 = await apiGet(
-      `/fixtures?referee=${q}&season=${season - 1}&from=${from}&to=${to}&status=FT&timezone=Europe/Rome`,
-    );
-
+    // Il vecchio codice usava referee+season+from/to con date che attraversavano
+    // stagioni diverse. Ora recuperiamo la lega per stagione e filtriamo noi.
+    const seasons = [Number(season), Number(season) - 1];
     let pool = [];
-    let usedGlobal = false;
 
-    if (all1.ok && !all1.errors) pool = pool.concat(all1.arr);
-    if (all2.ok && !all2.errors) pool = pool.concat(all2.arr);
-    if (pool.length > 0) usedGlobal = true;
-
-    if (pool.length === 0) {
-      if (!selectedFixture?.leagueId) {
-        refDiv.innerHTML = `<p class="bad"><em>Non ho leagueId: impossibile fallback.</em></p>`;
-        return;
-      }
-
-      const fx = await apiGet(
-        `/fixtures?league=${selectedFixture.leagueId}&season=${season}&from=${from}&to=${to}&status=FT&timezone=Europe/Rome`,
+    for (const s of seasons) {
+      const r = await apiGet(
+        `/fixtures?league=${leagueId}&season=${s}&timezone=Europe/Rome`,
+        { retries: 2, delays: [450, 900] },
       );
-      if (!fx.ok || fx.errors || fx.arr.length === 0) {
-        refDiv.innerHTML = `<p class="bad"><em>Non riesco a recuperare partite per lo storico arbitro.</em></p>`;
-        return;
+
+      if (r.ok && !r.errors && Array.isArray(r.arr) && r.arr.length) {
+        pool = pool.concat(r.arr);
       }
-      pool = fx.arr;
     }
+
+    if (!pool.length) {
+      refDiv.innerHTML = `<p class="bad"><em>Non riesco a recuperare partite per lo storico arbitro.</em></p>`;
+      return;
+    }
+
+    const seen = new Set();
+    pool = pool.filter((f) => {
+      const id = f?.fixture?.id ?? null;
+      if (!id || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+
+    const matchTs = selectedFixture?.date
+      ? new Date(selectedFixture.date).getTime()
+      : Date.now();
 
     const matchesByRef = pool
       .filter((f) => {
-        const r = f.fixture?.referee ?? "";
-        return r && sameReferee(r, refereeName);
+        const ref = f?.fixture?.referee ?? "";
+        const ts = f?.fixture?.date ? new Date(f.fixture.date).getTime() : 0;
+        return (
+          ref &&
+          sameReferee(ref, refereeName) &&
+          isPastOrFinishedFixture(f) &&
+          ts < matchTs
+        );
       })
       .sort((a, b) => new Date(b.fixture.date) - new Date(a.fixture.date));
 
     if (matchesByRef.length === 0) {
-      refDiv.innerHTML = `<p class="muted"><em>Nessuna partita trovata per arbitro "${safeHTML(refereeName)}".</em></p>`;
+      refDiv.innerHTML = `<p class="muted"><em>Nessuna partita precedente trovata per arbitro "${safeHTML(refereeName)}" nella stessa competizione.</em></p>`;
       return;
     }
 
@@ -255,9 +262,9 @@ async function loadRefereeHistory() {
     let maxTotal = null;
 
     for (const f of lastN) {
-      const fixtureId = f.fixture?.id;
-      const homeId = f.teams?.home?.id ?? null;
-      const awayId = f.teams?.away?.id ?? null;
+      const fixtureId = f?.fixture?.id;
+      const homeId = f?.teams?.home?.id ?? null;
+      const awayId = f?.teams?.away?.id ?? null;
 
       const cards = await countCardsFromEventsDetailed(fixtureId, homeId, awayId);
       cardMap.set(fixtureId, cards);
@@ -267,36 +274,22 @@ async function loadRefereeHistory() {
       if (maxTotal === null || cards.total > maxTotal) maxTotal = cards.total;
     }
 
-    const avgTotal = (sumTotal / lastN.length).toFixed(2);
-     try {
-  if (window.publishIndicatorData) {
-    window.publishIndicatorData("referee", { avgCards: Number(avgTotal) });
-  }
-} catch (e) {
-  console.error("publish indicators referee", e);
-}
+    const avgTotal = lastN.length ? (sumTotal / lastN.length).toFixed(2) : "0.00";
 
-    const groups = {};
-    for (const f of lastN) {
-      const b = bucketForFixture(f);
-      if (!groups[b]) groups[b] = { fixtures: [], yellow: 0, red: 0, total: 0 };
-      groups[b].fixtures.push(f);
-
-      const fixtureId = f.fixture?.id;
-      const c = cardMap.get(fixtureId) || { yellow: 0, red: 0, total: 0 };
-
-      groups[b].yellow += c.yellow;
-      groups[b].red += c.red;
-      groups[b].total += c.total;
+    try {
+      if (window.publishIndicatorData) {
+        window.publishIndicatorData("referee", { avgCards: Number(avgTotal) });
+      }
+    } catch (e) {
+      console.error("publish indicators referee", e);
     }
 
     refDiv.innerHTML = `
       <hr />
-      <p><strong>Riepilogo cartellini (ultime ${safeHTML(limit)})</strong></p>
+      <p><strong>Riepilogo cartellini (ultime ${safeHTML(lastN.length)})</strong></p>
       <div class="kv">
-        <div class="kv-row"><div class="k">Copertura</div><div class="v">${usedGlobal ? "Tutte le competizioni (se disponibili)" : "Solo stessa lega (fallback)"}</div></div>
-        <div class="kv-row"><div class="k">Range</div><div class="v">${safeHTML(from)} → ${safeHTML(to)}</div></div>
-        <div class="kv-row"><div class="k">Cartellini totali</div><div class="v">media <strong>${safeHTML(avgTotal)}</strong> — min <strong>${safeHTML(minTotal)}</strong> — max <strong>${safeHTML(maxTotal)}</strong></div></div>
+        <div class="kv-row"><div class="k">Copertura</div><div class="v">${safeHTML(selectedFixture.leagueName || "Stessa competizione")} • stagioni ${safeHTML(seasons.join(" + "))}</div></div>
+        <div class="kv-row"><div class="k">Cartellini totali</div><div class="v">media <strong>${safeHTML(avgTotal)}</strong> — min <strong>${safeHTML(minTotal ?? 0)}</strong> — max <strong>${safeHTML(maxTotal ?? 0)}</strong></div></div>
       </div>
 
       <p style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
@@ -330,50 +323,36 @@ async function loadRefereeHistory() {
     }
 
     if (divList) {
-      let html = `<p><strong>Storico partite (raggruppate)</strong></p>`;
+      const rows = lastN
+        .map((f) => {
+          const date = f?.fixture?.date
+            ? new Date(f.fixture.date).toLocaleDateString("it-IT")
+            : "—";
+          const home = f?.teams?.home?.name ?? "—";
+          const away = f?.teams?.away?.name ?? "—";
+          const comp = f?.league?.name ?? "—";
+          const c = cardMap.get(f?.fixture?.id) || { total: 0 };
 
-      for (const b of Object.keys(groups)) {
-        const g = groups[b];
-        const n = g.fixtures.length;
-        const avgT = (g.total / n).toFixed(2);
+          return `<li>${safeHTML(date)} — ${safeHTML(home)} vs ${safeHTML(away)} <em>(${safeHTML(comp)})</em> — Tot: <strong>${safeHTML(c.total)}</strong></li>`;
+        })
+        .join("");
 
-        const listHtml = g.fixtures
-          .map((f) => {
-            const date = f.fixture?.date ? new Date(f.fixture.date).toLocaleDateString("it-IT") : "—";
-            const home = f.teams?.home?.name ?? "—";
-            const away = f.teams?.away?.name ?? "—";
-            const comp = f.league?.name ?? "—";
-            const fixtureId = f.fixture?.id;
-            const c = cardMap.get(fixtureId) || { yellow: 0, red: 0, total: 0 };
-
-            return `<li>${safeHTML(date)} — ${safeHTML(home)} vs ${safeHTML(away)} <em>(${safeHTML(comp)})</em> — Tot: <strong>${safeHTML(c.total)}</strong></li>`;
-          })
-          .join("");
-
-        html += `
-          <hr />
-          <p><strong>${safeHTML(b)}</strong></p>
-          <ul>
-            <li>Partite: ${safeHTML(n)}</li>
-            <li>Media totali: ${safeHTML(avgT)} / partita</li>
-          </ul>
-          <ul>${listHtml}</ul>
-        `;
-      }
-
-      divList.innerHTML = html;
+      divList.innerHTML = `
+        <p><strong>Storico partite</strong></p>
+        <ul>${rows}</ul>
+      `;
     }
 
     if (divTeam) {
       const rows = lastN
         .map((f) => {
-          const date = f.fixture?.date ? new Date(f.fixture.date).toLocaleDateString("it-IT") : "—";
-          const home = f.teams?.home?.name ?? "—";
-          const away = f.teams?.away?.name ?? "—";
-          const comp = f.league?.name ?? "—";
-
-          const fixtureId = f.fixture?.id;
-          const c = cardMap.get(fixtureId) || {
+          const date = f?.fixture?.date
+            ? new Date(f.fixture.date).toLocaleDateString("it-IT")
+            : "—";
+          const home = f?.teams?.home?.name ?? "—";
+          const away = f?.teams?.away?.name ?? "—";
+          const comp = f?.league?.name ?? "—";
+          const c = cardMap.get(f?.fixture?.id) || {
             homeYellow: 0,
             homeRed: 0,
             awayYellow: 0,
@@ -393,12 +372,12 @@ async function loadRefereeHistory() {
 
       divTeam.innerHTML = `
         <hr />
-        <p><strong>Dettaglio per squadra (ultime ${safeHTML(limit)})</strong></p>
+        <p><strong>Dettaglio per squadra (ultime ${safeHTML(lastN.length)})</strong></p>
         <ul>${rows}</ul>
       `;
     }
   } catch (err) {
-    refDiv.innerHTML = `<p class="bad"><em>Errore storico arbitro: ${safeHTML(String(err.message || err))}</em></p>`;
+    console.error("loadRefereeHistory", err);
+    refDiv.innerHTML = `<p class="bad"><em>Errore storico arbitro: ${safeHTML(String(err?.message || err))}</em></p>`;
   }
 }
-
