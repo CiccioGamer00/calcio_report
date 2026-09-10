@@ -1,6 +1,6 @@
 // js/features/searchController.js
 // CALCIO REPORT CORE V2
-// Unico ingresso per suggerimenti, selezione squadra e caricamento fixture principale.
+// Unico ingresso per suggerimenti, selezione squadra e fixture principale.
 
 (() => {
   window.__CR_CORE_V2_SEARCH__ = true;
@@ -15,8 +15,6 @@
     document.getElementById("teamsList");
 
   if (!input) return;
-
-  // Con il dropdown custom evitiamo che la datalist nativa introduca un secondo flusso.
   if (box) input.removeAttribute("list");
 
   const SUGGEST_DEBOUNCE_MS = 250;
@@ -25,10 +23,10 @@
 
   let suggestTimer = null;
   let suggestSeq = 0;
-  let lastSuggestQuery = "";
-  let lastSuggestItems = [];
   let suggestAbort = null;
   let activeSearchAbort = null;
+  let lastSuggestQuery = "";
+  let lastSuggestItems = [];
   let pointerGesture = null;
 
   const MAJOR_TEAMS = new Set([
@@ -107,7 +105,7 @@
     document.getElementById("lineupsBox")?.classList.add("hidden");
   }
 
-  function hideSuggestions({ clear = false } = {}) {
+  function hideSuggestions(clear = false) {
     if (box) {
       box.classList.add("hidden");
       if (clear) box.innerHTML = "";
@@ -115,10 +113,21 @@
     if (clear && datalist) datalist.innerHTML = "";
   }
 
-  function scoreSuggestion(item, query) {
+  function mapTeams(rows) {
+    return (Array.isArray(rows) ? rows : [])
+      .map((row) => ({
+        id: row?.team?.id ?? null,
+        name: row?.team?.name ?? "",
+        logo: row?.team?.logo ?? "",
+        country: row?.team?.country ?? row?.team?.nation ?? "",
+      }))
+      .filter((team) => team.id && team.name);
+  }
+
+  function suggestionScore(team, query) {
     const q = norm(query);
-    const name = norm(item?.name);
-    const country = norm(item?.country);
+    const name = norm(team?.name);
+    const country = norm(team?.country);
     if (!q || !name) return -Infinity;
 
     let score = 0;
@@ -130,29 +139,15 @@
 
     if (MAJOR_TEAMS.has(name)) score += 3000;
     if (MAJOR_COUNTRIES.has(country)) score += 300;
-
-    // Preferenza leggera per il nome più compatto a parità di rilevanza.
-    score -= Math.min(name.length, 100);
-    return score;
+    return score - Math.min(name.length, 100);
   }
 
-  function rankSuggestions(items, query) {
+  function rankTeams(items, query) {
     return (Array.isArray(items) ? items : [])
-      .map((item) => ({ item, score: scoreSuggestion(item, query) }))
+      .map((team) => ({ team, score: suggestionScore(team, query) }))
       .filter((x) => Number.isFinite(x.score))
       .sort((a, b) => b.score - a.score)
-      .map((x) => x.item);
-  }
-
-  function mapTeams(apiRows) {
-    return (Array.isArray(apiRows) ? apiRows : [])
-      .map((row) => ({
-        id: row?.team?.id ?? null,
-        name: row?.team?.name ?? "",
-        logo: row?.team?.logo ?? "",
-        country: row?.team?.country ?? row?.team?.nation ?? "",
-      }))
-      .filter((team) => team.id && team.name);
+      .map((x) => x.team);
   }
 
   function renderSuggestions(items) {
@@ -161,7 +156,6 @@
 
     if (datalist) {
       datalist.innerHTML = list
-        .slice(0, 15)
         .map((team) => {
           const label = team.country ? `${team.country} — ${team.name}` : team.name;
           return `<option value="${safe(team.name)}" label="${safe(label)}"></option>`;
@@ -171,7 +165,7 @@
 
     if (!box) return;
     if (!list.length) {
-      hideSuggestions({ clear: true });
+      hideSuggestions(true);
       return;
     }
 
@@ -201,13 +195,12 @@
     box.classList.remove("hidden");
   }
 
-  function bestSuggestionFor(query) {
-    const q = norm(query);
-    if (!q || norm(lastSuggestQuery) !== q || !lastSuggestItems.length) return null;
-    return rankSuggestions(lastSuggestItems, query)[0] || null;
+  function bestVisibleSuggestion(query) {
+    if (norm(lastSuggestQuery) !== norm(query) || !lastSuggestItems.length) return null;
+    return rankTeams(lastSuggestItems, query)[0] || null;
   }
 
-  function cacheGetSuggestion(query) {
+  function getSuggestCache(query) {
     const key = norm(query);
     const hit = suggestCache.get(key);
     if (!hit) return null;
@@ -223,14 +216,14 @@
     if (q.length < 2) {
       lastSuggestQuery = "";
       lastSuggestItems = [];
-      hideSuggestions({ clear: true });
+      hideSuggestions(true);
       return;
     }
 
     const seq = ++suggestSeq;
     lastSuggestQuery = q;
 
-    const cached = cacheGetSuggestion(q);
+    const cached = getSuggestCache(q);
     if (cached) {
       if (seq === suggestSeq && norm(currentQuery()) === norm(q)) {
         renderSuggestions(cached);
@@ -241,14 +234,11 @@
     suggestAbort?.abort();
     suggestAbort = new AbortController();
 
-    const result = await window.apiGetV2(
-      `/teams?search=${encodeURIComponent(q)}`,
-      {
-        retries: 0,
-        signal: suggestAbort.signal,
-        cache: true,
-      },
-    );
+    const result = await window.apiGetV2(`/teams?search=${encodeURIComponent(q)}`, {
+      retries: 0,
+      signal: suggestAbort.signal,
+      cache: true,
+    });
 
     if (seq !== suggestSeq || norm(currentQuery()) !== norm(q)) return;
 
@@ -261,7 +251,7 @@
     });
 
     if (result.kind === "success") {
-      const items = rankSuggestions(mapTeams(result.arr), q);
+      const items = rankTeams(mapTeams(result.arr), q);
       suggestCache.set(norm(q), { ts: Date.now(), items });
       renderSuggestions(items);
       return;
@@ -273,21 +263,18 @@
       return;
     }
 
-    if (result.kind !== "aborted") {
-      // Su errore non trasformiamo il problema API in "nessuna squadra".
-      hideSuggestions();
-    }
+    // Un errore API non deve diventare un falso "nessun suggerimento".
+    if (result.kind !== "aborted") hideSuggestions(false);
   }
 
   function scheduleSuggestions() {
     clearTimeout(suggestTimer);
-    suggestTimer = null;
-
     const q = currentQuery();
+
     if (q.length < 2) {
       ++suggestSeq;
       suggestAbort?.abort();
-      hideSuggestions({ clear: true });
+      hideSuggestions(true);
       return;
     }
 
@@ -298,7 +285,7 @@
     }, SUGGEST_DEBOUNCE_MS);
   }
 
-  function resetLegacyPanelFlags() {
+  function resetLegacyPanels() {
     window.__PANEL_LOADED__ = {
       referee: false,
       teamsPanel: false,
@@ -336,7 +323,7 @@
     };
   }
 
-  function isValidFixture(fixture) {
+  function validFixture(fixture) {
     return Boolean(
       fixture?.id &&
         fixture?.leagueId &&
@@ -357,12 +344,13 @@
     const when = rawFixture?.fixture?.date
       ? new Date(rawFixture.fixture.date).toLocaleString("it-IT")
       : "—";
+
     setMatch(
       `<div class="matchHero"><div class="mh-main"><div class="mh-name">${safe(home)}</div><div class="mh-score">VS</div><div class="mh-name">${safe(away)}</div></div><div class="mh-meta">${safe(when)}</div></div>`,
     );
   }
 
-  function messageForResult(result, phase) {
+  function errorMessage(result, phase) {
     switch (result?.kind) {
       case "auth":
         return "Sessione non valida. Effettua nuovamente il login.";
@@ -388,21 +376,22 @@
   }
 
   async function resolveTeam(query, forcedTeam, searchId, signal) {
-    if (forcedTeam?.id && forcedTeam?.name) return forcedTeam;
+    if (forcedTeam?.id && forcedTeam?.name) {
+      return { team: forcedTeam };
+    }
 
-    const suggested = bestSuggestionFor(query);
-    if (suggested?.id) return suggested;
+    const suggested = bestVisibleSuggestion(query);
+    if (suggested?.id) {
+      return { team: suggested };
+    }
 
-    const result = await window.apiGetV2(
-      `/teams?search=${encodeURIComponent(query)}`,
-      {
-        retries: 1,
-        delays: [350],
-        signal,
-        searchId,
-        cache: true,
-      },
-    );
+    const result = await window.apiGetV2(`/teams?search=${encodeURIComponent(query)}`, {
+      retries: 1,
+      delays: [350],
+      signal,
+      searchId,
+      cache: true,
+    });
 
     debug("team lookup", {
       searchId,
@@ -415,8 +404,7 @@
     if (!window.crIsSearchActive(searchId)) return { stale: true };
     if (result.kind !== "success") return { result };
 
-    const ranked = rankSuggestions(mapTeams(result.arr), query);
-    const team = ranked[0] || null;
+    const team = rankTeams(mapTeams(result.arr), query)[0] || null;
     return team ? { team } : { result: { ...result, kind: "empty" } };
   }
 
@@ -427,7 +415,7 @@
     clearTimeout(suggestTimer);
     ++suggestSeq;
     suggestAbort?.abort();
-    hideSuggestions({ clear: true });
+    hideSuggestions(true);
 
     activeSearchAbort?.abort();
     activeSearchAbort = new AbortController();
@@ -436,7 +424,7 @@
     const signal = activeSearchAbort.signal;
 
     hideLineups();
-    resetLegacyPanelFlags();
+    resetLegacyPanels();
     setMatch(`<p class="muted"><em>Caricamento match...</em></p>`);
 
     if (typeof window.markWelcomeDone === "function") window.markWelcomeDone();
@@ -462,7 +450,7 @@
           );
         } else {
           window.crSetSearchFailure(searchId, "error", result);
-          setMatch(`<p class="bad"><em>${safe(messageForResult(result, "team"))}</em></p>`);
+          setMatch(`<p class="bad"><em>${safe(errorMessage(result, "team"))}</em></p>`);
         }
         return;
       }
@@ -505,26 +493,26 @@
       if (fixtureResult.kind !== "success") {
         window.crSetSearchFailure(searchId, "error", fixtureResult);
         setMatch(
-          `<p class="bad"><em>${safe(messageForResult(fixtureResult, "fixture"))}</em></p>`,
+          `<p class="bad"><em>${safe(errorMessage(fixtureResult, "fixture"))}</em></p>`,
         );
         return;
       }
 
-      const unique = [];
+      const uniqueFixtures = [];
       const seen = new Set();
       for (const fx of fixtureResult.arr || []) {
-        const id = fx?.fixture?.id ?? null;
-        if (!id || seen.has(id)) continue;
-        seen.add(id);
-        unique.push(fx);
-        if (unique.length >= 2) break;
+        const fixtureId = fx?.fixture?.id ?? null;
+        if (!fixtureId || seen.has(fixtureId)) continue;
+        seen.add(fixtureId);
+        uniqueFixtures.push(fx);
+        if (uniqueFixtures.length >= 2) break;
       }
 
-      const rawFixture = unique[0] || null;
-      const nextTeamFixture = unique[1] || null;
+      const rawFixture = uniqueFixtures[0] || null;
+      const nextTeamFixture = uniqueFixtures[1] || null;
       const fixture = normalizeFixture(rawFixture);
 
-      if (!rawFixture || !isValidFixture(fixture)) {
+      if (!rawFixture || !validFixture(fixture)) {
         window.crSetSearchFailure(searchId, "error", {
           kind: "invalid_fixture",
           fixture,
@@ -535,7 +523,7 @@
         return;
       }
 
-      // Commit atomico: team e fixture diventano globali solo adesso.
+      // Solo qui la nuova selezione diventa visibile al resto dell'app.
       if (!window.crCommitSelection(searchId, team, fixture)) return;
 
       window.CR_STATE.matchExtras.nextTeam = nextTeamFixture;
@@ -548,6 +536,7 @@
       });
     } catch (err) {
       if (!window.crIsSearchActive(searchId) || err?.name === "AbortError") return;
+
       const failure = {
         kind: "controller_error",
         message: String(err?.message || err || "unknown error"),
@@ -564,7 +553,8 @@
     }
   }
 
-  // INPUT: il controller V2 gestisce il flusso e blocca i listener legacy registrati dopo.
+  // I listener capture vengono registrati prima di teamFlow.js e neutralizzano
+  // i vecchi ingressi senza dover smontare subito quel file enorme.
   input.addEventListener(
     "input",
     (event) => {
@@ -576,9 +566,7 @@
 
   input.addEventListener(
     "change",
-    (event) => {
-      event.stopImmediatePropagation();
-    },
+    (event) => event.stopImmediatePropagation(),
     true,
   );
 
@@ -609,7 +597,7 @@
     "blur",
     (event) => {
       event.stopImmediatePropagation();
-      setTimeout(() => hideSuggestions(), 120);
+      setTimeout(() => hideSuggestions(false), 120);
     },
     true,
   );
@@ -633,7 +621,6 @@
         const item = event.target?.closest?.(".suggestItem");
         if (!item) return;
 
-        // Blocca il vecchio pointerdown di teamFlow senza impedire lo scroll touch.
         event.stopImmediatePropagation();
         pointerGesture = {
           pointerId: event.pointerId,
@@ -686,7 +673,7 @@
         if (!team.id || !team.name) return;
 
         input.value = team.name;
-        hideSuggestions({ clear: true });
+        hideSuggestions(true);
         startTeamSearch(team).catch((err) => console.error("CR V2 suggestion", err));
       },
       true,
@@ -695,8 +682,8 @@
 
   window.startTeamSearch = startTeamSearch;
 
-  // teamFlow.js viene caricato dopo questo file e definisce ancora showTeam().
-  // A parsing terminato sostituiamo quell'ingresso legacy con il controller V2.
+  // teamFlow.js viene caricato subito dopo e ridefinisce showTeam().
+  // Terminato il parsing, questo diventa l'unico ingresso pubblico.
   setTimeout(() => {
     window.showTeam = (forcedTeam = null) => startTeamSearch(forcedTeam);
   }, 0);
