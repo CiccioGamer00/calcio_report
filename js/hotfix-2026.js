@@ -1,18 +1,28 @@
 // js/hotfix-2026.js
-// Hotfix settembre 2026:
-// 1) bottone Cerca sempre operativo
-// 2) recupero suggerimenti se il debounce principale non li mostra
-// 3) formazioni: ufficiale subito, stima solo su richiesta
-// 4) riparazione moduli a 4 linee (es. 4-2-3-1)
+// Hotfix settembre 2026 - ricerca/UX/formazioni
+// Obiettivi:
+// 1) una sola ricerca per azione utente (niente reload al primo click sui tab)
+// 2) suggerimenti stabili mentre si completa il nome della squadra
+// 3) bottone Cerca affidabile anche senza selezionare la tendina
+// 4) formazione ufficiale leggera; stima solo su richiesta
+// 5) correzione moduli a 4 linee (es. 4-2-3-1)
 
 (() => {
   let applied = false;
+  let recoveryTimer = null;
+  let lastGoodSuggestItems = [];
+  let searchInFlight = null;
+  let searchInFlightKey = "";
 
   function normQuery(value) {
     if (typeof window.sanitizeSearch === "function") {
       return window.sanitizeSearch(value);
     }
     return String(value || "").trim();
+  }
+
+  function normText(value) {
+    return String(value || "").trim().toLowerCase();
   }
 
   function getInput() {
@@ -26,88 +36,262 @@
     return document.getElementById("teamSuggestBox");
   }
 
-  function hasVisibleSuggestions() {
+  function readVisibleSuggestItems() {
     const box = getSuggestBox();
-    return !!(
-      box &&
-      !box.classList.contains("hidden") &&
-      box.querySelector(".suggestItem")
-    );
+    if (!box) return [];
+
+    return Array.from(box.querySelectorAll(".suggestItem"))
+      .map((btn) => ({
+        id: Number(btn.getAttribute("data-team-id") || 0) || null,
+        name: btn.getAttribute("data-team-name") || "",
+        logo: btn.getAttribute("data-team-logo") || "",
+        country:
+          btn.querySelector(".suggestMeta")?.textContent?.trim() === "—"
+            ? ""
+            : btn.querySelector(".suggestMeta")?.textContent?.trim() || "",
+      }))
+      .filter((x) => x.id && x.name);
+  }
+
+  function rememberVisibleSuggestions() {
+    const items = readVisibleSuggestItems();
+    if (items.length) lastGoodSuggestItems = items;
+  }
+
+  function matchingSuggestions(items, query) {
+    const q = normText(query);
+    if (!q) return [];
+    return (items || []).filter((x) => normText(x?.name).includes(q));
+  }
+
+  function hasUsefulVisibleSuggestions(query) {
+    const box = getSuggestBox();
+    if (!box || box.classList.contains("hidden")) return false;
+    return matchingSuggestions(readVisibleSuggestItems(), query).length > 0;
+  }
+
+  function hideSuggestions() {
+    if (typeof window.hideSuggestBox === "function") {
+      window.hideSuggestBox();
+      return;
+    }
+    const box = getSuggestBox();
+    if (!box) return;
+    box.classList.add("hidden");
+  }
+
+  function normalizeTeamRows(arr) {
+    return (Array.isArray(arr) ? arr : [])
+      .map((t) => ({
+        id: t?.team?.id ?? null,
+        name: t?.team?.name ?? "",
+        logo: t?.team?.logo ?? "",
+        country: t?.team?.country ?? t?.team?.nation ?? "",
+      }))
+      .filter((x) => x.id && x.name);
+  }
+
+  function switchToMatchView() {
+    document
+      .querySelectorAll(".stageView")
+      .forEach((el) => el.classList.add("hidden"));
+    document.getElementById("matchView")?.classList.remove("hidden");
+
+    const nav = document.getElementById("panelTabs");
+    if (nav) {
+      nav
+        .querySelectorAll(".tab")
+        .forEach((b) => b.classList.remove("is-active"));
+      nav.querySelector('.tab[data-view="match"]')?.classList.add("is-active");
+    }
+  }
+
+  function clearLineupsForNewSearch() {
+    const box = document.getElementById("lineupsBox");
+    const content = document.getElementById("lineupsContent");
+    box?.classList.add("hidden");
+    if (content) {
+      content.innerHTML = `<p class="muted"><em>Formazioni non disponibili.</em></p>`;
+    }
+  }
+
+  function applyShowTeamCoordinator() {
+    if (
+      typeof window.showTeam !== "function" ||
+      window.showTeam.__crSearchCoordinator
+    ) {
+      return;
+    }
+
+    const original = window.showTeam;
+
+    const wrapped = async function (...args) {
+      const forced = args?.[0] || null;
+      const q = normQuery(getInput()?.value || "");
+      const key = forced?.id ? `id:${forced.id}` : `q:${normText(q)}`;
+
+      if (searchInFlight && key && key === searchInFlightKey) {
+        return searchInFlight;
+      }
+
+      if (searchInFlight) {
+        try {
+          await searchInFlight;
+        } catch (_) {}
+      }
+
+      switchToMatchView();
+      clearLineupsForNewSearch();
+      hideSuggestions();
+
+      const promise = Promise.resolve(original.apply(this, args));
+      searchInFlight = promise;
+      searchInFlightKey = key;
+
+      try {
+        return await promise;
+      } finally {
+        if (searchInFlight === promise) {
+          searchInFlight = null;
+          searchInFlightKey = "";
+        }
+      }
+    };
+
+    wrapped.__crSearchCoordinator = true;
+    window.showTeam = wrapped;
   }
 
   function applySearchFixes() {
     const input = getInput();
     const btn = document.getElementById("btnSearch");
+    if (!input) return;
 
-    if (btn && !btn.dataset.crSearchHotfix) {
-      btn.dataset.crSearchHotfix = "1";
-      btn.addEventListener("click", async (e) => {
-        e.preventDefault();
-        try {
-          if (typeof window.markWelcomeDone === "function") {
-            window.markWelcomeDone();
+    if (!input.dataset.crChangeFix) {
+      input.dataset.crChangeFix = "1";
+      input.addEventListener(
+        "change",
+        (e) => {
+          e.stopImmediatePropagation();
+          hideSuggestions();
+        },
+        true,
+      );
+    }
+
+    if (!input.dataset.crSuggestFix) {
+      input.dataset.crSuggestFix = "1";
+
+      input.addEventListener(
+        "input",
+        () => {
+          rememberVisibleSuggestions();
+          clearTimeout(recoveryTimer);
+
+          const q = normQuery(input.value);
+          if (!q || q.length < 2) return;
+
+          const localMatches = matchingSuggestions(lastGoodSuggestItems, q);
+
+          if (localMatches.length && typeof window.updateDatalist === "function") {
+            setTimeout(() => {
+              if (normQuery(input.value) !== q) return;
+              window.updateDatalist(localMatches);
+            }, 0);
           }
-          if (typeof window.showTeam === "function") {
-            await window.showTeam();
-          }
-        } catch (err) {
-          console.error("Search button hotfix error", err);
+
+          recoveryTimer = setTimeout(async () => {
+            if (normQuery(input.value) !== q) return;
+            if (hasUsefulVisibleSuggestions(q)) return;
+
+            if (localMatches.length && typeof window.updateDatalist === "function") {
+              window.updateDatalist(localMatches);
+              return;
+            }
+
+            try {
+              if (typeof window.apiGet !== "function") return;
+              const r = await window.apiGet(
+                `/teams?search=${encodeURIComponent(q)}`,
+                { retries: 1, delays: [350] },
+              );
+              const items = r?.ok && !r?.errors ? normalizeTeamRows(r.arr) : [];
+              if (
+                normQuery(input.value) === q &&
+                items.length &&
+                typeof window.updateDatalist === "function"
+              ) {
+                lastGoodSuggestItems = items;
+                window.updateDatalist(items);
+              }
+            } catch (err) {
+              console.warn("Suggestion recovery failed", err);
+            }
+          }, 520);
+        },
+        true,
+      );
+
+      input.addEventListener("focus", () => {
+        const q = normQuery(input.value);
+        const localMatches = matchingSuggestions(lastGoodSuggestItems, q);
+        if (
+          q.length >= 2 &&
+          localMatches.length &&
+          typeof window.updateDatalist === "function"
+        ) {
+          window.updateDatalist(localMatches);
         }
       });
     }
 
-    if (!input || input.dataset.crSuggestHotfix) return;
-    input.dataset.crSuggestHotfix = "1";
+    if (btn && !btn.dataset.crSearchFix) {
+      btn.dataset.crSearchFix = "1";
+      btn.addEventListener(
+        "click",
+        async (e) => {
+          e.preventDefault();
+          e.stopImmediatePropagation();
 
-    let timer = null;
-    let requestSeq = 0;
+          const q = normQuery(input.value);
+          if (!q || q.length < 2) return;
 
-    const scheduleRecovery = (delay = 450) => {
-      clearTimeout(timer);
-      const q = normQuery(input.value);
-      if (!q || q.length < 2) return;
-
-      const seq = ++requestSeq;
-      timer = setTimeout(async () => {
-        const nowQ = normQuery(input.value);
-        if (seq !== requestSeq || nowQ !== q || hasVisibleSuggestions()) return;
-
-        try {
-          if (typeof window.findSuggestedByName === "function") {
-            const exact = window.findSuggestedByName(input.value);
-            if (
-              exact &&
-              String(exact.name || "").trim().toLowerCase() ===
-                String(input.value || "").trim().toLowerCase()
-            ) {
-              return;
+          try {
+            if (typeof window.markWelcomeDone === "function") {
+              window.markWelcomeDone();
             }
+
+            rememberVisibleSuggestions();
+            hideSuggestions();
+
+            btn.disabled = true;
+            const oldText = btn.textContent;
+            btn.dataset.crOldText = oldText || "Cerca";
+            btn.textContent = "Cerco…";
+
+            let forced = null;
+            if (typeof window.findSuggestedByName === "function") {
+              forced = window.findSuggestedByName(input.value);
+            }
+            if (!forced) {
+              const local = matchingSuggestions(lastGoodSuggestItems, q);
+              forced = local[0] || null;
+            }
+
+            if (typeof window.showTeam === "function") {
+              await window.showTeam(forced);
+            }
+          } catch (err) {
+            console.error("Search button error", err);
+          } finally {
+            btn.disabled = false;
+            btn.textContent = btn.dataset.crOldText || "Cerca";
+            delete btn.dataset.crOldText;
           }
-        } catch (_) {}
-
-        if (
-          typeof window.fetchSuggestions !== "function" ||
-          typeof window.updateDatalist !== "function"
-        ) {
-          return;
-        }
-
-        try {
-          const items = await window.fetchSuggestions(q);
-          if (seq !== requestSeq || normQuery(input.value) !== q) return;
-          if (Array.isArray(items) && items.length) {
-            window.updateDatalist(items);
-          }
-        } catch (err) {
-          console.warn("Suggestion recovery failed", err);
-        }
-      }, delay);
-    };
-
-    input.addEventListener("input", () => scheduleRecovery(450));
-    input.addEventListener("focus", () => {
-      if (!hasVisibleSuggestions()) scheduleRecovery(250);
-    });
+        },
+        true,
+      );
+    }
   }
 
   function roleOf(player) {
@@ -186,7 +370,7 @@
       ...curByRole.DEF,
       ...candByRole.DEF,
     ];
-    let mids = take(middleSources, desired.MID, "MID");
+    const mids = take(middleSources, desired.MID, "MID");
 
     const allSources = [
       ...current,
@@ -314,7 +498,7 @@
 
     if (
       typeof window.showTeam !== "function" ||
-      typeof apiGet !== "function" ||
+      typeof window.apiGet !== "function" ||
       typeof window.loadLineupsPitch !== "function"
     ) {
       setTimeout(applyAll, 80);
@@ -322,10 +506,11 @@
     }
 
     applied = true;
+    applyShowTeamCoordinator();
     applySearchFixes();
     applyFormationFix();
     applyLineupOnDemandFix();
-    console.info("Calcio Report hotfix 2026 attivo");
+    console.info("Calcio Report hotfix 2026 v2 attivo");
   }
 
   if (document.readyState === "loading") {
