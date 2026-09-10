@@ -17,8 +17,8 @@
   if (!input) return;
   if (box) input.removeAttribute("list");
 
-  const SUGGEST_DEBOUNCE_MS = 250;
-  const SUGGEST_CACHE_TTL_MS = 2 * 60 * 1000;
+  const SUGGEST_DEBOUNCE_MS = 300;
+  const SUGGEST_CACHE_TTL_MS = 10 * 60 * 1000;
   const suggestCache = new Map();
 
   let suggestTimer = null;
@@ -30,8 +30,6 @@
   let lastSuggestItems = [];
   let pointerGesture = null;
 
-  // Priorità locale: nessuna chiamata API aggiuntiva.
-  // Nome + paese evitano che un club minore con nome identico vinca sul club atteso.
   const PREFERRED_CLUBS = new Set([
     "italy|ac milan",
     "italy|inter",
@@ -130,13 +128,7 @@
     if (result?.errors) parts.push(`errors=${compactErrors(result.errors)}`);
 
     const text = parts.join(" • ");
-    window.__CR_LAST_SEARCH_DEBUG__ = {
-      phase,
-      searchId,
-      team,
-      result,
-      text,
-    };
+    window.__CR_LAST_SEARCH_DEBUG__ = { phase, searchId, team, result, text };
 
     return `<div class="muted" style="margin-top:10px;font-size:12px;line-height:1.4;word-break:break-word"><code>${safe(text)}</code></div>`;
   }
@@ -201,6 +193,47 @@
       .map((x) => x.team);
   }
 
+  function rememberSuggestions(query, items) {
+    suggestCache.set(norm(query), {
+      ts: Date.now(),
+      query: String(query || "").trim(),
+      items: Array.isArray(items) ? items : [],
+    });
+  }
+
+  function getExactSuggestCache(query) {
+    const key = norm(query);
+    const hit = suggestCache.get(key);
+    if (!hit) return null;
+    if (Date.now() - hit.ts > SUGGEST_CACHE_TTL_MS) {
+      suggestCache.delete(key);
+      return null;
+    }
+    return hit.items;
+  }
+
+  function getReusableSuggestCache(query) {
+    const q = norm(query);
+    if (!q) return null;
+
+    let best = null;
+    for (const [key, entry] of suggestCache.entries()) {
+      if (Date.now() - entry.ts > SUGGEST_CACHE_TTL_MS) {
+        suggestCache.delete(key);
+        continue;
+      }
+
+      // Una ricerca precedente più corta contiene un superset utile.
+      // Es. risposta di "juv" riusata per "juventus" senza nuova API call.
+      if (!q.startsWith(key) || !entry.items?.length) continue;
+      if (!best || key.length > best.key.length) best = { key, entry };
+    }
+
+    if (!best) return null;
+    const filtered = rankTeams(best.entry.items, query);
+    return filtered.length ? filtered : null;
+  }
+
   function renderSuggestions(items) {
     const list = (Array.isArray(items) ? items : []).slice(0, 12);
     lastSuggestItems = list;
@@ -229,11 +262,7 @@
             data-team-name="${safe(team.name)}"
             data-team-logo="${safe(team.logo || "")}"
             data-team-country="${safe(team.country || "")}">
-            ${
-              team.logo
-                ? `<img class="suggestLogo" src="${safe(team.logo)}" alt="" onerror="this.style.display='none'; this.parentElement.querySelector('.suggestLogoFallback')?.classList.remove('hidden')" />`
-                : ""
-            }
+            ${team.logo ? `<img class="suggestLogo" src="${safe(team.logo)}" alt="" onerror="this.style.display='none'; this.parentElement.querySelector('.suggestLogoFallback')?.classList.remove('hidden')" />` : ""}
             <span class="suggestLogoFallback ${team.logo ? "hidden" : ""}">⚽</span>
             <span class="suggestText">
               <span class="suggestName">${safe(team.name)}</span>
@@ -246,17 +275,6 @@
     box.classList.remove("hidden");
   }
 
-  function getSuggestCache(query) {
-    const key = norm(query);
-    const hit = suggestCache.get(key);
-    if (!hit) return null;
-    if (Date.now() - hit.ts > SUGGEST_CACHE_TTL_MS) {
-      suggestCache.delete(key);
-      return null;
-    }
-    return hit.items;
-  }
-
   function bestKnownSuggestion(query) {
     const q = norm(query);
 
@@ -264,10 +282,11 @@
       return rankTeams(lastSuggestItems, query)[0] || null;
     }
 
-    const cached = getSuggestCache(query);
-    if (cached?.length) return rankTeams(cached, query)[0] || null;
+    const exact = getExactSuggestCache(query);
+    if (exact?.length) return rankTeams(exact, query)[0] || null;
 
-    return null;
+    const reusable = getReusableSuggestCache(query);
+    return reusable?.[0] || null;
   }
 
   async function loadSuggestions(query) {
@@ -282,11 +301,21 @@
     const seq = ++suggestSeq;
     lastSuggestQuery = q;
 
-    const cached = getSuggestCache(q);
-    if (cached) {
+    const exact = getExactSuggestCache(q);
+    if (exact) {
       if (seq === suggestSeq && norm(currentQuery()) === norm(q)) {
-        renderSuggestions(cached);
+        renderSuggestions(rankTeams(exact, q));
       }
+      return;
+    }
+
+    const reusable = getReusableSuggestCache(q);
+    if (reusable) {
+      rememberSuggestions(q, reusable);
+      if (seq === suggestSeq && norm(currentQuery()) === norm(q)) {
+        renderSuggestions(reusable);
+      }
+      debug("suggest local reuse", { q, results: reusable.length });
       return;
     }
 
@@ -300,12 +329,7 @@
       cache: true,
     });
 
-    pendingSuggestion = {
-      key: norm(q),
-      promise,
-      controller,
-    };
-
+    pendingSuggestion = { key: norm(q), promise, controller };
     const result = await promise;
 
     if (pendingSuggestion?.promise === promise) pendingSuggestion = null;
@@ -321,18 +345,17 @@
 
     if (result.kind === "success") {
       const items = rankTeams(mapTeams(result.arr), q);
-      suggestCache.set(norm(q), { ts: Date.now(), items });
+      rememberSuggestions(q, items);
       renderSuggestions(items);
       return;
     }
 
     if (result.kind === "empty") {
-      suggestCache.set(norm(q), { ts: Date.now(), items: [] });
+      rememberSuggestions(q, []);
       renderSuggestions([]);
       return;
     }
 
-    // Un errore API non deve diventare un falso "nessun suggerimento".
     if (result.kind !== "aborted") hideSuggestions(false);
   }
 
@@ -345,6 +368,17 @@
       suggestAbort?.abort();
       pendingSuggestion = null;
       hideSuggestions(true);
+      return;
+    }
+
+    const reusable = getReusableSuggestCache(q);
+    if (reusable) {
+      ++suggestSeq;
+      suggestAbort?.abort();
+      pendingSuggestion = null;
+      lastSuggestQuery = q;
+      rememberSuggestions(q, reusable);
+      renderSuggestions(reusable);
       return;
     }
 
@@ -475,8 +509,7 @@
     }
 
     const result = await window.apiGetV2(`/teams?search=${encodeURIComponent(query)}`, {
-      retries: 1,
-      delays: [350],
+      retries: 0,
       signal,
       searchId,
       cache: true,
@@ -504,9 +537,6 @@
     if (query.length < 2) return;
 
     const queryKey = norm(query);
-
-    // Prima di chiudere i suggerimenti salviamo sia la scelta migliore già pronta,
-    // sia l'eventuale richiesta identica ancora in corso.
     const preResolvedTeam = forcedTeam || bestKnownSuggestion(query);
     const pendingTeamPromise =
       pendingSuggestion?.key === queryKey ? pendingSuggestion.promise : null;
@@ -514,8 +544,6 @@
     clearTimeout(suggestTimer);
     ++suggestSeq;
 
-    // Se la richiesta suggerimenti è la stessa ricerca, NON la abortiamo:
-    // la riutilizziamo per evitare due chiamate /teams?search identiche.
     if (!pendingTeamPromise) {
       suggestAbort?.abort();
       pendingSuggestion = null;
@@ -583,8 +611,7 @@
       const fixtureResult = await window.apiGetV2(
         `/fixtures?team=${encodeURIComponent(team.id)}&next=2&timezone=Europe/Rome`,
         {
-          retries: 1,
-          delays: [400],
+          retries: 0,
           signal,
           searchId,
           cache: true,
@@ -643,7 +670,6 @@
         return;
       }
 
-      // Commit atomico: solo una fixture valida rende globale la nuova selezione.
       if (!window.crCommitSelection(searchId, team, fixture)) return;
 
       window.CR_STATE.matchExtras.nextTeam = nextTeamFixture;
@@ -685,7 +711,6 @@
     }
   }
 
-  // Listener in capture: registrati prima di teamFlow.js, neutralizzano i vecchi ingressi.
   input.addEventListener(
     "input",
     (event) => {
@@ -717,8 +742,10 @@
     (event) => {
       event.stopImmediatePropagation();
       const q = currentQuery();
-      if (q.length >= 2 && norm(lastSuggestQuery) === norm(q) && lastSuggestItems.length) {
-        renderSuggestions(lastSuggestItems);
+      const items = getReusableSuggestCache(q) || getExactSuggestCache(q);
+      if (q.length >= 2 && items?.length) {
+        lastSuggestQuery = q;
+        renderSuggestions(items);
       }
     },
     true,
@@ -813,8 +840,6 @@
 
   window.startTeamSearch = startTeamSearch;
 
-  // teamFlow.js viene caricato subito dopo e ridefinisce showTeam().
-  // Terminato il parsing, questo controller riprende l'unico ingresso pubblico.
   setTimeout(() => {
     window.showTeam = (forcedTeam = null) => startTeamSearch(forcedTeam);
   }, 0);
