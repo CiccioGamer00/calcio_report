@@ -188,3 +188,81 @@ async function getCornersForFixtureTeams(fixtureId, homeId, awayId) {
 
   return out;
 }
+
+/* =========================
+   RESILIENZA NEXT FIXTURES
+   ========================= */
+function installResilientNextFixtures() {
+  if (typeof window.fetchNextFixtures !== "function") {
+    setTimeout(installResilientNextFixtures, 80);
+    return;
+  }
+  if (window.fetchNextFixtures.__crResilientNext) return;
+
+  const original = window.fetchNextFixtures;
+
+  function isUsableFutureFixture(fx) {
+    const status = String(fx?.fixture?.status?.short || "").toUpperCase();
+    const blocked = new Set(["FT", "AET", "PEN", "CANC", "ABD", "AWD", "WO"]);
+    if (blocked.has(status)) return false;
+
+    const ts = Number(fx?.fixture?.timestamp || 0);
+    if (!ts) return false;
+
+    return ts >= Math.floor(Date.now() / 1000) - 6 * 60 * 60;
+  }
+
+  function sortSoonest(rows) {
+    return [...(rows || [])].sort((a, b) => {
+      const ta = Number(a?.fixture?.timestamp || 0);
+      const tb = Number(b?.fixture?.timestamp || 0);
+      return ta - tb;
+    });
+  }
+
+  window.fetchNextFixtures = async function (teamId, count = 2) {
+    const wanted = Math.max(1, Number(count) || 2);
+    let primary = [];
+
+    try {
+      primary = await original.call(this, teamId, Math.max(wanted, 3));
+    } catch (err) {
+      console.warn("Primary next fixtures failed", teamId, err);
+    }
+
+    primary = sortSoonest(
+      uniqueFixtures((primary || []).filter(isUsableFutureFixture)),
+    );
+
+    if (primary.length >= wanted) return primary.slice(0, wanted);
+
+    // Se next=N torna vuoto o incompleto, usiamo una query diversa e quindi
+    // anche una cache-key diversa sul Worker.
+    const from = new Date();
+    const to = new Date(from.getTime() + 180 * 24 * 60 * 60 * 1000);
+
+    try {
+      const rf = await apiGet(
+        `/fixtures?team=${encodeURIComponent(teamId)}&from=${dateOnlyUTC(from)}&to=${dateOnlyUTC(to)}&timezone=Europe/Rome`,
+        { retries: 1, delays: [500] },
+      );
+
+      const fallbackRows =
+        rf.ok && !rf.errors && Array.isArray(rf.arr)
+          ? rf.arr.filter(isUsableFutureFixture)
+          : [];
+
+      const merged = sortSoonest(uniqueFixtures([...primary, ...fallbackRows]));
+      return merged.slice(0, wanted);
+    } catch (err) {
+      console.warn("Fallback next fixtures failed", teamId, err);
+      return primary.slice(0, wanted);
+    }
+  };
+
+  window.fetchNextFixtures.__crResilientNext = true;
+  console.info("Calcio Report resilient next-fixtures attivo");
+}
+
+// teamFlow viene caricato dopo questo file: differiamo l'aggancio.
+setTimeout(installResilientNextFixtures, 0);
