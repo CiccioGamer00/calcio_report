@@ -20,7 +20,7 @@ function getFromLocalCache(url) {
 }
 
 function setInLocalCache(url, data) {
-  // Solo successi semantici reali. Mai errori, auth/paywall/rate-limit.
+  // Solo successi semantici reali. Mai empty/error/auth/paywall/rate-limit.
   if (data?.kind === "success" && data.ok && !data.errors) {
     __API_FRONTEND_CACHE__.set(url, { ts: Date.now(), data });
   }
@@ -37,6 +37,29 @@ function hasApiErrors(json) {
   return Boolean(errors);
 }
 
+function hasRateLimitError(json) {
+  if (!json || typeof json !== "object") return false;
+
+  const candidates = [json.error, json.message, json.errors]
+    .filter(Boolean)
+    .map((value) => {
+      try {
+        return typeof value === "string" ? value : JSON.stringify(value);
+      } catch {
+        return String(value);
+      }
+    })
+    .join(" ")
+    .toLowerCase();
+
+  return (
+    candidates.includes("ratelimit") ||
+    candidates.includes("rate limit") ||
+    candidates.includes("too many requests") ||
+    candidates.includes("requests per minute")
+  );
+}
+
 function classifyResult({ status, ok, json, parseError, aborted, networkError }) {
   if (aborted) return "aborted";
   if (networkError) return "network_error";
@@ -50,6 +73,9 @@ function classifyResult({ status, ok, json, parseError, aborted, networkError })
   if (!ok) return status >= 500 ? "server_error" : "http_error";
 
   if (parseError) return "parse_error";
+
+  // API-Football può restituire HTTP 200 e mettere il rate-limit dentro `errors`.
+  if (hasRateLimitError(json)) return "rate_limit";
   if (hasApiErrors(json)) return "api_error";
 
   const response = json?.response;
@@ -61,8 +87,9 @@ function classifyResult({ status, ok, json, parseError, aborted, networkError })
 }
 
 function shouldRetryV2(result) {
-  // Retry solo per problemi transitori. Mai per errori semantici o gate.
-  return ["network_error", "rate_limit", "server_error"].includes(result?.kind);
+  // Retry solo per problemi di rete/5xx realmente transitori.
+  // Un rate-limit per minuto non va martellato con un secondo tentativo immediato.
+  return ["network_error", "server_error"].includes(result?.kind);
 }
 
 function buildErrors(json, fallback = null) {
