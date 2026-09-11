@@ -189,7 +189,7 @@ Important: the deployed Worker still calls API-Football directly. VPS relay inte
 
 ## Relay status
 
-Files already prepared:
+Files prepared and installed from `core-v2`:
 
 ```text
 relay/package.json
@@ -200,22 +200,21 @@ relay/deploy/relay.env.example
 relay/deploy/Caddyfile.example
 ```
 
-Design goals:
+Design / implemented protections:
 
-- API-Football key stored only as VPS environment variable;
-- shared Worker/VPS secret stored only as environment secret;
+- API-Football key stored only in VPS environment file;
+- shared Worker/VPS secret stored only in environment secret;
 - HMAC SHA-256 request authentication;
 - timestamp validation;
 - GET only;
 - API-Football endpoint allowlist;
-- relay listens internally on `127.0.0.1:8788`;
-- HTTPS handled by Caddy reverse proxy;
+- relay listens only on `127.0.0.1:8788`;
 - outbound pacing below API-Football per-second limit;
 - deduplicate identical concurrent requests;
 - main data cache remains Cloudflare edge cache;
 - service runs under dedicated unprivileged user `calcioreport` with systemd hardening.
 
-Deployment layout planned on VPS:
+Deployment layout on VPS:
 
 ```text
 /opt/calcio-report/relay/
@@ -224,9 +223,24 @@ Deployment layout planned on VPS:
 /etc/caddy/Caddyfile
 ```
 
-The internal relay port `8788` must stay closed in UFW. Public web traffic will terminate on Caddy over ports 80/443, while SSH stays on 22.
+Current relay validation completed:
 
-Relay is not installed on the VPS yet. The Worker must not be switched to the relay until the local VPS relay and HTTPS endpoint have both been tested successfully.
+- `server.js` syntax checked successfully with Node.js 22;
+- systemd unit installed and validated;
+- VPS-only environment file created with permissions `600 root:root`;
+- `APISPORTS_KEY`, `CR_RELAY_SECRET`, `HOST` and `PORT` verified set without exposing values;
+- relay service started successfully and reported `active`;
+- local `/health` returned HTTP 200 with `x-cr-relay: 1`;
+- HMAC rejection path confirmed during testing;
+- signed local request `/teams?search=Milan` successfully reached API-Football through the relay;
+- API-Football returned HTTP 200, `errors: []`, and AC Milan (`team.id = 489`) in the response;
+- relay forwarded API rate-limit headers and `x-cr-relay: 1`.
+
+Test note: an initial manual test used a shell timestamp format incompatible with the relay's millisecond timestamp requirement and was correctly rejected as `expired_signature`. Retesting with Node `Date.now()` succeeded. No relay code change is required for this.
+
+The internal relay port `8788` must remain closed in UFW. Public relay traffic will terminate on Caddy over HTTPS after DNS/Caddy configuration.
+
+The Worker must not be switched to the relay until the HTTPS endpoint has been tested successfully.
 
 ## OVH VPS
 
@@ -270,24 +284,26 @@ Completed:
 - controlled reboot completed after package updates;
 - fresh SSH key login tested successfully after reboot;
 - Node.js 22.22.1 installed from the official Ubuntu repository;
-- Node.js executable verified at `/usr/bin/node`, matching the prepared systemd service;
+- Node.js executable verified at `/usr/bin/node`;
 - Caddy 2.6.2 installed from the official Ubuntu repository;
-- Caddy systemd service verified active.
-
-Current note:
-
-- SSH hardening and post-update reboot are complete and verified;
-- Node.js and Caddy are installed and running as expected;
-- the dedicated `calcioreport` service user and relay service are not installed yet.
+- Caddy systemd service verified active;
+- dedicated system user/group `calcioreport` created with `/usr/sbin/nologin`;
+- `/opt/calcio-report/relay` created with dedicated ownership and restricted access;
+- relay runtime files installed as `calcioreport`;
+- `/etc/calcio-report` created as root-only;
+- relay environment file created root-only;
+- relay systemd unit installed and validated;
+- relay started successfully and tested locally through a real API-Football request.
 
 Security / infrastructure still pending:
 
-- create dedicated service user and install relay files;
-- create VPS-only environment file with real secrets;
-- keep internal service ports closed;
+- enable relay service at boot after successful local validation;
+- keep internal service port `8788` closed;
+- configure UFW for public HTTP/HTTPS only when needed;
+- configure DNS and Caddy HTTPS;
+- test external HTTPS `/health` and signed request path;
 - security update policy/logging review;
-- configure DNS and HTTPS;
-- connect Cloudflare Worker to relay only after relay tests pass.
+- connect Cloudflare Worker to relay only after HTTPS tests pass.
 
 ## Immediate next objective
 
@@ -307,15 +323,15 @@ API-Football
 
 Operational order from here:
 
-1. create dedicated service user and install relay files;
-2. create VPS-only environment file with real secrets;
-3. test relay on `127.0.0.1:8788`;
-4. configure DNS + Caddy HTTPS and test `/health`;
-5. only then integrate Worker -> relay with HMAC.
+1. enable the validated relay service at boot;
+2. configure DNS + Caddy HTTPS and test `/health`;
+3. test a signed request through HTTPS;
+4. update Worker cache/fetch path so cache MISS uses the relay with HMAC;
+5. keep automatic direct API-Football fallback disabled during relay validation.
 
 Then validate:
 
-1. single controlled request;
+1. single controlled Worker request;
 2. `x-cr-cache` behavior;
 3. repeated searches without abnormal rate-limit;
 4. sequence: Milan → Juventus → Inter → Milan;
