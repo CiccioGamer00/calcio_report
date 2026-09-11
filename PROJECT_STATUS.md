@@ -255,24 +255,34 @@ Completed:
 - UFW firewall enabled and verified active;
 - default incoming policy is `deny`;
 - OpenSSH/22 explicitly allowed for IPv4 and IPv6;
-- UFW enabled on system startup.
+- UFW enabled on system startup;
+- dedicated Ed25519 SSH key created on Windows and public key installed on the VPS;
+- key-based SSH login tested successfully;
+- SSH hardening applied through `/etc/ssh/sshd_config.d/00-calcio-hardening.conf`;
+- `PubkeyAuthentication yes`;
+- `PasswordAuthentication no`;
+- `KbdInteractiveAuthentication no`;
+- `PermitRootLogin no`;
+- SSH configuration validated with `sshd -t`;
+- SSH service reloaded successfully;
+- second independent key-based login tested successfully after reload;
+- password-only SSH login explicitly tested and correctly denied.
 
 Current note:
 
 - the server reports `System restart required` after package updates;
-- do not reboot casually: perform a controlled reboot and verify SSH access in the next session.
+- next step is a controlled reboot followed by a fresh SSH-key login test.
 
-Security hardening still pending:
+Security / infrastructure still pending:
 
-- create SSH key on Windows;
-- install/test public key on VPS;
-- only after successful key login, disable SSH password authentication;
-- disable root SSH login;
-- review SSH config;
-- perform controlled reboot after updates and verify connectivity;
+- perform controlled reboot after updates and verify SSH recovery;
 - install Node.js and Caddy;
+- create dedicated service user and install relay files;
+- create VPS-only environment file with real secrets;
 - keep internal service ports closed;
-- security update policy/logging review.
+- security update policy/logging review;
+- configure DNS and HTTPS;
+- connect Cloudflare Worker to relay only after relay tests pass.
 
 ## Immediate next objective
 
@@ -292,16 +302,13 @@ API-Football
 
 Operational order from here:
 
-1. create SSH key on Windows;
-2. install and test the public key on the VPS;
-3. only after successful key login, disable password SSH and root SSH;
-4. perform the pending controlled reboot and verify SSH recovery;
-5. install Node.js and Caddy;
-6. create dedicated service user and install relay files;
-7. create VPS-only environment file with real secrets;
-8. test relay on `127.0.0.1:8788`;
-9. configure DNS + Caddy HTTPS and test `/health`;
-10. only then integrate Worker -> relay with HMAC.
+1. perform the pending controlled reboot and verify SSH recovery;
+2. install Node.js and Caddy;
+3. create dedicated service user and install relay files;
+4. create VPS-only environment file with real secrets;
+5. test relay on `127.0.0.1:8788`;
+6. configure DNS + Caddy HTTPS and test `/health`;
+7. only then integrate Worker -> relay with HMAC.
 
 Then validate:
 
