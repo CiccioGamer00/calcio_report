@@ -268,17 +268,19 @@ Completed:
 - second independent key-based login tested successfully after reload;
 - password-only SSH login explicitly tested and correctly denied;
 - controlled reboot completed after package updates;
-- fresh SSH key login tested successfully after reboot.
+- fresh SSH key login tested successfully after reboot;
+- Node.js 22.22.1 installed from the official Ubuntu repository;
+- Node.js executable verified at `/usr/bin/node`, matching the prepared systemd service.
 
 Current note:
 
 - SSH hardening and post-update reboot are complete and verified;
-- Ubuntu 26.04 offers Node.js 22.22.1 from the official repository, satisfying the relay requirement of Node.js 20+;
-- Node.js has not been installed yet.
+- Node.js is installed and satisfies the relay requirement of Node.js 20+;
+- Caddy and the relay service are not installed yet.
 
 Security / infrastructure still pending:
 
-- install Node.js and Caddy;
+- install Caddy;
 - create dedicated service user and install relay files;
 - create VPS-only environment file with real secrets;
 - keep internal service ports closed;
@@ -304,7 +306,7 @@ API-Football
 
 Operational order from here:
 
-1. install Node.js and Caddy;
+1. install Caddy;
 2. create dedicated service user and install relay files;
 3. create VPS-only environment file with real secrets;
 4. test relay on `127.0.0.1:8788`;
