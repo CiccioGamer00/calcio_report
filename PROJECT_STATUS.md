@@ -270,17 +270,18 @@ Completed:
 - controlled reboot completed after package updates;
 - fresh SSH key login tested successfully after reboot;
 - Node.js 22.22.1 installed from the official Ubuntu repository;
-- Node.js executable verified at `/usr/bin/node`, matching the prepared systemd service.
+- Node.js executable verified at `/usr/bin/node`, matching the prepared systemd service;
+- Caddy 2.6.2 installed from the official Ubuntu repository;
+- Caddy systemd service verified active.
 
 Current note:
 
 - SSH hardening and post-update reboot are complete and verified;
-- Node.js is installed and satisfies the relay requirement of Node.js 20+;
-- Caddy and the relay service are not installed yet.
+- Node.js and Caddy are installed and running as expected;
+- the dedicated `calcioreport` service user and relay service are not installed yet.
 
 Security / infrastructure still pending:
 
-- install Caddy;
 - create dedicated service user and install relay files;
 - create VPS-only environment file with real secrets;
 - keep internal service ports closed;
@@ -306,12 +307,11 @@ API-Football
 
 Operational order from here:
 
-1. install Caddy;
-2. create dedicated service user and install relay files;
-3. create VPS-only environment file with real secrets;
-4. test relay on `127.0.0.1:8788`;
-5. configure DNS + Caddy HTTPS and test `/health`;
-6. only then integrate Worker -> relay with HMAC.
+1. create dedicated service user and install relay files;
+2. create VPS-only environment file with real secrets;
+3. test relay on `127.0.0.1:8788`;
+4. configure DNS + Caddy HTTPS and test `/health`;
+5. only then integrate Worker -> relay with HMAC.
 
 Then validate:
 
