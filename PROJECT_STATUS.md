@@ -1,6 +1,6 @@
 # Calcio Report — Project Status
 
-_Last updated: 2026-09-10_
+_Last updated: 2026-09-11_
 
 This file is the operational source of truth for the current Core V2 rebuild. Keep it updated when architecture, infrastructure, or implementation status changes.
 
@@ -195,6 +195,9 @@ Files already prepared:
 relay/package.json
 relay/server.js
 relay/README.md
+relay/deploy/calcio-report-relay.service
+relay/deploy/relay.env.example
+relay/deploy/Caddyfile.example
 ```
 
 Design goals:
@@ -206,12 +209,24 @@ Design goals:
 - GET only;
 - API-Football endpoint allowlist;
 - relay listens internally on `127.0.0.1:8788`;
-- HTTPS handled by reverse proxy;
+- HTTPS handled by Caddy reverse proxy;
 - outbound pacing below API-Football per-second limit;
 - deduplicate identical concurrent requests;
-- main data cache remains Cloudflare edge cache.
+- main data cache remains Cloudflare edge cache;
+- service runs under dedicated unprivileged user `calcioreport` with systemd hardening.
 
-Relay is not installed on the VPS yet.
+Deployment layout planned on VPS:
+
+```text
+/opt/calcio-report/relay/
+/etc/calcio-report/relay.env
+/etc/systemd/system/calcio-report-relay.service
+/etc/caddy/Caddyfile
+```
+
+The internal relay port `8788` must stay closed in UFW. Public web traffic will terminate on Caddy over ports 80/443, while SSH stays on 22.
+
+Relay is not installed on the VPS yet. The Worker must not be switched to the relay until the local VPS relay and HTTPS endpoint have both been tested successfully.
 
 ## OVH VPS
 
@@ -255,7 +270,7 @@ Security hardening still pending:
 - disable root SSH login;
 - review SSH config;
 - perform controlled reboot after updates and verify connectivity;
-- install required runtime/reverse proxy;
+- install Node.js and Caddy;
 - keep internal service ports closed;
 - security update policy/logging review.
 
@@ -274,6 +289,19 @@ OVH relay with stable egress IP
     ↓
 API-Football
 ```
+
+Operational order from here:
+
+1. create SSH key on Windows;
+2. install and test the public key on the VPS;
+3. only after successful key login, disable password SSH and root SSH;
+4. perform the pending controlled reboot and verify SSH recovery;
+5. install Node.js and Caddy;
+6. create dedicated service user and install relay files;
+7. create VPS-only environment file with real secrets;
+8. test relay on `127.0.0.1:8788`;
+9. configure DNS + Caddy HTTPS and test `/health`;
+10. only then integrate Worker -> relay with HMAC.
 
 Then validate:
 
