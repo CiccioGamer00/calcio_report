@@ -221,6 +221,7 @@ Deployment layout on VPS:
 /etc/calcio-report/relay.env
 /etc/systemd/system/calcio-report-relay.service
 /etc/caddy/Caddyfile
+/etc/caddy/sites/*.caddy
 ```
 
 Current relay validation completed:
@@ -234,7 +235,8 @@ Current relay validation completed:
 - HMAC rejection path confirmed during testing;
 - signed local request `/teams?search=Milan` successfully reached API-Football through the relay;
 - API-Football returned HTTP 200, `errors: []`, and AC Milan (`team.id = 489`) in the response;
-- relay forwarded API rate-limit headers and `x-cr-relay: 1`.
+- relay forwarded API rate-limit headers and `x-cr-relay: 1`;
+- relay systemd service enabled at boot and verified `enabled` + `active`.
 
 Test note: an initial manual test used a shell timestamp format incompatible with the relay's millisecond timestamp requirement and was correctly rejected as `expired_signature`. Retesting with Node `Date.now()` succeeded. No relay code change is required for this.
 
@@ -293,14 +295,19 @@ Completed:
 - `/etc/calcio-report` created as root-only;
 - relay environment file created root-only;
 - relay systemd unit installed and validated;
-- relay started successfully and tested locally through a real API-Football request.
+- relay started successfully and tested locally through a real API-Football request;
+- relay enabled at boot and verified `enabled` + `active`;
+- original Caddyfile backed up as `/etc/caddy/Caddyfile.original`;
+- multi-project Caddy layout created with `/etc/caddy/Caddyfile` importing `/etc/caddy/sites/*.caddy`;
+- current default `:80` site moved to `/etc/caddy/sites/default.caddy`;
+- new Caddy configuration validated successfully;
+- Caddy reloaded successfully and verified `active`.
 
 Security / infrastructure still pending:
 
-- enable relay service at boot after successful local validation;
 - keep internal service port `8788` closed;
 - configure UFW for public HTTP/HTTPS only when needed;
-- configure DNS and Caddy HTTPS;
+- configure DNS and Caddy HTTPS for `relay.calcioreport.com`;
 - test external HTTPS `/health` and signed request path;
 - security update policy/logging review;
 - connect Cloudflare Worker to relay only after HTTPS tests pass.
@@ -323,11 +330,13 @@ API-Football
 
 Operational order from here:
 
-1. enable the validated relay service at boot;
-2. configure DNS + Caddy HTTPS and test `/health`;
-3. test a signed request through HTTPS;
-4. update Worker cache/fetch path so cache MISS uses the relay with HMAC;
-5. keep automatic direct API-Football fallback disabled during relay validation.
+1. configure DNS record for `relay.calcioreport.com`;
+2. open only HTTP/HTTPS in UFW when ready;
+3. add the dedicated Calcio Report Caddy site and obtain HTTPS;
+4. test external HTTPS `/health`;
+5. test a signed request through HTTPS;
+6. update Worker cache/fetch path so cache MISS uses the relay with HMAC;
+7. keep automatic direct API-Football fallback disabled during relay validation.
 
 Then validate:
 
