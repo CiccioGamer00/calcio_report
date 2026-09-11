@@ -164,12 +164,16 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || "/", `http://${host}`);
 
   if (req.method === "GET" && url.pathname === "/health") {
-    const missing = configurationError();
-    return json(res, missing.length ? 503 : 200, {
-      ok: missing.length === 0,
-      service: "calcio-report-relay",
-      missing,
-    });
+    const ready = configurationError().length === 0;
+    return json(
+      res,
+      ready ? 200 : 503,
+      {
+        ok: ready,
+        service: "calcio-report-relay",
+      },
+      { "x-cr-relay": "1" },
+    );
   }
 
   if (req.method !== "GET") {
@@ -178,7 +182,7 @@ const server = http.createServer(async (req, res) => {
 
   const missing = configurationError();
   if (missing.length) {
-    return json(res, 503, { error: "RELAY_NOT_CONFIGURED", missing });
+    return json(res, 503, { error: "RELAY_NOT_CONFIGURED" });
   }
 
   if (!isAllowedPath(url.pathname)) {
