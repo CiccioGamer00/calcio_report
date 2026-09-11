@@ -266,16 +266,18 @@ Completed:
 - SSH configuration validated with `sshd -t`;
 - SSH service reloaded successfully;
 - second independent key-based login tested successfully after reload;
-- password-only SSH login explicitly tested and correctly denied.
+- password-only SSH login explicitly tested and correctly denied;
+- controlled reboot completed after package updates;
+- fresh SSH key login tested successfully after reboot.
 
 Current note:
 
-- the server reports `System restart required` after package updates;
-- next step is a controlled reboot followed by a fresh SSH-key login test.
+- SSH hardening and post-update reboot are complete and verified;
+- Ubuntu 26.04 offers Node.js 22.22.1 from the official repository, satisfying the relay requirement of Node.js 20+;
+- Node.js has not been installed yet.
 
 Security / infrastructure still pending:
 
-- perform controlled reboot after updates and verify SSH recovery;
 - install Node.js and Caddy;
 - create dedicated service user and install relay files;
 - create VPS-only environment file with real secrets;
@@ -302,13 +304,12 @@ API-Football
 
 Operational order from here:
 
-1. perform the pending controlled reboot and verify SSH recovery;
-2. install Node.js and Caddy;
-3. create dedicated service user and install relay files;
-4. create VPS-only environment file with real secrets;
-5. test relay on `127.0.0.1:8788`;
-6. configure DNS + Caddy HTTPS and test `/health`;
-7. only then integrate Worker -> relay with HMAC.
+1. install Node.js and Caddy;
+2. create dedicated service user and install relay files;
+3. create VPS-only environment file with real secrets;
+4. test relay on `127.0.0.1:8788`;
+5. configure DNS + Caddy HTTPS and test `/health`;
+6. only then integrate Worker -> relay with HMAC.
 
 Then validate:
 
