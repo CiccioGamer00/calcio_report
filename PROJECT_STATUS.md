@@ -388,9 +388,29 @@ Completed and verified:
 - `main` remains unchanged;
 - `app.js`, `index.html`, `style.css`, `config.js`, `teamFlow.js` and the existing panel modules remain functionally based on `main`; only the API/state/search orchestration and infrastructure have been changed.
 
+### Four-line formation investigation — 2026-09-12
+
+A focused local test was run on Lazio–AC Milan, including AC Milan's estimated `3-4-2-1`.
+
+What was confirmed:
+
+- the pitch renderer can draw the correct number of visual lines for four-line formations;
+- the existing estimated-XI builder still groups players mainly by macro roles (`GK/DEF/MID/ATT`) and then places them sequentially into formation rows;
+- this allows tactically invalid placements, for example a natural defender appearing on a midfield/advanced row merely to fill the shape;
+- an experimental local attempt using historical lineup `grid` improved row ordering but did not solve the role constraint, so the test was **not approved**;
+- all experimental `teamFlow.js` changes were reverted locally; no lineup code from this investigation was committed or pushed.
+
+Required behavior for the eventual fix:
+
+- natural player role must remain a hard constraint for normal defensive, midfield and attacking rows; a `DEF` must not become a midfielder simply to fill a slot;
+- hybrid advanced rows in shapes such as `4-2-3-1` or `3-4-2-1` may legitimately draw from suitable `MID` and `ATT` candidates, ranked using recent usage/presence;
+- use the role and historical lineup `grid` data already available to the estimator where possible;
+- do not add API calls solely to solve row placement;
+- repeat visual tests before closing the bug.
+
 Open bugs / required work, in priority order:
 
-1. **Four-line formations.** Validate and, where needed, correct both official and estimated pitch rendering for formations such as 4-2-3-1, 4-1-4-1 and 3-4-2-1. Do not assume the existing dynamic parser is sufficient until visual tests pass.
+1. **Four-line formations — NOT CLOSED.** Implement role-aware estimated XI row assignment for formations such as `4-2-3-1`, `4-1-4-1` and `3-4-2-1`, respecting natural roles and allowing only intentional MID/ATT mixing on hybrid attacking-midfield rows. Current GitHub code remains at the last verified checkpoint; the unsuccessful local experiment was reverted.
 2. **Panel parity and call audit.** Test each unchanged panel against `main`. Preserve its content and presentation; change code only for a reproduced bug, duplicated request or measurable efficiency improvement.
 
 Closed frontend regressions:
