@@ -718,6 +718,11 @@ function setupTabs() {
     // Match: niente fetch extra qui
     if (viewId === "matchView") return;
     if (viewId === "standingsPanel" && typeof loadStandings === "function") {
+      // La card Match usa la stessa classifica per le mini-pillole.
+      // Aspettiamo quella richiesta così il pannello riusa la cache locale.
+      if (window.__CR_MAIN_STANDINGS_PROMISE__) {
+        await window.__CR_MAIN_STANDINGS_PROMISE__;
+      }
       window.__PANEL_LOADED__.standingsPanel = true;
       await loadStandings();
     }
@@ -838,8 +843,12 @@ function setupTabs() {
     const view = activeTab?.getAttribute("data-view");
     if (!view || view === "match") return;
 
-    autoLoadFor(view).catch((e) =>
-      console.error("deferred autoLoadFor error", view, e),
+    // Il controller assegna nella stessa iterazione le richieste secondarie
+    // condivise; partiamo subito dopo per poterle riusare senza duplicarle.
+    Promise.resolve().then(() =>
+      autoLoadFor(view).catch((e) =>
+        console.error("deferred autoLoadFor error", view, e),
+      ),
     );
   });
 

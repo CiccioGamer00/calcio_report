@@ -393,6 +393,7 @@
   }
 
   function resetLegacyPanels() {
+    window.__CR_MAIN_STANDINGS_PROMISE__ = null;
     window.__PANEL_LOADED__ = {
       referee: false,
       teamsPanel: false,
@@ -477,6 +478,68 @@
       searchId,
     });
     if (html) document.getElementById("match")?.insertAdjacentHTML("beforeend", html);
+  }
+
+  async function loadMainStandingsMini({
+    rawFixture,
+    nextTeamFixture,
+    team,
+    searchId,
+    signal,
+    mainResult,
+  }) {
+    const fixture = window.CR_STATE.selection.fixture;
+    if (!fixture?.leagueId || !fixture?.season) return;
+
+    const result = await window.apiGetV2(
+      `/standings?league=${encodeURIComponent(fixture.leagueId)}&season=${encodeURIComponent(fixture.season)}`,
+      {
+        retries: 0,
+        signal,
+        searchId,
+        cache: true,
+      },
+    );
+
+    debug("main standings mini", {
+      searchId,
+      kind: result.kind,
+      status: result.status,
+      cache: result.cache,
+      relay: result.relay,
+      reqId: result.reqId,
+    });
+
+    if (!window.crIsSearchActive(searchId) || result.kind === "aborted") return;
+    if (Number(window.CR_STATE.selection.fixture?.id) !== Number(fixture.id)) return;
+    if (result.kind !== "success") return;
+
+    const league = result.arr?.[0]?.league || {};
+    const groups = Array.isArray(league.standings) ? league.standings : [];
+    const rows = Array.isArray(groups[0]) ? groups[0] : [];
+    if (!rows.length) return;
+
+    const homeRow = rows.find(
+      (row) => Number(row?.team?.id) === Number(fixture.home.id),
+    );
+    const awayRow = rows.find(
+      (row) => Number(row?.team?.id) === Number(fixture.away.id),
+    );
+
+    fixture.standingsMini = {
+      leagueName: league.name || "",
+      home: homeRow ? { rank: homeRow.rank, points: homeRow.points } : null,
+      away: awayRow ? { rank: awayRow.rank, points: awayRow.points } : null,
+    };
+    window.CR_STATE.matchExtras.standingsMini = fixture.standingsMini;
+
+    renderMainFixture(
+      rawFixture,
+      nextTeamFixture,
+      team,
+      window.CR_STATE.matchExtras.nextOpponent,
+    );
+    appendSuccessDiagnostic(mainResult, team, searchId);
   }
 
   async function loadOpponentNext({
@@ -783,6 +846,19 @@
       }).catch((err) => {
         if (window.crIsSearchActive(searchId) && err?.name !== "AbortError") {
           console.error("CR V2 opponent next fixture", err);
+        }
+      });
+
+      window.__CR_MAIN_STANDINGS_PROMISE__ = loadMainStandingsMini({
+        rawFixture,
+        nextTeamFixture,
+        team,
+        searchId,
+        signal,
+        mainResult: fixtureResult,
+      }).catch((err) => {
+        if (window.crIsSearchActive(searchId) && err?.name !== "AbortError") {
+          console.error("CR V2 main standings mini", err);
         }
       });
     } catch (err) {

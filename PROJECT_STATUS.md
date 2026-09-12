@@ -380,22 +380,24 @@ Completed and verified:
 - online sequence Milan → Juventus → Inter → Milan without abnormal rate-limit failures;
 - Core V2 raw `milan` + Enter resolves AC Milan and loads the correct fixture;
 - Core V2 physical Search-button path was regression-tested: one click enters the shared search controller, resolves AC Milan and commits its fixture without duplicate team/fixture calls;
+- first-click tabs were manually re-tested across new searches; an already-open tab now resumes automatically when the new fixture becomes valid;
 - searched team's following fixture remains visible;
 - opponent's following fixture loads in background without delaying the main match (verified Lazio → Venezia);
+- main-card standings pills are restored through one non-blocking, stale-safe `/standings` request; opening the full standings panel reuses the same frontend-cache entry;
 - `main` remains unchanged;
 - `app.js`, `index.html`, `style.css`, `config.js`, `teamFlow.js` and the existing panel modules remain functionally based on `main`; only the API/state/search orchestration and infrastructure have been changed.
 
 Open bugs / required work, in priority order:
 
-1. **Main-card parity.** Restore any remaining information shown by `main` but bypassed by the new search controller, including the mini standings/rank pills, without blocking the first match render.
-2. **Lineup request cost.** Measure the real request sequence first. Keep the lightweight official `/fixtures/lineups` check; if official lineups are absent, show “Formazioni non disponibili” and offer an explicit button for the expensive estimated lineup instead of starting estimation automatically.
-3. **Four-line formations.** Validate and, where needed, correct both official and estimated pitch rendering for formations such as 4-2-3-1, 4-1-4-1 and 3-4-2-1. Do not assume the existing dynamic parser is sufficient until visual tests pass.
-4. **Panel parity and call audit.** Test each unchanged panel against `main`. Preserve its content and presentation; change code only for a reproduced bug, duplicated request or measurable efficiency improvement.
+1. **Lineup request cost.** Measure the real request sequence first. Keep the lightweight official `/fixtures/lineups` check; if official lineups are absent, show “Formazioni non disponibili” and offer an explicit button for the expensive estimated lineup instead of starting estimation automatically.
+2. **Four-line formations.** Validate and, where needed, correct both official and estimated pitch rendering for formations such as 4-2-3-1, 4-1-4-1 and 3-4-2-1. Do not assume the existing dynamic parser is sufficient until visual tests pass.
+3. **Panel parity and call audit.** Test each unchanged panel against `main`. Preserve its content and presentation; change code only for a reproduced bug, duplicated request or measurable efficiency improvement.
 
 Closed frontend regressions:
 
 - **Search button:** explicit click-path regression test passed; it uses the shared `startTeamSearch()` flow and did not require a code change.
 - **Tabs/cards first click:** reproduced as a timing race. A tab clicked before `selectedFixture` was committed opened visually but skipped its on-demand loader permanently; `cr:selection` now resumes the already-active tab once the fixture is valid, without starting extra panels or duplicating successful loads.
+- **Main-card parity:** the mini standings/rank pills bypassed by the new controller are loaded in background again, with `searchId` and fixture checks preventing stale re-renders.
 
 ### Scope guardrails for the next chat
 
