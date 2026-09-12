@@ -176,16 +176,26 @@ A real deployed Worker copy is versioned in:
 worker/worker.js
 ```
 
-Current deployed fixes include:
+Current versioned Worker state on `core-v2` includes:
 
 - semantic API-Football errors are not edge-cached;
-- separate V2 cache namespace/keying;
+- dedicated relay cache namespace/keying;
 - canonical query parameter ordering;
 - upstream error responses use `no-store`;
-- `Access-Control-Expose-Headers: x-cr-cache`;
+- `Access-Control-Expose-Headers: x-cr-cache, x-cr-relay`;
 - root direct access without auth correctly returns `AUTH_REQUIRED`.
 
-Important: the deployed Worker still calls API-Football directly. VPS relay integration has not happened yet.
+Relay transport implementation is complete in the versioned Worker:
+
+- both the default proxy and the internal `/predict` data helper use one shared cache/relay transport;
+- cache HIT returns without contacting the relay;
+- cache MISS is signed with HMAC SHA-256 and sent to `CR_RELAY_URL`;
+- there is no direct Worker fallback to API-Football;
+- API-Football HTTP 200 responses containing semantic `errors` are never cached;
+- `x-cr-relay` is propagated for diagnostics;
+- the API-Football key is no longer referenced by the Worker.
+
+The live Cloudflare Worker must still be deployed from this version and validated before the transport milestone is considered complete.
 
 ## Relay status
 
@@ -240,12 +250,14 @@ Current relay validation completed:
 - `relay.calcioreport.com` DNS A record points directly to the VPS during relay validation;
 - Caddy HTTPS endpoint is active for `relay.calcioreport.com`;
 - external `https://relay.calcioreport.com/health` returned HTTP/2 200 with `x-cr-relay: 1` and `{"ok":true,"service":"calcio-report-relay"}`.
+- a signed request to `/teams?search=Milan` through the public HTTPS relay endpoint succeeded;
+- the public signed response contained `errors: []` and AC Milan (`team.id = 489`).
 
 Test note: an initial manual test used a shell timestamp format incompatible with the relay's millisecond timestamp requirement and was correctly rejected as `expired_signature`. Retesting with Node `Date.now()` succeeded. No relay code change is required for this.
 
 The internal relay port `8788` remains private on loopback and closed in UFW. Public relay traffic terminates on Caddy over ports 80/443 and is forwarded internally to `127.0.0.1:8788`.
 
-The Worker must not be switched to the relay until a signed API request through the public HTTPS endpoint has also been tested successfully.
+The public HTTPS/HMAC prerequisite for switching the Worker to the relay is complete.
 
 ## OVH VPS
 
@@ -312,9 +324,8 @@ Completed:
 
 Security / infrastructure still pending:
 
-- test a signed API request through the public HTTPS relay endpoint;
 - security update policy/logging review;
-- connect Cloudflare Worker to relay only after the signed HTTPS test passes.
+- deploy the versioned relay-enabled Worker and complete end-to-end validation.
 
 ## Immediate next objective
 
@@ -332,20 +343,15 @@ OVH relay with stable egress IP
 API-Football
 ```
 
-Operational order from here:
+Relay code integration and local transport tests are complete. Automatic direct API-Football fallback is disabled. Next validate the live path:
 
-1. test a signed request through `https://relay.calcioreport.com`;
-2. update Worker cache/fetch path so cache MISS uses the relay with HMAC;
-3. keep automatic direct API-Football fallback disabled during relay validation.
-
-Then validate:
-
-1. single controlled Worker request;
-2. `x-cr-cache` behavior;
-3. repeated searches without abnormal rate-limit;
-4. sequence: Milan → Juventus → Inter → Milan;
-5. verify stale responses never overwrite current search;
-6. confirm upstream call count stays controlled.
+1. deploy the canonical `worker/worker.js` to Cloudflare;
+2. make one controlled Worker request and confirm `x-cr-relay: 1`;
+3. verify `x-cr-cache: MISS` followed by `HIT`;
+4. verify the relay actually received the MISS;
+5. test the sequence Milan → Juventus → Inter → Milan;
+6. verify stale responses never overwrite current search;
+7. confirm upstream call count stays controlled.
 
 Only after that resume Core V2 feature migration.
 
