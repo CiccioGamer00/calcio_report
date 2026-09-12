@@ -1,6 +1,6 @@
 # Calcio Report — Project Status
 
-_Last updated: 2026-09-11_
+_Last updated: 2026-09-12_
 
 This file is the operational source of truth for the current Core V2 rebuild. Keep it updated when architecture, infrastructure, or implementation status changes.
 
@@ -236,13 +236,16 @@ Current relay validation completed:
 - signed local request `/teams?search=Milan` successfully reached API-Football through the relay;
 - API-Football returned HTTP 200, `errors: []`, and AC Milan (`team.id = 489`) in the response;
 - relay forwarded API rate-limit headers and `x-cr-relay: 1`;
-- relay systemd service enabled at boot and verified `enabled` + `active`.
+- relay systemd service enabled at boot and verified `enabled` + `active`;
+- `relay.calcioreport.com` DNS A record points directly to the VPS during relay validation;
+- Caddy HTTPS endpoint is active for `relay.calcioreport.com`;
+- external `https://relay.calcioreport.com/health` returned HTTP/2 200 with `x-cr-relay: 1` and `{"ok":true,"service":"calcio-report-relay"}`.
 
 Test note: an initial manual test used a shell timestamp format incompatible with the relay's millisecond timestamp requirement and was correctly rejected as `expired_signature`. Retesting with Node `Date.now()` succeeded. No relay code change is required for this.
 
-The internal relay port `8788` must remain closed in UFW. Public relay traffic will terminate on Caddy over HTTPS after DNS/Caddy configuration.
+The internal relay port `8788` remains private on loopback and closed in UFW. Public relay traffic terminates on Caddy over ports 80/443 and is forwarded internally to `127.0.0.1:8788`.
 
-The Worker must not be switched to the relay until the HTTPS endpoint has been tested successfully.
+The Worker must not be switched to the relay until a signed API request through the public HTTPS endpoint has also been tested successfully.
 
 ## OVH VPS
 
@@ -299,18 +302,19 @@ Completed:
 - relay enabled at boot and verified `enabled` + `active`;
 - original Caddyfile backed up as `/etc/caddy/Caddyfile.original`;
 - multi-project Caddy layout created with `/etc/caddy/Caddyfile` importing `/etc/caddy/sites/*.caddy`;
-- current default `:80` site moved to `/etc/caddy/sites/default.caddy`;
-- new Caddy configuration validated successfully;
-- Caddy reloaded successfully and verified `active`.
+- original default `:80` site moved to a separate file and later disabled after the real relay site was added;
+- dedicated Calcio Report Caddy site installed from the versioned `relay/deploy/Caddyfile.example`;
+- Caddy configuration validated successfully and reloaded;
+- DNS resolution for `relay.calcioreport.com` verified from the VPS;
+- UFW opened only TCP 80 and 443 in addition to SSH; internal relay port `8788` was not opened;
+- automatic HTTPS for `relay.calcioreport.com` is working;
+- external HTTPS `/health` test succeeded with HTTP/2 200.
 
 Security / infrastructure still pending:
 
-- keep internal service port `8788` closed;
-- configure UFW for public HTTP/HTTPS only when needed;
-- configure DNS and Caddy HTTPS for `relay.calcioreport.com`;
-- test external HTTPS `/health` and signed request path;
+- test a signed API request through the public HTTPS relay endpoint;
 - security update policy/logging review;
-- connect Cloudflare Worker to relay only after HTTPS tests pass.
+- connect Cloudflare Worker to relay only after the signed HTTPS test passes.
 
 ## Immediate next objective
 
@@ -330,13 +334,9 @@ API-Football
 
 Operational order from here:
 
-1. configure DNS record for `relay.calcioreport.com`;
-2. open only HTTP/HTTPS in UFW when ready;
-3. add the dedicated Calcio Report Caddy site and obtain HTTPS;
-4. test external HTTPS `/health`;
-5. test a signed request through HTTPS;
-6. update Worker cache/fetch path so cache MISS uses the relay with HMAC;
-7. keep automatic direct API-Football fallback disabled during relay validation.
+1. test a signed request through `https://relay.calcioreport.com`;
+2. update Worker cache/fetch path so cache MISS uses the relay with HMAC;
+3. keep automatic direct API-Football fallback disabled during relay validation.
 
 Then validate:
 
