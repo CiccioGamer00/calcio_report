@@ -6,10 +6,11 @@ export default {
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: corsHeaders() });
     }
+
     // ========== STRIPE WEBHOOK ==========
-if (url.pathname === "/stripe/webhook" && request.method === "POST") {
-  return handleStripeWebhook(request, env);
-}
+    if (url.pathname === "/stripe/webhook" && request.method === "POST") {
+      return handleStripeWebhook(request, env);
+    }
 
     // ========== AUTH ==========
     if (url.pathname === "/register" && request.method === "POST") {
@@ -80,7 +81,6 @@ async function handleRegister(request, env) {
     const passHash = await hashPassword(password, salt);
     const now = new Date();
     const nowIso = now.toISOString();
-
     const trialEnds = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
     await env.DB.prepare(
@@ -142,10 +142,22 @@ async function handleMe(request, env) {
 async function authenticateRequest(request, env) {
   const header = request.headers.get("Authorization") || "";
   const m = header.match(/^Bearer\s+(.+)$/i);
-  if (!m) return { ok: false, status: 401, body: { error: "AUTH_REQUIRED", message: "Login necessario." } };
+  if (!m) {
+    return {
+      ok: false,
+      status: 401,
+      body: { error: "AUTH_REQUIRED", message: "Login necessario." },
+    };
+  }
 
   const token = m[1].trim();
-  if (!token) return { ok: false, status: 401, body: { error: "AUTH_REQUIRED", message: "Login necessario." } };
+  if (!token) {
+    return {
+      ok: false,
+      status: 401,
+      body: { error: "AUTH_REQUIRED", message: "Login necessario." },
+    };
+  }
 
   const u = await env.DB.prepare(
     `SELECT email, disabled, trial_ends_at, paid_until, paid_activated_at, last_seen_at
@@ -154,9 +166,21 @@ async function authenticateRequest(request, env) {
     .bind(token)
     .first();
 
-  if (!u) return { ok: false, status: 401, body: { error: "AUTH_INVALID", message: "Sessione non valida." } };
-  if (Number(u.disabled) === 1)
-    return { ok: false, status: 403, body: { error: "ACCOUNT_DISABLED", message: "Account disabilitato." } };
+  if (!u) {
+    return {
+      ok: false,
+      status: 401,
+      body: { error: "AUTH_INVALID", message: "Sessione non valida." },
+    };
+  }
+
+  if (Number(u.disabled) === 1) {
+    return {
+      ok: false,
+      status: 403,
+      body: { error: "ACCOUNT_DISABLED", message: "Account disabilitato." },
+    };
+  }
 
   return { ok: true, user: u };
 }
@@ -303,8 +327,9 @@ async function handleAdminGrant(request, env) {
 }
 
 function isAdmin(request, env) {
-  const k = request.headers.get("x-admin-key") || "";
-  return k && env.ADMIN_KEY && k === env.ADMIN_KEY;
+  const provided = request.headers.get("x-admin-key") || "";
+  const expected = String(env.ADMIN_KEY || "");
+  return Boolean(provided && expected && timingSafeEqual(provided, expected));
 }
 
 /* =========================
@@ -337,9 +362,9 @@ function hasApiSportsErrors(payload) {
   return Boolean(errors);
 }
 
-function makeCacheKey(requestUrl) {
-  const src = new URL(requestUrl);
-  const cacheUrl = new URL(src.origin);
+function makeCacheKey(pathWithQuery) {
+  const src = new URL(pathWithQuery, "https://api.calcioreport.internal");
+  const cacheUrl = new URL("https://cache.calcioreport.internal");
 
   cacheUrl.pathname = `/__cr_cache_v2__${src.pathname}`;
   cacheUrl.search = "";
@@ -359,72 +384,116 @@ function makeCacheKey(requestUrl) {
   });
 }
 
-async function proxyToApiSports(request, env, ctx) {
-  const url = new URL(request.url);
+function getRelayBaseUrl(env) {
+  const raw = String(env.CR_RELAY_URL || "").trim();
+  if (!raw) throw new Error("RELAY_NOT_CONFIGURED");
+
+  let parsed;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    throw new Error("RELAY_NOT_CONFIGURED");
+  }
+
+  if (parsed.protocol !== "https:") throw new Error("RELAY_NOT_CONFIGURED");
+  return parsed.href.replace(/\/+$/, "");
+}
+
+async function fetchRelay(env, pathWithQuery) {
+  const relayBaseUrl = getRelayBaseUrl(env);
+  const relaySecret = String(env.CR_RELAY_SECRET || "").trim();
+  if (!relaySecret) throw new Error("RELAY_NOT_CONFIGURED");
+
+  const timestamp = String(Date.now());
+  const canonical = `${timestamp}\nGET\n${pathWithQuery}`;
+  const signature = await hmacSha256Hex(relaySecret, canonical);
+
+  const headers = new Headers();
+  headers.set("Accept", "application/json");
+  headers.set("x-cr-timestamp", timestamp);
+  headers.set("x-cr-signature", signature);
+
+  return fetch(`${relayBaseUrl}${pathWithQuery}`, {
+    method: "GET",
+    headers,
+  });
+}
+
+function relayFailureResponse(err) {
+  const notConfigured = String(err?.message || "") === "RELAY_NOT_CONFIGURED";
+  return new Response(
+    JSON.stringify({
+      error: notConfigured ? "RELAY_NOT_CONFIGURED" : "UPSTREAM_NETWORK",
+      message: notConfigured ? "Relay non configurato." : "Relay non raggiungibile.",
+    }),
+    {
+      status: notConfigured ? 503 : 502,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+      },
+    }
+  );
+}
+
+async function fetchFootballCached(env, ctx, pathWithQuery, ttlOverride = null) {
+  const src = new URL(pathWithQuery, "https://api.calcioreport.internal");
   const cache = caches.default;
-  const cacheKey = makeCacheKey(url.toString());
+  const cacheKey = makeCacheKey(pathWithQuery);
 
   let response = await cache.match(cacheKey);
-  let cacheStatus = response ? "HIT" : "MISS";
+  const cacheStatus = response ? "HIT" : "MISS";
+  if (response) return { response, cacheStatus };
 
-  if (!response) {
-    const upstreamUrl = `https://v3.football.api-sports.io${url.pathname}${url.search}`;
-    const h = new Headers();
-    h.set("x-apisports-key", env.APISPORTS_KEY);
-    h.set("Accept", "application/json");
-
-    let apiRes;
-    try {
-      apiRes = await fetch(upstreamUrl, { method: "GET", headers: h });
-    } catch (err) {
-      return json(
-        {
-          error: "UPSTREAM_NETWORK",
-          message: String(err?.message || err || "API-Football non raggiungibile"),
-        },
-        502,
-        {
-          ...corsHeaders(),
-          "Cache-Control": "no-store",
-          "x-cr-cache": "MISS",
-        },
-      );
-    }
-
-    const bodyText = await apiRes.text();
-
-    let parsed = null;
-    try {
-      parsed = JSON.parse(bodyText);
-    } catch {}
-
-    const semanticOk = apiRes.ok && parsed !== null && !hasApiSportsErrors(parsed);
-    const responseHeaders = new Headers(apiRes.headers);
-
-    if (semanticOk) {
-      const ttl = cacheTtlFor(url.pathname, url.searchParams);
-      responseHeaders.set("Cache-Control", ttl > 0 ? `public, s-maxage=${ttl}` : "no-store");
-
-      response = new Response(bodyText, {
-        status: apiRes.status,
-        statusText: apiRes.statusText,
-        headers: responseHeaders,
-      });
-
-      if (ttl > 0) {
-        const putPromise = cache.put(cacheKey, response.clone());
-        if (ctx?.waitUntil) ctx.waitUntil(putPromise);
-        else await putPromise;
-      }
-    } else {
-      responseHeaders.set("Cache-Control", "no-store");
-      response = new Response(bodyText, {
-        status: apiRes.status,
-        statusText: apiRes.statusText,
-        headers: responseHeaders,
-      });
-    }
+  let apiRes;
+  try {
+    apiRes = await fetchRelay(env, pathWithQuery);
+  } catch (err) {
+    return { response: relayFailureResponse(err), cacheStatus: "MISS" };
   }
+
+  const bodyText = await apiRes.text();
+  let parsed = null;
+  try {
+    parsed = JSON.parse(bodyText);
+  } catch {}
+
+  const semanticOk = apiRes.ok && parsed !== null && !hasApiSportsErrors(parsed);
+  const responseHeaders = new Headers(apiRes.headers);
+
+  if (semanticOk) {
+    const ttl = ttlOverride == null
+      ? cacheTtlFor(src.pathname, src.searchParams)
+      : Math.max(0, Number(ttlOverride) || 0);
+
+    responseHeaders.set("Cache-Control", ttl > 0 ? `public, s-maxage=${ttl}` : "no-store");
+    response = new Response(bodyText, {
+      status: apiRes.status,
+      statusText: apiRes.statusText,
+      headers: responseHeaders,
+    });
+
+    if (ttl > 0) {
+      const putPromise = cache.put(cacheKey, response.clone());
+      if (ctx?.waitUntil) ctx.waitUntil(putPromise);
+      else await putPromise;
+    }
+  } else {
+    responseHeaders.set("Cache-Control", "no-store");
+    response = new Response(bodyText, {
+      status: apiRes.status,
+      statusText: apiRes.statusText,
+      headers: responseHeaders,
+    });
+  }
+
+  return { response, cacheStatus: "MISS" };
+}
+
+async function proxyToApiSports(request, env, ctx) {
+  const url = new URL(request.url);
+  const pathWithQuery = `${url.pathname}${url.search}`;
+  const { response, cacheStatus } = await fetchFootballCached(env, ctx, pathWithQuery);
 
   const newHeaders = new Headers(response.headers);
   Object.entries(corsHeaders()).forEach(([k, v]) => newHeaders.set(k, v));
@@ -497,48 +566,17 @@ async function handlePredict(request, env, ctx) {
 }
 
 async function af(env, ctx, pathWithQuery, ttl = 300) {
-  const cache = caches.default;
-  const publicKeyUrl = new URL(`https://cache.local${pathWithQuery}`);
-  const cacheKey = new Request(publicKeyUrl.toString(), { method: "GET" });
+  const { response } = await fetchFootballCached(env, ctx, pathWithQuery, ttl);
+  const text = await response.text();
 
-  let cached = await cache.match(cacheKey);
-  if (cached) {
-    const payload = await cached.json();
-    return Array.isArray(payload?.response) ? payload.response : [];
-  }
-
-  const h = new Headers();
-  h.set("x-apisports-key", env.APISPORTS_KEY);
-  h.set("Accept", "application/json");
-
-  const res = await fetch(`https://v3.football.api-sports.io${pathWithQuery}`, {
-    method: "GET",
-    headers: h,
-  });
-
-  const text = await res.text();
   let parsed = null;
   try {
     parsed = JSON.parse(text);
   } catch {}
 
-  if (!res.ok || parsed === null || hasApiSportsErrors(parsed)) {
-    const msg = parsed?.errors || parsed?.error || `HTTP ${res.status}`;
+  if (!response.ok || parsed === null || hasApiSportsErrors(parsed)) {
+    const msg = parsed?.errors || parsed?.error || `HTTP ${response.status}`;
     throw new Error(typeof msg === "string" ? msg : JSON.stringify(msg));
-  }
-
-  const out = new Response(text, {
-    status: res.status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": `public, s-maxage=${ttl}`,
-    },
-  });
-
-  if (ttl > 0) {
-    const putPromise = cache.put(cacheKey, out.clone());
-    if (ctx?.waitUntil) ctx.waitUntil(putPromise);
-    else await putPromise;
   }
 
   return Array.isArray(parsed?.response) ? parsed.response : [];
@@ -831,7 +869,7 @@ function corsHeaders() {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization, x-admin-key",
-    "Access-Control-Expose-Headers": "x-cr-cache",
+    "Access-Control-Expose-Headers": "x-cr-cache, x-cr-relay",
   };
 }
 
