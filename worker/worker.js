@@ -586,51 +586,20 @@ async function handlePredict(request, env) {
     );
   }
 
-  // CACHE helper (semplice, stabile, senza waitUntil)
+  // CACHE helper condiviso con il proxy pubblico.
   async function af(pathWithQuery, ttlSeconds = 0) {
-    const cache = caches.default;
-
-    const cacheKey = new Request(
-      new URL("/__cache__" + pathWithQuery, request.url),
-      { method: "GET" },
+    const apiUrl = new URL(pathWithQuery, request.url);
+    const { response: res } = await fetchApiFootballCached(
+      apiUrl,
+      env,
+      ttlSeconds,
     );
-
-    if (ttlSeconds > 0) {
-      const cached = await cache.match(cacheKey);
-      if (cached) {
-        const data = await cached.json().catch(() => null);
-        if (data?.response) return data.response;
-      }
-    }
-
-    const upstream = new URL(
-      "https://v3.football.api-sports.io" + pathWithQuery,
-    );
-
-    const headers = new Headers();
-    headers.set("x-apisports-key", env.APISPORTS_KEY);
-    headers.set("accept", "application/json");
-
-    const res = await fetch(upstream.toString(), { method: "GET", headers });
-    const j = await res.json().catch(() => ({}));
+    const j = await res.json().catch(() => null);
 
     if (!res.ok) throw new Error(`API HTTP ${res.status}`);
-    if (j?.errors && Object.keys(j.errors).length)
-      throw new Error("API errors");
+    if (hasApiSportsErrors(j)) throw new Error("API errors");
 
-    const payload = { response: Array.isArray(j.response) ? j.response : [] };
-
-    if (ttlSeconds > 0) {
-      const cacheRes = new Response(JSON.stringify(payload), {
-        headers: {
-          "content-type": "application/json; charset=utf-8",
-          "cache-control": `public, max-age=${ttlSeconds}`,
-        },
-      });
-      await cache.put(cacheKey, cacheRes);
-    }
-
-    return payload.response;
+    return Array.isArray(j.response) ? j.response : [];
   }
 
   function goalsForAgainst(teamId, fx) {
@@ -1040,12 +1009,13 @@ function hasApiSportsErrors(payload) {
 // Cache key V2:
 // - condivisa tra utenti (Authorization esclusa)
 // - query string canonica
-// - namespace nuovo, così eventuali vecchi errori cacheati non vengono più riutilizzati.
+// - namespace relay dedicato, così il primo test non può usare risposte create
+//   dal vecchio trasporto diretto.
 function makeCacheKey(requestUrl) {
   const src = new URL(requestUrl);
   const cacheUrl = new URL(src.origin);
 
-  cacheUrl.pathname = `/__cr_cache_v2__${src.pathname}`;
+  cacheUrl.pathname = `/__cr_cache_relay_v1__${src.pathname}`;
   cacheUrl.search = "";
 
   const entries = [...src.searchParams.entries()].sort(([ak, av], [bk, bv]) => {
@@ -1063,86 +1033,111 @@ function makeCacheKey(requestUrl) {
   });
 }
 
+// Unico trasporto ammesso dal Worker verso API-Football:
+// cache Cloudflare -> relay OVH firmato HMAC -> API-Football.
+async function fetchRelay(pathWithQuery, env) {
+  const relayBase = String(env.CR_RELAY_URL || "").trim();
+  const relaySecret = String(env.CR_RELAY_SECRET || "").trim();
+
+  if (!relayBase || !relaySecret) {
+    throw new Error("Relay non configurato");
+  }
+
+  const relayOrigin = new URL(relayBase);
+  const relayUrl = new URL(pathWithQuery, relayOrigin.origin);
+  const signedPath = `${relayUrl.pathname}${relayUrl.search}`;
+  const timestamp = String(Date.now());
+  const canonical = `${timestamp}\nGET\n${signedPath}`;
+  const signature = await hmacSha256Hex(relaySecret, canonical);
+
+  return fetch(relayUrl.toString(), {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+      "x-cr-timestamp": timestamp,
+      "x-cr-signature": signature,
+    },
+  });
+}
+
+async function fetchApiFootballCached(requestUrl, env, ttlSeconds = 0, ctx) {
+  const url = requestUrl instanceof URL ? requestUrl : new URL(requestUrl);
+  const cache = caches.default;
+  const cacheKey = makeCacheKey(url.toString());
+
+  if (ttlSeconds > 0) {
+    const cached = await cache.match(cacheKey);
+    if (cached) return { response: cached, cacheStatus: "HIT" };
+  }
+
+  const pathWithQuery = `${url.pathname}${url.search}`;
+  const relayRes = await fetchRelay(pathWithQuery, env);
+  const bodyText = await relayRes.text();
+
+  let parsed = null;
+  try {
+    parsed = JSON.parse(bodyText);
+  } catch {}
+
+  const semanticOk =
+    relayRes.ok && parsed !== null && !hasApiSportsErrors(parsed);
+  const responseHeaders = new Headers(relayRes.headers);
+  responseHeaders.set(
+    "x-cr-relay",
+    relayRes.headers.get("x-cr-relay") || "missing",
+  );
+
+  if (semanticOk && ttlSeconds > 0) {
+    responseHeaders.set("Cache-Control", `public, s-maxage=${ttlSeconds}`);
+  } else {
+    responseHeaders.set("Cache-Control", "no-store");
+  }
+
+  const response = new Response(bodyText, {
+    status: relayRes.status,
+    statusText: relayRes.statusText,
+    headers: responseHeaders,
+  });
+
+  if (semanticOk && ttlSeconds > 0) {
+    const putPromise = cache.put(cacheKey, response.clone());
+    if (ctx?.waitUntil) ctx.waitUntil(putPromise);
+    else await putPromise;
+  }
+
+  return { response, cacheStatus: "MISS" };
+}
+
 /* =========================
    Proxy default (con gate)
    ========================= */
 async function proxyToApiSports(request, env, ctx) {
   const url = new URL(request.url);
-  const cache = caches.default;
-  const cacheKey = makeCacheKey(url.toString());
+  const ttl = cacheTtlFor(url.pathname, url.searchParams);
 
-  let response = await cache.match(cacheKey);
-  let cacheStatus = response ? "HIT" : "MISS";
-
-  if (!response) {
-    const upstreamUrl = `https://v3.football.api-sports.io${url.pathname}${url.search}`;
-    const h = new Headers();
-    h.set("x-apisports-key", env.APISPORTS_KEY);
-    h.set("Accept", "application/json");
-
-    let apiRes;
-    try {
-      apiRes = await fetch(upstreamUrl, { method: "GET", headers: h });
-    } catch (err) {
-      return json(
-        {
-          error: "UPSTREAM_NETWORK",
-          message: String(err?.message || err || "API-Football non raggiungibile"),
-        },
-        502,
-        {
-          ...corsHeaders(),
-          "Cache-Control": "no-store",
-          "x-cr-cache": "MISS",
-        },
-      );
-    }
-
-    const bodyText = await apiRes.text();
-
-    let parsed = null;
-    try {
-      parsed = JSON.parse(bodyText);
-    } catch {}
-
-    const semanticOk =
-      apiRes.ok &&
-      parsed !== null &&
-      !hasApiSportsErrors(parsed);
-
-    const responseHeaders = new Headers(apiRes.headers);
-
-    if (semanticOk) {
-      const ttl = cacheTtlFor(url.pathname, url.searchParams);
-
-      if (ttl > 0) {
-        responseHeaders.set("Cache-Control", `public, s-maxage=${ttl}`);
-      } else {
-        responseHeaders.set("Cache-Control", "no-store");
-      }
-
-      response = new Response(bodyText, {
-        status: apiRes.status,
-        statusText: apiRes.statusText,
-        headers: responseHeaders,
-      });
-
-      if (ttl > 0) {
-        const putPromise = cache.put(cacheKey, response.clone());
-        if (ctx?.waitUntil) ctx.waitUntil(putPromise);
-        else await putPromise;
-      }
-    } else {
-      // HTTP error, JSON invalido o API-Football 200 + errors:
-      // restituisci al client ma NON memorizzare mai in edge cache.
-      responseHeaders.set("Cache-Control", "no-store");
-
-      response = new Response(bodyText, {
-        status: apiRes.status,
-        statusText: apiRes.statusText,
-        headers: responseHeaders,
-      });
-    }
+  let response;
+  let cacheStatus = "MISS";
+  try {
+    ({ response, cacheStatus } = await fetchApiFootballCached(
+      url,
+      env,
+      ttl,
+      ctx,
+    ));
+  } catch (err) {
+    return json(
+      {
+        error: "UPSTREAM_NETWORK",
+        message: String(err?.message || err || "Relay non raggiungibile"),
+      },
+      502,
+      {
+        ...corsHeaders(),
+        "Cache-Control": "no-store",
+        "x-cr-cache": "MISS",
+        "x-cr-relay": "0",
+      },
+    );
   }
 
   const newHeaders = new Headers(response.headers);
@@ -1290,7 +1285,7 @@ function corsHeaders() {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization, x-admin-key",
-    "Access-Control-Expose-Headers": "x-cr-cache",
+    "Access-Control-Expose-Headers": "x-cr-cache, x-cr-relay",
   };
 }
 
