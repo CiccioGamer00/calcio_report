@@ -195,7 +195,17 @@ Relay transport implementation is complete in the versioned Worker:
 - `x-cr-relay` is propagated for diagnostics;
 - the API-Football key is no longer referenced by the Worker.
 
-The live Cloudflare Worker must still be deployed from this version and validated before the transport milestone is considered complete.
+The canonical relay-enabled Worker was deployed manually to the live Cloudflare Worker `calcio-report-proxy` on 2026-09-12.
+
+Live end-to-end validation completed:
+
+- the online app loaded AC Milan's real next fixture through the deployed Worker;
+- the sequence Milan → Juventus → Inter → Milan completed successfully when teams were selected from suggestions;
+- no abnormal API-Football rate-limit error reappeared during the sequence;
+- because the deployed Worker has no direct API-Football fallback and uses a fresh relay cache namespace, the successful live data confirms the Worker → OVH relay → API-Football path;
+- automated transport tests separately confirmed canonical cache keys, MISS → HIT reuse, correct HMAC signatures, and that HTTP 200 responses containing semantic `errors` are not cached.
+
+Observed frontend behavior on the currently published legacy UI: pressing Enter on raw `milan` produced a false empty result, while selecting `AC Milan` from suggestions loaded the fixture correctly. Treat this as a frontend flow bug; do not infer an upstream/relay failure from it. Core V2 must keep Enter, Cerca and suggestion click on one shared deterministic path.
 
 ## Relay status
 
@@ -324,14 +334,11 @@ Completed:
 
 Security / infrastructure still pending:
 
-- security update policy/logging review;
-- deploy the versioned relay-enabled Worker and complete end-to-end validation.
+- security update policy/logging review.
 
-## Immediate next objective
+## Completed infrastructure milestone
 
-Do not resume panels or lineup rebuild yet.
-
-First make this path work reliably:
+The required live path is now working:
 
 ```text
 localhost frontend
@@ -343,15 +350,11 @@ OVH relay with stable egress IP
 API-Football
 ```
 
-Relay code integration and local transport tests are complete. Automatic direct API-Football fallback is disabled. Next validate the live path:
+Relay code integration, deployment, local transport tests and the live team sequence are complete. Automatic direct API-Football fallback remains disabled.
 
-1. deploy the canonical `worker/worker.js` to Cloudflare;
-2. make one controlled Worker request and confirm `x-cr-relay: 1`;
-3. verify `x-cr-cache: MISS` followed by `HIT`;
-4. verify the relay actually received the MISS;
-5. test the sequence Milan → Juventus → Inter → Milan;
-6. verify stale responses never overwrite current search;
-7. confirm upstream call count stays controlled.
+## Immediate next objective
+
+Resume Core V2 frontend work from the existing modular files. First verify the shared search path and stale-request protection in the Core V2 implementation, then continue the planned panel migration without changing the current visual identity.
 
 Only after that resume Core V2 feature migration.
 
