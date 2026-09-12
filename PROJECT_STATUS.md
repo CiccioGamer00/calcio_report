@@ -408,10 +408,14 @@ Required behavior for the eventual fix:
 - do not add API calls solely to solve row placement;
 - repeat visual tests before closing the bug.
 
+### Panel parity audit — started 2026-09-12
+
+- **Arbitro — VERIFIED.** `js/features/refereePanel.js` is byte-identical to `main`. Manual test on Lazio–AC Milan confirmed fixture referee/stadium/city rendering, referee-history fallback, card summary, grouped match-history toggle and per-team detail toggle. No reproduced regression and no code change required. The panel remains on-demand; no obvious duplicate request was observed during the focused test.
+
 Open bugs / required work, in priority order:
 
 1. **Four-line formations — NOT CLOSED.** Implement role-aware estimated XI row assignment for formations such as `4-2-3-1`, `4-1-4-1` and `3-4-2-1`, respecting natural roles and allowing only intentional MID/ATT mixing on hybrid attacking-midfield rows. Current GitHub code remains at the last verified checkpoint; the unsuccessful local experiment was reverted.
-2. **Panel parity and call audit.** Test each unchanged panel against `main`. Preserve its content and presentation; change code only for a reproduced bug, duplicated request or measurable efficiency improvement.
+2. **Panel parity and call audit.** Continue testing each unchanged panel against `main`. Preserve its content and presentation; change code only for a reproduced bug, duplicated request or measurable efficiency improvement. `Arbitro` is verified; continue with `Squadre`.
 
 Closed frontend regressions:
 
