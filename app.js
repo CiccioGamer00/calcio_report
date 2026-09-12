@@ -831,6 +831,18 @@ function setupTabs() {
     await autoLoadFor(viewId);
   });
 
+  // Se la scheda è stata aperta mentre la ricerca stava ancora risolvendo
+  // la fixture, avvia il suo caricamento appena la selezione diventa valida.
+  window.addEventListener("cr:selection", () => {
+    const activeTab = nav.querySelector(".tab.is-active");
+    const view = activeTab?.getAttribute("data-view");
+    if (!view || view === "match") return;
+
+    autoLoadFor(view).catch((e) =>
+      console.error("deferred autoLoadFor error", view, e),
+    );
+  });
+
   // default: Match
   showView("matchView");
 }

@@ -103,6 +103,12 @@ function crCommitSelection(searchId, team, fixture) {
   selectedTeam = team;
   selectedFixture = fixture;
 
+  window.dispatchEvent(
+    new CustomEvent("cr:selection", {
+      detail: { searchId, team, fixture },
+    }),
+  );
+
   return true;
 }
 
