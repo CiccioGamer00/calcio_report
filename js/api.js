@@ -135,6 +135,7 @@ async function apiGetV2(pathWithQuery, opts = {}) {
       reqId,
       searchId,
       cache: "NONE",
+      relay: "NONE",
     };
   }
 
@@ -182,6 +183,7 @@ async function apiGetV2(pathWithQuery, opts = {}) {
           : null;
         const arr = Array.isArray(response) ? response : [];
         const cacheHeader = res.headers.get("x-cr-cache") || "NONE";
+        const relayHeader = res.headers.get("x-cr-relay") || "NONE";
 
         const out = {
           kind,
@@ -197,6 +199,7 @@ async function apiGetV2(pathWithQuery, opts = {}) {
           searchId,
           attempt,
           cache: cacheHeader,
+          relay: relayHeader,
           frontendCache: "MISS",
         };
 
@@ -227,6 +230,7 @@ async function apiGetV2(pathWithQuery, opts = {}) {
           searchId,
           attempt,
           cache: "NONE",
+          relay: "NONE",
           frontendCache: "MISS",
         };
 

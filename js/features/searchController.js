@@ -117,6 +117,7 @@
       `tipo=${result?.kind || "—"}`,
       `http=${result?.status ?? "—"}`,
       `cache=${result?.cache || result?.frontendCache || "—"}`,
+      `relay=${result?.relay || "—"}`,
     ];
 
     if (team) {
@@ -340,6 +341,7 @@
       kind: result.kind,
       status: result.status,
       cache: result.cache,
+      relay: result.relay,
       reqId: result.reqId,
     });
 
@@ -625,6 +627,7 @@
         status: fixtureResult.status,
         results: fixtureResult.arr?.length || 0,
         cache: fixtureResult.cache,
+        relay: fixtureResult.relay,
         reqId: fixtureResult.reqId,
       });
 
