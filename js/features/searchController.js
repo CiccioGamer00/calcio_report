@@ -861,6 +861,14 @@
           console.error("CR V2 main standings mini", err);
         }
       });
+
+      if (typeof window.loadLineupsPitch === "function") {
+        window.loadLineupsPitch({ searchId, signal }).catch((err) => {
+          if (window.crIsSearchActive(searchId) && err?.name !== "AbortError") {
+            console.error("CR V2 official lineups", err);
+          }
+        });
+      }
     } catch (err) {
       if (!window.crIsSearchActive(searchId) || err?.name === "AbortError") return;
 

@@ -384,20 +384,21 @@ Completed and verified:
 - searched team's following fixture remains visible;
 - opponent's following fixture loads in background without delaying the main match (verified Lazio → Venezia);
 - main-card standings pills are restored through one non-blocking, stale-safe `/standings` request; opening the full standings panel reuses the same frontend-cache entry;
+- the main card performs one non-blocking official lineup check; an empty result no longer starts the historical estimator automatically and instead exposes an explicit estimate button;
 - `main` remains unchanged;
 - `app.js`, `index.html`, `style.css`, `config.js`, `teamFlow.js` and the existing panel modules remain functionally based on `main`; only the API/state/search orchestration and infrastructure have been changed.
 
 Open bugs / required work, in priority order:
 
-1. **Lineup request cost.** Measure the real request sequence first. Keep the lightweight official `/fixtures/lineups` check; if official lineups are absent, show “Formazioni non disponibili” and offer an explicit button for the expensive estimated lineup instead of starting estimation automatically.
-2. **Four-line formations.** Validate and, where needed, correct both official and estimated pitch rendering for formations such as 4-2-3-1, 4-1-4-1 and 3-4-2-1. Do not assume the existing dynamic parser is sufficient until visual tests pass.
-3. **Panel parity and call audit.** Test each unchanged panel against `main`. Preserve its content and presentation; change code only for a reproduced bug, duplicated request or measurable efficiency improvement.
+1. **Four-line formations.** Validate and, where needed, correct both official and estimated pitch rendering for formations such as 4-2-3-1, 4-1-4-1 and 3-4-2-1. Do not assume the existing dynamic parser is sufficient until visual tests pass.
+2. **Panel parity and call audit.** Test each unchanged panel against `main`. Preserve its content and presentation; change code only for a reproduced bug, duplicated request or measurable efficiency improvement.
 
 Closed frontend regressions:
 
 - **Search button:** explicit click-path regression test passed; it uses the shared `startTeamSearch()` flow and did not require a code change.
 - **Tabs/cards first click:** reproduced as a timing race. A tab clicked before `selectedFixture` was committed opened visually but skipped its on-demand loader permanently; `cr:selection` now resumes the already-active tab once the fixture is valid, without starting extra panels or duplicating successful loads.
 - **Main-card parity:** the mini standings/rank pills bypassed by the new controller are loaded in background again, with `searchId` and fixture checks preventing stale re-renders.
+- **Lineup request cost:** automatic loading now stops after one official `/fixtures/lineups` check when data is absent; the existing multi-request estimator runs only after an explicit click, while transport errors remain distinguishable from an empty response.
 
 ### Scope guardrails for the next chat
 

@@ -676,10 +676,18 @@ function initTeamSearchUX() {
 }
 
 initTeamSearchUX();
-async function loadLineupsPitch() {
+async function loadLineupsPitch(options = {}) {
   const box = document.getElementById("lineupsBox");
   const content = document.getElementById("lineupsContent");
   if (!box || !content) return;
+
+  const estimateOnDemand = options?.estimateOnDemand === true;
+  const signal = options?.signal || null;
+  const searchId = Number.isFinite(options?.searchId)
+    ? options.searchId
+    : Number.isFinite(window.CR_STATE?.search?.activeId)
+      ? window.CR_STATE.search.activeId
+      : null;
 
   // Mostra sempre il box
   box.classList.remove("hidden");
@@ -689,19 +697,90 @@ async function loadLineupsPitch() {
     return;
   }
 
-  content.innerHTML = `<p class="muted"><em>Recupero formazioni…</em></p>`;
+  const fixtureId = selectedFixture.id;
+  const isStillCurrent = () => {
+    if (Number(selectedFixture?.id) !== Number(fixtureId)) return false;
+    if (searchId === null || typeof window.crIsSearchActive !== "function") {
+      return true;
+    }
+    return window.crIsSearchActive(searchId);
+  };
 
-  const r = await apiGet(`/fixtures/lineups?fixture=${selectedFixture.id}`, {
-    retries: 2,
-    delays: [350, 900],
-  });
+  content.innerHTML = estimateOnDemand
+    ? `<p class="muted"><em>Calcolo formazione stimata…</em></p>`
+    : `<p class="muted"><em>Verifico le formazioni ufficiali…</em></p>`;
 
-  // Se non disponibili ufficialmente: provo STIMATA (storico + indisponibili)
-  if (!r.ok || r.errors || !Array.isArray(r.arr) || r.arr.length === 0) {
+  let r = null;
+  if (!estimateOnDemand) {
+    r = await apiGet(`/fixtures/lineups?fixture=${fixtureId}`, {
+      retries: 0,
+      signal,
+      searchId,
+    });
+
+    if (!isStillCurrent() || r?.kind === "aborted") return;
+
+    const hasOfficial =
+      r?.ok && !r?.errors && Array.isArray(r?.arr) && r.arr.length > 0;
+
+    if (!hasOfficial) {
+      const isEmpty =
+        r?.kind === "empty" ||
+        (r?.ok && !r?.errors && Array.isArray(r?.arr) && r.arr.length === 0);
+
+      if (isEmpty) {
+        content.innerHTML = `
+          ${renderPitchPlaceholder("Formazioni non disponibili.")}
+          <div style="margin-top:10px; text-align:center;">
+            <button type="button" class="btn primary" id="btnEstimateLineups">
+              Calcola formazione stimata
+            </button>
+          </div>
+        `;
+
+        document.getElementById("btnEstimateLineups")?.addEventListener(
+          "click",
+          () => {
+            loadLineupsPitch({ estimateOnDemand: true, signal, searchId }).catch(
+              (e) => console.error("estimated lineups on demand", e),
+            );
+          },
+          { once: true },
+        );
+        return;
+      }
+
+      content.innerHTML = `
+        ${renderPitchPlaceholder("Impossibile verificare le formazioni ufficiali.")}
+        <div style="margin-top:10px; text-align:center;">
+          <button type="button" class="btn" id="btnRetryOfficialLineups">
+            Riprova
+          </button>
+        </div>
+      `;
+
+      document.getElementById("btnRetryOfficialLineups")?.addEventListener(
+        "click",
+        () => {
+          loadLineupsPitch({ signal, searchId }).catch((e) =>
+            console.error("official lineups retry", e),
+          );
+        },
+        { once: true },
+      );
+      return;
+    }
+  }
+
+  // La stima pesante parte esclusivamente dal pulsante esplicito.
+  if (estimateOnDemand) {
     const est = await estimateLineupsForFixture().catch((e) => {
       console.error("estimateLineupsForFixture ERROR:", e);
       return null;
     });
+
+    if (!isStillCurrent()) return;
+
     if (est?.home && est?.away) {
       // join foto da /players/squads (così le facce ci sono anche nella STIMATA)
       async function fetchSquadPhotoMap(teamId) {
@@ -737,6 +816,8 @@ async function loadLineupsPitch() {
         fetchSquadPhotoMap(homeId),
         fetchSquadPhotoMap(awayId),
       ]);
+
+      if (!isStillCurrent()) return;
 
       // applico foto a startXI stimata
       (est.home.startXI || []).forEach((p) => {
