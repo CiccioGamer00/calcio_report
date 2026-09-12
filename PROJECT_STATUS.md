@@ -410,12 +410,34 @@ Required behavior for the eventual fix:
 
 ### Panel parity audit — started 2026-09-12
 
-- **Arbitro — VERIFIED.** `js/features/refereePanel.js` is byte-identical to `main`. Manual test on Lazio–AC Milan confirmed fixture referee/stadium/city rendering, referee-history fallback, card summary, grouped match-history toggle and per-team detail toggle. No reproduced regression and no code change required. The panel remains on-demand; no obvious duplicate request was observed during the focused test.
+- **Arbitro — VERIFIED.** `js/features/refereePanel.js` is byte-identical to `main`. Manual test on Lazio–AC Milan confirmed fixture referee/stadium/city rendering, referee-history fallback, card summary, grouped match-history toggle and per-team detail toggle. Returning to the panel after visiting Match is immediate and does not reload it. No reproduced regression and no code change required.
+- **Squadre — VERIFIED.** `js/features/teamsPanel.js` is byte-identical to `main`. Manual test on Lazio–AC Milan confirmed both team cards, last-5 results, W/D/L counts, GF/GS, cards and opponent/home-away presentation. Returning to the panel after visiting Match is immediate and does not reload it. Existing shared event caching remains in use; no reproduced regression and no code change required.
+- Panel help/toast persistence was also checked: `Non mostrare più` is intentionally stored per hint key (`hint_referee`, `hint_teams`, etc.) in `localStorage`; focused retest confirmed the same disabled hint does not reappear. No bug.
+
+### Indicators score semantics investigation — 2026-09-12
+
+A visual audit of the Indicators tiles found a real interpretation problem in `js/features/indicatorsPanel.js`.
+
+Current behavior:
+
+- the large percentage shown on Corner, Tiri, Cartellini and Falli tiles is **not a probability of the displayed betting label**;
+- it is a linear 0–100 intensity index produced by `scoreLinear()` from the expected raw volume;
+- example observed: `Cartellini: Under 4.5`, expected cards `2.60`, displayed score `12%`; the 12% comes from scaling 2.60 between 2 and 7 and therefore means low card volume, not 12% probability of Under 4.5;
+- the same issue explains examples such as Corner 20%, Tiri 26% and Falli 5%;
+- the separate Bookmaker section above is different: those percentages are actual historical hit rates (`hit / total`) over recent matches.
+
+Required follow-up:
+
+- do not present the tile intensity index as if it were the probability/confidence of the betting label;
+- preferred product direction is for the prominent tile score to express the strength/coherence of the displayed prediction, so a strong `Under 4.5` signal from low expected cards should score high rather than low;
+- define the final score semantics consistently across Corner, Tiri, Cartellini and Falli before changing code;
+- no extra API calls are needed for this correction; reuse the data already calculated by the Indicators panel.
 
 Open bugs / required work, in priority order:
 
 1. **Four-line formations — NOT CLOSED.** Implement role-aware estimated XI row assignment for formations such as `4-2-3-1`, `4-1-4-1` and `3-4-2-1`, respecting natural roles and allowing only intentional MID/ATT mixing on hybrid attacking-midfield rows. Current GitHub code remains at the last verified checkpoint; the unsuccessful local experiment was reverted.
-2. **Panel parity and call audit.** Continue testing each unchanged panel against `main`. Preserve its content and presentation; change code only for a reproduced bug, duplicated request or measurable efficiency improvement. `Arbitro` is verified; continue with `Squadre`.
+2. **Indicators score semantics — OPEN.** Decide and implement a clear score meaning for the main Indicator tiles; current `%` values are intensity indexes and are misleading beside labels such as `Under 4.5`.
+3. **Panel parity and call audit.** Continue testing each unchanged panel against `main`. Preserve its content and presentation; change code only for a reproduced bug, duplicated request or measurable efficiency improvement. `Arbitro` and `Squadre` are verified; continue with the remaining panels.
 
 Closed frontend regressions:
 
