@@ -6,352 +6,1026 @@ export default {
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: corsHeaders() });
     }
-
     // ========== STRIPE WEBHOOK ==========
-    if (url.pathname === "/stripe/webhook" && request.method === "POST") {
-      return handleStripeWebhook(request, env);
-    }
+if (url.pathname === "/stripe/webhook" && request.method === "POST") {
+  return handleStripeWebhook(request, env);
+}
 
-    // ========== AUTH ==========
-    if (url.pathname === "/register" && request.method === "POST") {
+    // ========== AUTH / LICENSE ROUTES ==========
+    if (url.pathname === "/auth/register" && request.method === "POST")
       return handleRegister(request, env);
-    }
-    if (url.pathname === "/login" && request.method === "POST") {
+    if (url.pathname === "/auth/login" && request.method === "POST")
       return handleLogin(request, env);
-    }
-    if (url.pathname === "/me" && request.method === "GET") {
+    if (url.pathname === "/auth/me" && request.method === "GET")
       return handleMe(request, env);
-    }
+    if (url.pathname === "/license/redeem" && request.method === "POST")
+      return handleRedeem(request, env);
+
+    // ========== ADMIN ROUTES ==========
+    if (url.pathname === "/admin/mint" && request.method === "GET")
+      return handleAdminMint(request, env);
+    if (url.pathname === "/admin/users" && request.method === "GET")
+      return handleAdminUsers(request, env);
+    if (url.pathname === "/admin/note" && request.method === "POST")
+      return handleAdminNote(request, env);
+    if (url.pathname === "/admin/grant" && request.method === "POST")
+      return handleAdminGrant(request, env);
+    if (url.pathname === "/admin/adjust" && request.method === "POST")
+      return handleAdminAdjust(request, env);
+    if (url.pathname === "/admin/disable" && request.method === "POST")
+      return handleAdminDisable(request, env);
+    if (url.pathname === "/admin/stats" && request.method === "GET")
+      return handleAdminStats(request, env);
+
 
     // ========== TELEMETRY ==========
-    if (url.pathname === "/telemetry/ping" && request.method === "POST") {
+    if (url.pathname === "/telemetry/ping" && request.method === "POST")
       return handleTelemetryPing(request, env);
+
+    // ✅ ROUTE: /predict (Il cuore del tuo algoritmo)
+    if (url.pathname === "/predict") {
+      const gate = await requireActiveUser(request, env); // Aggiungi questo
+      if (!gate.ok) return gate.res;
+      return handlePredict(request, env);
     }
 
-    // ========== LICENSE ==========
-    if (url.pathname === "/license/redeem" && request.method === "POST") {
-      return handleRedeem(request, env);
-    }
-
-    // ========== ADMIN ==========
-    if (url.pathname === "/admin/users" && request.method === "GET") {
-      return handleAdminUsers(request, env);
-    }
-    if (url.pathname === "/admin/users/grant" && request.method === "POST") {
-      return handleAdminGrant(request, env);
-    }
-
-    // ========== PREDICTION ==========
-    if (url.pathname === "/predict" && request.method === "GET") {
-      const gate = await requireActiveUser(request, env);
-      if (!gate.ok) return json(gate.body, gate.status);
-      return handlePredict(request, env, ctx);
-    }
-
-    // ========== DEFAULT: API-FOOTBALL PROXY ==========
+    // ========== DEFAULT PROXY: API-Football con Paywall ==========
     const gate = await requireActiveUser(request, env);
-    if (!gate.ok) return json(gate.body, gate.status);
+    if (!gate.ok) return gate.res;
 
     return proxyToApiSports(request, env, ctx);
   },
 };
 
 /* =========================
-   Auth helpers
+   AUTH: register/login/me
    ========================= */
 async function handleRegister(request, env) {
-  try {
-    const body = await request.json();
-    const email = normalizeEmail(body.email);
-    const password = String(body.password || "");
+  const body = await request.json().catch(() => ({}));
+  const email = normEmail(body.email);
+  const password = String(body.password || "");
 
-    if (!email || !email.includes("@")) {
-      return json({ error: "INVALID_EMAIL" }, 400);
-    }
-    if (password.length < 6) {
-      return json({ error: "PASSWORD_TOO_SHORT" }, 400);
-    }
-
-    const exists = await env.DB.prepare("SELECT email FROM users WHERE email = ?")
-      .bind(email)
-      .first();
-    if (exists) return json({ error: "EMAIL_EXISTS" }, 409);
-
-    const salt = randomHex(16);
-    const passHash = await hashPassword(password, salt);
-    const now = new Date();
-    const nowIso = now.toISOString();
-    const trialEnds = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
-
-    await env.DB.prepare(
-      `INSERT INTO users
-        (email, pass_hash, salt, created_at, trial_ends_at, paid_until, disabled, token, paid_activated_at, last_seen_at)
-       VALUES (?, ?, ?, ?, ?, NULL, 0, NULL, NULL, ?)`
-    )
-      .bind(email, passHash, salt, nowIso, trialEnds, nowIso)
-      .run();
-
-    const token = await issueToken(env, email);
-    return json({ ok: true, token }, 200);
-  } catch (e) {
-    return json({ error: "REGISTER_FAILED", message: String(e?.message || e) }, 500);
+  if (!email || password.length < 6) {
+    return json(
+      {
+        error: "BAD_INPUT",
+        message: "Email valida e password min 6 caratteri.",
+      },
+      400,
+      corsHeaders(),
+    );
   }
+
+  const exists = await env.DB.prepare("SELECT email FROM users WHERE email = ?")
+    .bind(email)
+    .first();
+
+  if (exists) {
+    return json(
+      { error: "EMAIL_EXISTS", message: "Email già registrata. Fai login." },
+      409,
+      corsHeaders(),
+    );
+  }
+
+  
+
+  const now = Date.now();
+  const trialEndsAt = now + 7 * 24 * 60 * 60 * 1000; // 7 giorni
+  const passHash = await sha256(password);
+
+  await env.DB.prepare(
+    "INSERT INTO users (id, email, pass_hash, trial_ends_at, paid_until, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+  )
+    .bind(crypto.randomUUID(), email, passHash, trialEndsAt, 0, now)
+    .run();
+
+  const token = await signToken(env, { email, iat: now });
+
+  return json(
+    {
+      ok: true,
+      token,
+      trialEndsAt,
+      paidUntil: 0,
+    },
+    200,
+    corsHeaders(),
+  );
 }
 
 async function handleLogin(request, env) {
-  try {
-    const body = await request.json();
-    const email = normalizeEmail(body.email);
-    const password = String(body.password || "");
+  const body = await request.json().catch(() => ({}));
+  const email = normEmail(body.email);
+  const password = String(body.password || "");
 
-    const u = await env.DB.prepare(
-      `SELECT email, pass_hash, salt, disabled, trial_ends_at, paid_until
-       FROM users WHERE email = ?`
-    )
-      .bind(email)
-      .first();
-
-    if (!u) return json({ error: "INVALID_CREDENTIALS" }, 401);
-    if (Number(u.disabled) === 1) return json({ error: "ACCOUNT_DISABLED" }, 403);
-
-    const passHash = await hashPassword(password, u.salt);
-    if (passHash !== u.pass_hash) return json({ error: "INVALID_CREDENTIALS" }, 401);
-
-    const token = await issueToken(env, email);
-    return json({ ok: true, token }, 200);
-  } catch (e) {
-    return json({ error: "LOGIN_FAILED", message: String(e?.message || e) }, 500);
-  }
-}
-
-async function handleMe(request, env) {
-  const auth = await authenticateRequest(request, env);
-  if (!auth.ok) return json(auth.body, auth.status);
-
-  const access = accessState(auth.user);
-  return json({
-    ok: true,
-    email: auth.user.email,
-    trialEndsAt: auth.user.trial_ends_at,
-    paidUntil: auth.user.paid_until,
-    disabled: Number(auth.user.disabled) === 1,
-    access,
-  });
-}
-
-async function authenticateRequest(request, env) {
-  const header = request.headers.get("Authorization") || "";
-  const m = header.match(/^Bearer\s+(.+)$/i);
-  if (!m) {
-    return {
-      ok: false,
-      status: 401,
-      body: { error: "AUTH_REQUIRED", message: "Login necessario." },
-    };
-  }
-
-  const token = m[1].trim();
-  if (!token) {
-    return {
-      ok: false,
-      status: 401,
-      body: { error: "AUTH_REQUIRED", message: "Login necessario." },
-    };
+  if (!email || !password) {
+    return json(
+      { error: "BAD_INPUT", message: "Email e password richieste." },
+      400,
+      corsHeaders(),
+    );
   }
 
   const u = await env.DB.prepare(
-    `SELECT email, disabled, trial_ends_at, paid_until, paid_activated_at, last_seen_at
-     FROM users WHERE token = ?`
+    "SELECT email, pass_hash, trial_ends_at, paid_until FROM users WHERE email = ?",
   )
-    .bind(token)
+    .bind(email)
     .first();
 
   if (!u) {
-    return {
-      ok: false,
-      status: 401,
-      body: { error: "AUTH_INVALID", message: "Sessione non valida." },
-    };
+    return json(
+      { error: "LOGIN_FAILED", message: "Credenziali errate." },
+      401,
+      corsHeaders(),
+    );
   }
-
-  if (Number(u.disabled) === 1) {
-    return {
-      ok: false,
-      status: 403,
-      body: { error: "ACCOUNT_DISABLED", message: "Account disabilitato." },
-    };
-  }
-
-  return { ok: true, user: u };
+  if (Number(u.disabled || 0) === 1) {
+  return json(
+    { error: "ACCOUNT_DISABLED", message: "Account disabilitato." },
+    403,
+    corsHeaders(),
+  );
 }
 
-async function requireActiveUser(request, env) {
-  const auth = await authenticateRequest(request, env);
-  if (!auth.ok) return auth;
-
-  const access = accessState(auth.user);
-  if (!access.active) {
-    return {
-      ok: false,
-      status: 402,
-      body: {
-        error: "PAYWALL",
-        message: "Periodo di prova scaduto. Attiva PRO per continuare.",
-        access,
-      },
-    };
+  const passHash = await sha256(password);
+  if (passHash !== u.pass_hash) {
+    return json(
+      { error: "LOGIN_FAILED", message: "Credenziali errate." },
+      401,
+      corsHeaders(),
+    );
   }
 
-  return auth;
+  const token = await signToken(env, { email, iat: Date.now() });
+
+  return json(
+    {
+      ok: true,
+      token,
+      trialEndsAt: Number(u.trial_ends_at || 0),
+      paidUntil: Number(u.paid_until || 0),
+    },
+    200,
+    corsHeaders(),
+  );
 }
 
-function accessState(u) {
-  const now = Date.now();
-  const trial = u?.trial_ends_at ? Date.parse(u.trial_ends_at) : 0;
-  const paid = u?.paid_until ? Date.parse(u.paid_until) : 0;
+async function handleMe(request, env) {
+  const token = readBearer(request);
+  if (!token) return json({ ok: false }, 200, corsHeaders());
 
-  const paidActive = Number.isFinite(paid) && paid > now;
-  const trialActive = Number.isFinite(trial) && trial > now;
+  const sess = await verifySignedToken(env, token);
+  if (!sess?.email) return json({ ok: false }, 200, corsHeaders());
 
-  return {
-    active: paidActive || trialActive,
-    mode: paidActive ? "PRO" : trialActive ? "TRIAL" : "EXPIRED",
-    trialEndsAt: u?.trial_ends_at || null,
-    paidUntil: u?.paid_until || null,
-  };
-}
+  const u = await env.DB.prepare(
+    "SELECT email, trial_ends_at, paid_until FROM users WHERE email = ?",
+  )
+    .bind(sess.email)
+    .first();
 
-async function issueToken(env, email) {
-  const token = `${randomHex(24)}${randomHex(24)}`;
-  await env.DB.prepare("UPDATE users SET token = ? WHERE email = ?")
-    .bind(token, email)
-    .run();
-  return token;
+  if (!u) return json({ ok: false }, 200, corsHeaders());
+
+  return json(
+    {
+      ok: true,
+      email: u.email,
+      trialEndsAt: Number(u.trial_ends_at || 0),
+      paidUntil: Number(u.paid_until || 0),
+      now: Date.now(),
+    },
+    200,
+    corsHeaders(),
+  );
 }
 
 /* =========================
-   Telemetry
-   ========================= */
-async function handleTelemetryPing(request, env) {
-  const auth = await authenticateRequest(request, env);
-  if (!auth.ok) return json(auth.body, auth.status);
-
-  const nowIso = new Date().toISOString();
-  await env.DB.prepare("UPDATE users SET last_seen_at = ? WHERE email = ?")
-    .bind(nowIso, auth.user.email)
-    .run();
-
-  return json({ ok: true });
-}
-
-/* =========================
-   License
-   ========================= */
+   LICENSE: redeem (utente)
+   =========================
+   L'utente incolla un codice che TU gli dai dopo pagamento.
+   Il codice è firmato con LICENSE_SECRET e contiene email + exp.
+*/
 async function handleRedeem(request, env) {
-  const auth = await authenticateRequest(request, env);
-  if (!auth.ok) return json(auth.body, auth.status);
-
-  try {
-    const body = await request.json();
-    const code = String(body.code || "").trim();
-    if (!code) return json({ error: "INVALID_CODE" }, 400);
-
-    const license = await verifyLicenseCode(env, code);
-    if (!license.ok) return json({ error: "INVALID_CODE" }, 400);
-
-    const days = Math.max(1, Math.min(365, Number(license.days) || 30));
-    const now = Date.now();
-    const current = auth.user.paid_until ? Date.parse(auth.user.paid_until) : 0;
-    const base = Number.isFinite(current) && current > now ? current : now;
-    const paidUntil = new Date(base + days * 24 * 60 * 60 * 1000).toISOString();
-
-    await env.DB.prepare("UPDATE users SET paid_until = ? WHERE email = ?")
-      .bind(paidUntil, auth.user.email)
-      .run();
-
-    return json({ ok: true, paidUntil });
-  } catch (e) {
-    return json({ error: "REDEEM_FAILED", message: String(e?.message || e) }, 500);
+  const token = readBearer(request);
+  if (!token) {
+    return json({ error: "AUTH_REQUIRED" }, 401, corsHeaders());
   }
+  const sess = await verifySignedToken(env, token);
+  if (!sess?.email) {
+    return json({ error: "AUTH_INVALID" }, 401, corsHeaders());
+  }
+
+  const body = await request.json().catch(() => ({}));
+  const code = String(body.code || "").trim();
+  if (!code)
+    return json(
+      { error: "BAD_INPUT", message: "Codice mancante." },
+      400,
+      corsHeaders(),
+    );
+
+  const payload = await verifyLicenseCode(env, code);
+  if (!payload?.email || !payload?.exp) {
+    return json(
+      { error: "CODE_INVALID", message: "Codice non valido." },
+      400,
+      corsHeaders(),
+    );
+  }
+  if (normEmail(payload.email) !== normEmail(sess.email)) {
+    return json(
+      { error: "CODE_EMAIL_MISMATCH", message: "Codice non per questa email." },
+      400,
+      corsHeaders(),
+    );
+  }
+  if (Date.now() > Number(payload.exp)) {
+    return json(
+      { error: "CODE_EXPIRED", message: "Codice scaduto." },
+      400,
+      corsHeaders(),
+    );
+  }
+
+  // Attiva 30 giorni da adesso (o estendi se già attivo)
+  const u = await env.DB.prepare("SELECT paid_until FROM users WHERE email = ?")
+    .bind(sess.email)
+    .first();
+
+  const now = Date.now();
+  const currentPaid = Number(u?.paid_until || 0);
+  const base = Math.max(now, currentPaid);
+  const newPaidUntil = base + 30 * 24 * 60 * 60 * 1000;
+
+  await env.DB.prepare("UPDATE users SET paid_until = ? WHERE email = ?")
+    .bind(newPaidUntil, sess.email)
+    .run();
+
+  return json({ ok: true, paidUntil: newPaidUntil, now }, 200, corsHeaders());
 }
 
 /* =========================
-   Admin
-   ========================= */
-async function handleAdminUsers(request, env) {
-  if (!isAdmin(request, env)) return json({ error: "FORBIDDEN" }, 403);
+   ADMIN: mint code (tu)
+   =========================
+   GET /admin/mint?email=...  header: x-admin-key
+   Ritorna un codice da mandare all'utente.
+*/
+async function handleAdminMint(request, env) {
+  if (!isAdmin(request, env))
+    return json({ error: "FORBIDDEN" }, 403, corsHeaders());
 
   const url = new URL(request.url);
-  const limit = Math.max(1, Math.min(200, Number(url.searchParams.get("limit") || 100)));
+  const email = normEmail(url.searchParams.get("email"));
+  if (!email)
+    return json(
+      { error: "BAD_INPUT", message: "email mancante" },
+      400,
+      corsHeaders(),
+    );
+
+  const exp = Date.now() + 7 * 24 * 60 * 60 * 1000; // il codice vale 7 giorni (tempo per inserirlo)
+  const code = await makeLicenseCode(env, { email, exp });
+
+  return json({ ok: true, email, exp, code }, 200, corsHeaders());
+}
+async function handleAdminUsers(request, env) {
+  if (!isAdmin(request, env)) {
+    return json({ error: "FORBIDDEN" }, 403, corsHeaders());
+  }
 
   const rows = await env.DB.prepare(
-    `SELECT email, created_at, trial_ends_at, paid_until, disabled, paid_activated_at, last_seen_at, note
-     FROM users
-     ORDER BY created_at DESC
-     LIMIT ?`
-  )
-    .bind(limit)
-    .all();
+    `
+    SELECT email, trial_ends_at, paid_until, created_at, note,
+           COALESCE(last_seen_at, 0) as last_seen_at,
+           COALESCE(paid_activated_at, 0) as paid_activated_at,
+           COALESCE(disabled, 0) as disabled
+    FROM users
+    WHERE COALESCE(disabled, 0) = 0
+    ORDER BY COALESCE(last_seen_at, 0) DESC, created_at DESC
+  `,
+  ).all();
 
-  return json({ ok: true, users: rows.results || [] });
+  const now = Date.now();
+
+  const users = (rows.results || []).map((u) => {
+    const trialEndsAt = Number(u.trial_ends_at || 0);
+    const paidUntil = Number(u.paid_until || 0);
+
+    let status = "SCADUTO";
+    if (now < paidUntil) status = "PRO";
+    else if (now < trialEndsAt) status = "TRIAL";
+
+    return {
+      email: u.email,
+      trialEndsAt,
+      paidUntil,
+      createdAt: u.created_at,
+      status,
+      note: u.note || "",
+      lastSeenAt: Number(u.last_seen_at || 0),
+      paidActivatedAt: Number(u.paid_activated_at || 0),
+    };
+  });
+
+  return json({ ok: true, users }, 200, corsHeaders());
 }
-
-async function handleAdminGrant(request, env) {
-  if (!isAdmin(request, env)) return json({ error: "FORBIDDEN" }, 403);
-
-  try {
-    const body = await request.json();
-    const email = normalizeEmail(body.email);
-    const days = Math.max(1, Math.min(3650, Number(body.days) || 30));
-
-    if (!email) return json({ error: "INVALID_EMAIL" }, 400);
-
-    const row = await env.DB.prepare("SELECT paid_until FROM users WHERE email = ?")
-      .bind(email)
-      .first();
-    if (!row) return json({ error: "USER_NOT_FOUND" }, 404);
-
-    const now = Date.now();
-    const current = row.paid_until ? Date.parse(row.paid_until) : 0;
-    const base = Number.isFinite(current) && current > now ? current : now;
-    const paidUntil = new Date(base + days * 24 * 60 * 60 * 1000).toISOString();
-
-    await env.DB.prepare("UPDATE users SET paid_until = ? WHERE email = ?")
-      .bind(paidUntil, email)
-      .run();
-
-    return json({ ok: true, email, paidUntil });
-  } catch (e) {
-    return json({ error: "ADMIN_GRANT_FAILED", message: String(e?.message || e) }, 500);
+async function handleAdminNote(request, env) {
+  if (!isAdmin(request, env)) {
+    return json({ error: "FORBIDDEN" }, 403, corsHeaders());
   }
-}
 
-function isAdmin(request, env) {
-  const provided = request.headers.get("x-admin-key") || "";
-  const expected = String(env.ADMIN_KEY || "");
-  return Boolean(provided && expected && timingSafeEqual(provided, expected));
+  const body = await request.json().catch(() => ({}));
+  const email = normEmail(body.email);
+  const note = String(body.note || "");
+
+  if (!email) {
+    return json(
+      { error: "BAD_INPUT", message: "email mancante" },
+      400,
+      corsHeaders(),
+    );
+  }
+
+  await env.DB.prepare("UPDATE users SET note = ? WHERE email = ?")
+    .bind(note, email)
+    .run();
+
+  return json({ ok: true }, 200, corsHeaders());
 }
 
 /* =========================
-   Cache / API proxy
-   ========================= */
-function cacheTtlFor(pathname, searchParams) {
-  if (pathname === "/fixtures/events") return 5 * 60;
-  if (pathname === "/fixtures/statistics") return 10 * 60;
+   ADMIN: grant 30d (tu)
+   =========================
+   POST /admin/grant {email}  header: x-admin-key
+*/
+async function handleAdminGrant(request, env) {
+  if (!isAdmin(request, env))
+    return json({ error: "FORBIDDEN" }, 403, corsHeaders());
 
-  if (pathname === "/fixtures") {
-    if (searchParams?.get("id")) return 10 * 60;
-    return 3 * 60;
+  const body = await request.json().catch(() => ({}));
+  const email = normEmail(body.email);
+  if (!email)
+    return json(
+      { error: "BAD_INPUT", message: "email mancante" },
+      400,
+      corsHeaders(),
+    );
+
+  const u = await env.DB.prepare("SELECT paid_until FROM users WHERE email = ?")
+    .bind(email)
+    .first();
+
+  const now = Date.now();
+  const currentPaid = Number(u?.paid_until || 0);
+  const base = Math.max(now, currentPaid);
+  const newPaidUntil = base + 30 * 24 * 60 * 60 * 1000;
+
+  await env.DB.prepare("UPDATE users SET paid_until = ?, paid_activated_at = ? WHERE email = ?")
+    .bind(newPaidUntil, Date.now(), email)
+    .run();
+
+  return json({ ok: true, email, paidUntil: newPaidUntil }, 200, corsHeaders());
+}
+async function handleAdminAdjust(request, env) {
+  if (!isAdmin(request, env)) {
+    return json({ error: "FORBIDDEN" }, 403, corsHeaders());
   }
 
-  if (pathname === "/injuries") return 10 * 60;
-  if (pathname === "/players" || pathname === "/players/squads") return 30 * 60;
-  if (pathname === "/teams") return 60 * 60;
-  return 5 * 60;
+  const body = await request.json().catch(() => ({}));
+  const email = normEmail(body.email);
+  const deltaDays = parseInt(body.deltaDays, 10);
+
+  if (!email || !Number.isFinite(deltaDays)) {
+    return json(
+      { error: "BAD_INPUT", message: "email e deltaDays richiesti" },
+      400,
+      corsHeaders(),
+    );
+  }
+
+  // Limite di sicurezza: max +/- 365 giorni
+  if (deltaDays < -365 || deltaDays > 365) {
+    return json(
+      { error: "BAD_INPUT", message: "deltaDays fuori limite (+/-365)" },
+      400,
+      corsHeaders(),
+    );
+  }
+
+  const row = await env.DB.prepare(
+    "SELECT paid_until FROM users WHERE email = ?",
+  )
+    .bind(email)
+    .first();
+
+  if (!row) {
+    return json(
+      { error: "NOT_FOUND", message: "Utente non trovato" },
+      404,
+      corsHeaders(),
+    );
+  }
+
+  const now = Date.now();
+  const currentPaid = Number(row.paid_until || 0);
+  const wasPro = now < currentPaid;
+  const deltaMs = deltaDays * 24 * 60 * 60 * 1000;
+
+  let newPaidUntil;
+
+  if (deltaDays >= 0) {
+    // aggiunta: estende da adesso o da fine attuale
+    const base = Math.max(now, currentPaid);
+    newPaidUntil = base + deltaMs;
+  } else {
+    // rimozione: toglie dalla scadenza attuale (anche se va sotto "now")
+    newPaidUntil = Math.max(0, currentPaid + deltaMs);
+  }
+
+  // Se stiamo attivando PRO (prima non pro, ora aggiungiamo giorni), salviamo timestamp
+  const shouldSetActivated = deltaDays > 0 && !wasPro;
+  if (shouldSetActivated) {
+    await env.DB.prepare("UPDATE users SET paid_activated_at = ? WHERE email = ?")
+      .bind(now, email)
+      .run();
+  }
+
+  await env.DB.prepare("UPDATE users SET paid_until = ? WHERE email = ?")
+    .bind(newPaidUntil, email)
+    .run();
+
+  return json({ ok: true, email, paidUntil: newPaidUntil }, 200, corsHeaders());
 }
 
+/* =========================
+   ADMIN: disable/enable user (soft delete)
+   POST /admin/disable {email, disabled:1|0}  header: x-admin-key
+   ========================= */
+async function handleAdminDisable(request, env) {
+  if (!isAdmin(request, env)) {
+    return json({ error: "FORBIDDEN" }, 403, corsHeaders());
+  }
+
+  const body = await request.json().catch(() => ({}));
+  const email = normEmail(body.email);
+  const disabled = body.disabled ? 1 : 0;
+
+  if (!email) {
+    return json(
+      { error: "BAD_INPUT", message: "email mancante" },
+      400,
+      corsHeaders(),
+    );
+  }
+
+  await env.DB.prepare("UPDATE users SET disabled = ? WHERE email = ?")
+    .bind(disabled, email)
+    .run();
+
+  return json({ ok: true, email, disabled }, 200, corsHeaders());
+}
+
+/* =========================
+   ADMIN: stats dashboard
+   GET /admin/stats  header: x-admin-key
+   ========================= */
+async function handleAdminStats(request, env) {
+  if (!isAdmin(request, env)) {
+    return json({ error: "FORBIDDEN" }, 403, corsHeaders());
+  }
+
+  const now = Date.now();
+  const onlineCutoff = now - 5 * 60 * 1000; // 5 minuti
+  const dayCutoff = now - 24 * 60 * 60 * 1000;
+  const weekCutoff = now - 7 * 24 * 60 * 60 * 1000;
+
+  const onlineRow = await env.DB.prepare(
+    "SELECT COUNT(*) as c FROM users WHERE COALESCE(disabled,0)=0 AND COALESCE(last_seen_at,0) >= ?",
+  )
+    .bind(onlineCutoff)
+    .first();
+
+  const active24Row = await env.DB.prepare(
+    "SELECT COUNT(*) as c FROM users WHERE COALESCE(disabled,0)=0 AND COALESCE(last_seen_at,0) >= ?",
+  )
+    .bind(dayCutoff)
+    .first();
+
+  const active7dRow = await env.DB.prepare(
+    "SELECT COUNT(*) as c FROM users WHERE COALESCE(disabled,0)=0 AND COALESCE(last_seen_at,0) >= ?",
+  )
+    .bind(weekCutoff)
+    .first();
+
+  const newPro24Row = await env.DB.prepare(
+    "SELECT COUNT(*) as c FROM users WHERE COALESCE(disabled,0)=0 AND COALESCE(paid_activated_at,0) >= ?",
+  )
+    .bind(dayCutoff)
+    .first();
+
+  return json(
+    {
+      ok: true,
+      now,
+      online5m: Number(onlineRow?.c || 0),
+      active24h: Number(active24Row?.c || 0),
+      active7d: Number(active7dRow?.c || 0),
+      newPro24h: Number(newPro24Row?.c || 0),
+    },
+    200,
+    corsHeaders(),
+  );
+}
+
+/* =========================
+   TELEMETRY: ping (online)
+   POST /telemetry/ping   Authorization: Bearer <token>
+   ========================= */
+async function handleTelemetryPing(request, env) {
+  const gate = await requireActiveUser(request, env);
+  if (!gate.ok) return gate.res;
+
+  const now = Date.now();
+  await env.DB.prepare("UPDATE users SET last_seen_at = ? WHERE email = ?")
+    .bind(now, gate.email)
+    .run();
+
+  return json({ ok: true, ts: now }, 200, corsHeaders());
+}
+
+
+function isAdmin(request, env) {
+  const k = request.headers.get("x-admin-key") || "";
+  return k && env.ADMIN_KEY && k === env.ADMIN_KEY;
+}
+
+/* =========================
+   /predict handler (TUO, INVARIATO)
+   ========================= */
+
+async function handlePredict(request, env) {
+  const url = new URL(request.url);
+
+  const fixtureId = url.searchParams.get("fixture");
+  const nRaw = url.searchParams.get("n");
+  let n = parseInt(nRaw || "10", 10);
+
+  // Dixon–Coles rho (default -0.10). Clamp per evitare valori assurdi.
+  let rho = parseFloat(url.searchParams.get("rho") || "-0.10");
+  if (!Number.isFinite(rho)) rho = -0.1;
+  rho = Math.max(-0.3, Math.min(0.3, rho));
+
+  if (!Number.isFinite(n) || n < 5) n = 10;
+  if (n > 20) n = 20;
+
+  if (!fixtureId) {
+    return json(
+      { response: null, errors: { fixture: "missing" } },
+      400,
+      corsHeaders(),
+    );
+  }
+
+  // CACHE helper (semplice, stabile, senza waitUntil)
+  async function af(pathWithQuery, ttlSeconds = 0) {
+    const cache = caches.default;
+
+    const cacheKey = new Request(
+      new URL("/__cache__" + pathWithQuery, request.url),
+      { method: "GET" },
+    );
+
+    if (ttlSeconds > 0) {
+      const cached = await cache.match(cacheKey);
+      if (cached) {
+        const data = await cached.json().catch(() => null);
+        if (data?.response) return data.response;
+      }
+    }
+
+    const upstream = new URL(
+      "https://v3.football.api-sports.io" + pathWithQuery,
+    );
+
+    const headers = new Headers();
+    headers.set("x-apisports-key", env.APISPORTS_KEY);
+    headers.set("accept", "application/json");
+
+    const res = await fetch(upstream.toString(), { method: "GET", headers });
+    const j = await res.json().catch(() => ({}));
+
+    if (!res.ok) throw new Error(`API HTTP ${res.status}`);
+    if (j?.errors && Object.keys(j.errors).length)
+      throw new Error("API errors");
+
+    const payload = { response: Array.isArray(j.response) ? j.response : [] };
+
+    if (ttlSeconds > 0) {
+      const cacheRes = new Response(JSON.stringify(payload), {
+        headers: {
+          "content-type": "application/json; charset=utf-8",
+          "cache-control": `public, max-age=${ttlSeconds}`,
+        },
+      });
+      await cache.put(cacheKey, cacheRes);
+    }
+
+    return payload.response;
+  }
+
+  function goalsForAgainst(teamId, fx) {
+    const hId = fx?.teams?.home?.id ?? null;
+    const aId = fx?.teams?.away?.id ?? null;
+    const gh = Number(fx?.goals?.home ?? 0);
+    const ga = Number(fx?.goals?.away ?? 0);
+
+    if (teamId === hId) return { gf: gh, ga: ga, isHome: true };
+    if (teamId === aId) return { gf: ga, ga: gh, isHome: false };
+    return { gf: 0, ga: 0, isHome: null };
+  }
+
+  function avg(nums) {
+    const arr = (nums || []).filter((x) => Number.isFinite(x));
+    if (!arr.length) return 0;
+    return arr.reduce((a, b) => a + b, 0) / arr.length;
+  }
+
+  function poissonPmf(k, lambda) {
+    const L = Math.max(0, Number(lambda) || 0);
+    const e = Math.exp(-L);
+    let fact = 1;
+    for (let i = 2; i <= k; i++) fact *= i;
+    return (e * Math.pow(L, k)) / fact;
+  }
+
+  function clamp(x, a, b) {
+    const nn = Number(x) || 0;
+    return Math.max(a, Math.min(b, nn));
+  }
+
+  function nOr0(x) {
+    const v = Number(x);
+    return Number.isFinite(v) ? v : 0;
+  }
+
+  function tauDC(i, j, lambdaH, lambdaA, rho) {
+    // Standard Dixon–Coles low-score adjustment
+    if (i === 0 && j === 0) return 1 - lambdaH * lambdaA * rho;
+    if (i === 0 && j === 1) return 1 + lambdaH * rho;
+    if (i === 1 && j === 0) return 1 + lambdaA * rho;
+    if (i === 1 && j === 1) return 1 - rho;
+    return 1;
+  }
+
+  try {
+    // TTL consigliati (come avevamo detto)
+    const TTL_STATS = 6 * 3600;
+    const TTL_LEAGUE50 = 30 * 60;
+    const TTL_TEAM_LAST = 10 * 60;
+    const TTL_FIXTURE = 30 * 60;
+
+    // 1) fixture details
+    const fxArr = await af(
+      `/fixtures?id=${encodeURIComponent(fixtureId)}&timezone=Europe/Rome`,
+      TTL_FIXTURE,
+    );
+
+    if (!fxArr.length) {
+      return json(
+        { response: null, errors: { fixture: "not_found" } },
+        404,
+        corsHeaders(),
+      );
+    }
+
+    const fx = fxArr[0];
+    const homeId = fx?.teams?.home?.id ?? null;
+    const awayId = fx?.teams?.away?.id ?? null;
+    const leagueId = fx?.league?.id ?? null;
+    const season = fx?.league?.season ?? null;
+
+    if (!homeId || !awayId || !leagueId || !season) {
+      return json(
+        { response: null, errors: { fixture: "missing_fields" } },
+        422,
+        corsHeaders(),
+      );
+    }
+
+    // 2) stats stagione (cache 6 ore)
+    const [homeSeasonArr, awaySeasonArr] = await Promise.all([
+      af(
+        `/teams/statistics?team=${homeId}&league=${leagueId}&season=${season}`,
+        TTL_STATS,
+      ),
+      af(
+        `/teams/statistics?team=${awayId}&league=${leagueId}&season=${season}`,
+        TTL_STATS,
+      ),
+    ]);
+
+    const homeSeason = homeSeasonArr?.[0] || null;
+    const awaySeason = awaySeasonArr?.[0] || null;
+
+    // 3) ultime N (cache 10 min)
+    const [homeLast, awayLast] = await Promise.all([
+      af(
+        `/fixtures?team=${homeId}&league=${leagueId}&season=${season}&last=${n}&status=FT&timezone=Europe/Rome`,
+        TTL_TEAM_LAST,
+      ),
+      af(
+        `/fixtures?team=${awayId}&league=${leagueId}&season=${season}&last=${n}&status=FT&timezone=Europe/Rome`,
+        TTL_TEAM_LAST,
+      ),
+    ]);
+
+    const homeCtx = homeLast.filter(
+      (m) => (m?.teams?.home?.id ?? null) === homeId,
+    );
+    const awayCtx = awayLast.filter(
+      (m) => (m?.teams?.away?.id ?? null) === awayId,
+    );
+
+    const homeUse = homeCtx.length >= 3 ? homeCtx : homeLast;
+    const awayUse = awayCtx.length >= 3 ? awayCtx : awayLast;
+
+    const homeGF = homeUse.map((m) => goalsForAgainst(homeId, m).gf);
+    const homeGA = homeUse.map((m) => goalsForAgainst(homeId, m).ga);
+    const awayGF = awayUse.map((m) => goalsForAgainst(awayId, m).gf);
+    const awayGA = awayUse.map((m) => goalsForAgainst(awayId, m).ga);
+
+    const recentHomeGF = avg(homeGF);
+    const recentHomeGA = avg(homeGA);
+    const recentAwayGF = avg(awayGF);
+    const recentAwayGA = avg(awayGA);
+
+    // 4) medie lega ultime 50 (cache 30 min)
+    let leagueHomeGoals = 1.25;
+    let leagueAwayGoals = 1.05;
+    try {
+      const leagueLast = await af(
+        `/fixtures?league=${leagueId}&season=${season}&last=50&status=FT&timezone=Europe/Rome`,
+        TTL_LEAGUE50,
+      );
+      if (leagueLast && leagueLast.length) {
+        leagueHomeGoals = avg(
+          leagueLast.map((m) => Number(m?.goals?.home ?? 0)),
+        );
+        leagueAwayGoals = avg(
+          leagueLast.map((m) => Number(m?.goals?.away ?? 0)),
+        );
+      }
+    } catch (_) {}
+
+    // medie stagione contestuali
+    const seasonHomeGF = nOr0(homeSeason?.goals?.for?.average?.home);
+    const seasonHomeGA = nOr0(homeSeason?.goals?.against?.average?.home);
+    const seasonAwayGF = nOr0(awaySeason?.goals?.for?.average?.away);
+    const seasonAwayGA = nOr0(awaySeason?.goals?.against?.average?.away);
+
+    const safeSeasonHomeGF = seasonHomeGF > 0 ? seasonHomeGF : recentHomeGF;
+    const safeSeasonHomeGA = seasonHomeGA > 0 ? seasonHomeGA : recentHomeGA;
+    const safeSeasonAwayGF = seasonAwayGF > 0 ? seasonAwayGF : recentAwayGF;
+    const safeSeasonAwayGA = seasonAwayGA > 0 ? seasonAwayGA : recentAwayGA;
+
+    const W_SEASON = 0.7;
+    const W_RECENT = 0.3;
+
+    const blendHomeGF = W_SEASON * safeSeasonHomeGF + W_RECENT * recentHomeGF;
+    const blendHomeGA = W_SEASON * safeSeasonHomeGA + W_RECENT * recentHomeGA;
+    const blendAwayGF = W_SEASON * safeSeasonAwayGF + W_RECENT * recentAwayGF;
+    const blendAwayGA = W_SEASON * safeSeasonAwayGA + W_RECENT * recentAwayGA;
+
+    const attHome = leagueHomeGoals > 0 ? blendHomeGF / leagueHomeGoals : 1;
+    const defAway = leagueHomeGoals > 0 ? blendAwayGA / leagueHomeGoals : 1;
+    const attAway = leagueAwayGoals > 0 ? blendAwayGF / leagueAwayGoals : 1;
+    const defHome = leagueAwayGoals > 0 ? blendHomeGA / leagueAwayGoals : 1;
+
+    const HOME_ADV = 1.07;
+
+    let lambdaHome = leagueHomeGoals * attHome * defAway * HOME_ADV;
+    let lambdaAway = leagueAwayGoals * attAway * defHome;
+
+    lambdaHome = clamp(lambdaHome, 0.2, 3.2);
+    lambdaAway = clamp(lambdaAway, 0.2, 3.2);
+
+    // 5) matrice 0..5 + Dixon–Coles
+    const maxG = 5;
+    const ph = Array.from({ length: maxG + 1 }, (_, k) =>
+      poissonPmf(k, lambdaHome),
+    );
+    const pa = Array.from({ length: maxG + 1 }, (_, k) =>
+      poissonPmf(k, lambdaAway),
+    );
+
+    let homeWinRaw = 0,
+      drawRaw = 0,
+      awayWinRaw = 0;
+    let over25Raw = 0,
+      bttsYesRaw = 0;
+
+    const scorelines = [];
+    let sumMatrix = 0;
+
+    for (let i = 0; i <= maxG; i++) {
+      for (let j = 0; j <= maxG; j++) {
+        let p = ph[i] * pa[j];
+
+        const t = tauDC(i, j, lambdaHome, lambdaAway, rho);
+        p = p * t;
+        if (p < 0) p = 0;
+
+        sumMatrix += p;
+
+        if (i > j) homeWinRaw += p;
+        else if (i === j) drawRaw += p;
+        else awayWinRaw += p;
+
+        if (i + j >= 3) over25Raw += p;
+        if (i >= 1 && j >= 1) bttsYesRaw += p;
+
+        scorelines.push({ score: `${i}-${j}`, p });
+      }
+    }
+
+    const denom = sumMatrix > 0 ? sumMatrix : 1;
+
+    const homeWin = homeWinRaw / denom;
+    const draw = drawRaw / denom;
+    const awayWin = awayWinRaw / denom;
+    // ===== Confidence / Risk (bookmaker-style) =====
+    // Basato su EDGE: differenza tra 1° e 2° esito 1X2.
+    // Più edge = più confidence (più "bookmaker").
+    function clamp01(x) {
+      return Math.max(0, Math.min(1, x));
+    }
+
+    const probs = [
+      Number(homeWin) || 0,
+      Number(draw) || 0,
+      Number(awayWin) || 0,
+    ].sort((a, b) => b - a);
+
+    const pMax = probs[0] || 0;
+    const pSecond = probs[1] || 0;
+
+    const edge = Math.max(0, pMax - pSecond); // 0..1
+
+    // Mapping semplice e leggibile:
+    // edge 0.00 -> 0
+    // edge 0.10 -> 25
+    // edge 0.20 -> 50
+    // edge 0.30 -> 75
+    // edge 0.40+ -> 100
+    const scoreRaw = (edge / 0.4) * 100;
+    const confidenceScore = Math.round(clamp01(scoreRaw / 100) * 100);
+
+    // Labels
+    let confidenceLabel = "Media";
+    let riskLabel = "Medio";
+    if (confidenceScore >= 75) {
+      confidenceLabel = "Alta";
+      riskLabel = "Basso";
+    } else if (confidenceScore >= 55) {
+      confidenceLabel = "Medio-Alta";
+      riskLabel = "Medio-Basso";
+    } else if (confidenceScore >= 35) {
+      confidenceLabel = "Media";
+      riskLabel = "Medio";
+    } else {
+      confidenceLabel = "Bassa";
+      riskLabel = "Alto";
+    }
+
+    // Nota breve
+    const edgePct = Math.round(edge * 100);
+    const confidenceNote =
+      confidenceScore >= 75
+        ? `Esito principale abbastanza favorito (edge ${edgePct}%).`
+        : confidenceScore <= 35
+          ? `Quote vicine: partita più incerta (edge ${edgePct}%).`
+          : `Vantaggio moderato per l’esito principale (edge ${edgePct}%).`;
+    // extras normalizzati su denom
+    const over25 = over25Raw / denom;
+    const bttsYes = bttsYesRaw / denom;
+
+    // top scorelines normalizzate su denom
+    scorelines.sort((a, b) => b.p - a.p);
+    const topScorelines = scorelines.slice(0, 3).map((x) => ({
+      score: x.score,
+      p: x.p / denom,
+    }));
+
+    // drivers (lasciati come prima, ma puliti)
+    function pushDriver(list, factor, impact, note) {
+      list.push({ factor, impact, note });
+    }
+
+    const drivers = [];
+    const sumLambda = (Number(lambdaHome) || 0) + (Number(lambdaAway) || 0);
+    if (sumLambda >= 3.0)
+      pushDriver(
+        drivers,
+        "Totale gol atteso alto",
+        "+",
+        "Modello vede gara aperta (probabilità Over/BTTS cresce).",
+      );
+    else if (sumLambda <= 2.1)
+      pushDriver(
+        drivers,
+        "Totale gol atteso basso",
+        "-",
+        "Modello vede gara chiusa (crescono 0-0 / 1-0 / 0-1).",
+      );
+
+    pushDriver(
+      drivers,
+      "Fattore campo",
+      "+",
+      `Home advantage applicato: x${HOME_ADV}`,
+    );
+    pushDriver(
+      drivers,
+      "Dixon–Coles",
+      "+",
+      `Correzione low-score attiva (rho=${rho}).`,
+    );
+
+    return json(
+      {
+        response: {
+          model: {
+            name: "poisson_v1_3_dc_cached",
+            maxGoals: maxG,
+            nUsed: n,
+            wSeason: 0.7,
+            wRecent: 0.3,
+            rho,
+          },
+
+          confidence: {
+            score: confidenceScore,
+            level: confidenceLabel,
+            risk: riskLabel,
+            note: confidenceNote,
+          },
+
+          expectedGoals: { home: lambdaHome, away: lambdaAway },
+          probabilities: { homeWin, draw, awayWin },
+          topScorelines,
+          extras: { over25, bttsYes },
+          drivers,
+        },
+        errors: null,
+      },
+      200,
+      corsHeaders(),
+    );
+  } catch (e) {
+    return json(
+      { response: null, errors: { predict: String(e.message || e) } },
+      500,
+      corsHeaders(),
+    );
+  }
+}
+// =========================
+// CACHE POLICY (edge cache)
+// =========================
+
+// TTL in secondi in base alla rotta (conservativi ma efficaci)
+function cacheTtlFor(pathname, searchParams) {
+  if (pathname === "/standings") return 60 * 10; // 10 min
+  // NON cacheare mai rotte auth/admin (non passano qui, ma per sicurezza)
+  if (pathname.startsWith("/auth/") || pathname.startsWith("/admin/")) return 0;
+
+  // Endpoint super-ripetuti e costosi (gold)
+  if (pathname === "/fixtures/events") return 60 * 5; // 5 min
+  if (pathname === "/fixtures/statistics") return 60 * 10; // 10 min
+
+  // Fixture details: cambia poco, ottimo per cache
+  if (pathname === "/fixtures") {
+    // se è per id singolo, cache più lunga
+    if (searchParams.has("id") || searchParams.has("fixture")) return 60 * 10; // 10 min
+    // liste fixtures (team/last/next): più breve
+    return 60 * 3; // 3 min
+  }
+
+  // Injuries / players sono pesanti: cache media
+  if (pathname === "/injuries") return 60 * 10; // 10 min
+  if (pathname === "/players") return 60 * 30; // 30 min
+
+  // Teams search: molto ripetuto
+  if (pathname === "/teams") return 60 * 60; // 60 min
+
+  // Default: niente cache
+  return 0;
+}
+
+// Rileva errori semantici API-Football anche quando l'HTTP è 200.
 function hasApiSportsErrors(payload) {
   if (!payload || typeof payload !== "object") return true;
+
   if (payload.error) return true;
 
   const errors = payload.errors;
@@ -359,12 +1033,17 @@ function hasApiSportsErrors(payload) {
   if (typeof errors === "string") return errors.trim().length > 0;
   if (Array.isArray(errors)) return errors.length > 0;
   if (typeof errors === "object") return Object.keys(errors).length > 0;
+
   return Boolean(errors);
 }
 
-function makeCacheKey(pathWithQuery) {
-  const src = new URL(pathWithQuery, "https://api.calcioreport.internal");
-  const cacheUrl = new URL("https://cache.calcioreport.internal");
+// Cache key V2:
+// - condivisa tra utenti (Authorization esclusa)
+// - query string canonica
+// - namespace nuovo, così eventuali vecchi errori cacheati non vengono più riutilizzati.
+function makeCacheKey(requestUrl) {
+  const src = new URL(requestUrl);
+  const cacheUrl = new URL(src.origin);
 
   cacheUrl.pathname = `/__cr_cache_v2__${src.pathname}`;
   cacheUrl.search = "";
@@ -384,116 +1063,87 @@ function makeCacheKey(pathWithQuery) {
   });
 }
 
-function getRelayBaseUrl(env) {
-  const raw = String(env.CR_RELAY_URL || "").trim();
-  if (!raw) throw new Error("RELAY_NOT_CONFIGURED");
-
-  let parsed;
-  try {
-    parsed = new URL(raw);
-  } catch {
-    throw new Error("RELAY_NOT_CONFIGURED");
-  }
-
-  if (parsed.protocol !== "https:") throw new Error("RELAY_NOT_CONFIGURED");
-  return parsed.href.replace(/\/+$/, "");
-}
-
-async function fetchRelay(env, pathWithQuery) {
-  const relayBaseUrl = getRelayBaseUrl(env);
-  const relaySecret = String(env.CR_RELAY_SECRET || "").trim();
-  if (!relaySecret) throw new Error("RELAY_NOT_CONFIGURED");
-
-  const timestamp = String(Date.now());
-  const canonical = `${timestamp}\nGET\n${pathWithQuery}`;
-  const signature = await hmacSha256Hex(relaySecret, canonical);
-
-  const headers = new Headers();
-  headers.set("Accept", "application/json");
-  headers.set("x-cr-timestamp", timestamp);
-  headers.set("x-cr-signature", signature);
-
-  return fetch(`${relayBaseUrl}${pathWithQuery}`, {
-    method: "GET",
-    headers,
-  });
-}
-
-function relayFailureResponse(err) {
-  const notConfigured = String(err?.message || "") === "RELAY_NOT_CONFIGURED";
-  return new Response(
-    JSON.stringify({
-      error: notConfigured ? "RELAY_NOT_CONFIGURED" : "UPSTREAM_NETWORK",
-      message: notConfigured ? "Relay non configurato." : "Relay non raggiungibile.",
-    }),
-    {
-      status: notConfigured ? 503 : 502,
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-        "Cache-Control": "no-store",
-      },
-    }
-  );
-}
-
-async function fetchFootballCached(env, ctx, pathWithQuery, ttlOverride = null) {
-  const src = new URL(pathWithQuery, "https://api.calcioreport.internal");
-  const cache = caches.default;
-  const cacheKey = makeCacheKey(pathWithQuery);
-
-  let response = await cache.match(cacheKey);
-  const cacheStatus = response ? "HIT" : "MISS";
-  if (response) return { response, cacheStatus };
-
-  let apiRes;
-  try {
-    apiRes = await fetchRelay(env, pathWithQuery);
-  } catch (err) {
-    return { response: relayFailureResponse(err), cacheStatus: "MISS" };
-  }
-
-  const bodyText = await apiRes.text();
-  let parsed = null;
-  try {
-    parsed = JSON.parse(bodyText);
-  } catch {}
-
-  const semanticOk = apiRes.ok && parsed !== null && !hasApiSportsErrors(parsed);
-  const responseHeaders = new Headers(apiRes.headers);
-
-  if (semanticOk) {
-    const ttl = ttlOverride == null
-      ? cacheTtlFor(src.pathname, src.searchParams)
-      : Math.max(0, Number(ttlOverride) || 0);
-
-    responseHeaders.set("Cache-Control", ttl > 0 ? `public, s-maxage=${ttl}` : "no-store");
-    response = new Response(bodyText, {
-      status: apiRes.status,
-      statusText: apiRes.statusText,
-      headers: responseHeaders,
-    });
-
-    if (ttl > 0) {
-      const putPromise = cache.put(cacheKey, response.clone());
-      if (ctx?.waitUntil) ctx.waitUntil(putPromise);
-      else await putPromise;
-    }
-  } else {
-    responseHeaders.set("Cache-Control", "no-store");
-    response = new Response(bodyText, {
-      status: apiRes.status,
-      statusText: apiRes.statusText,
-      headers: responseHeaders,
-    });
-  }
-
-  return { response, cacheStatus: "MISS" };
-}
-
+/* =========================
+   Proxy default (con gate)
+   ========================= */
 async function proxyToApiSports(request, env, ctx) {
   const url = new URL(request.url);
-  const pathWithQuery = `${url.pathname}${url.search}`;
-  const { response, cacheStatus } = await fetchFootballCached(env, ctx, pathWithQuery);
+  const cache = caches.default;
+  const cacheKey = makeCacheKey(url.toString());
+
+  let response = await cache.match(cacheKey);
+  let cacheStatus = response ? "HIT" : "MISS";
+
+  if (!response) {
+    const upstreamUrl = `https://v3.football.api-sports.io${url.pathname}${url.search}`;
+    const h = new Headers();
+    h.set("x-apisports-key", env.APISPORTS_KEY);
+    h.set("Accept", "application/json");
+
+    let apiRes;
+    try {
+      apiRes = await fetch(upstreamUrl, { method: "GET", headers: h });
+    } catch (err) {
+      return json(
+        {
+          error: "UPSTREAM_NETWORK",
+          message: String(err?.message || err || "API-Football non raggiungibile"),
+        },
+        502,
+        {
+          ...corsHeaders(),
+          "Cache-Control": "no-store",
+          "x-cr-cache": "MISS",
+        },
+      );
+    }
+
+    const bodyText = await apiRes.text();
+
+    let parsed = null;
+    try {
+      parsed = JSON.parse(bodyText);
+    } catch {}
+
+    const semanticOk =
+      apiRes.ok &&
+      parsed !== null &&
+      !hasApiSportsErrors(parsed);
+
+    const responseHeaders = new Headers(apiRes.headers);
+
+    if (semanticOk) {
+      const ttl = cacheTtlFor(url.pathname, url.searchParams);
+
+      if (ttl > 0) {
+        responseHeaders.set("Cache-Control", `public, s-maxage=${ttl}`);
+      } else {
+        responseHeaders.set("Cache-Control", "no-store");
+      }
+
+      response = new Response(bodyText, {
+        status: apiRes.status,
+        statusText: apiRes.statusText,
+        headers: responseHeaders,
+      });
+
+      if (ttl > 0) {
+        const putPromise = cache.put(cacheKey, response.clone());
+        if (ctx?.waitUntil) ctx.waitUntil(putPromise);
+        else await putPromise;
+      }
+    } else {
+      // HTTP error, JSON invalido o API-Football 200 + errors:
+      // restituisci al client ma NON memorizzare mai in edge cache.
+      responseHeaders.set("Cache-Control", "no-store");
+
+      response = new Response(bodyText, {
+        status: apiRes.status,
+        statusText: apiRes.statusText,
+        headers: responseHeaders,
+      });
+    }
+  }
 
   const newHeaders = new Headers(response.headers);
   Object.entries(corsHeaders()).forEach(([k, v]) => newHeaders.set(k, v));
@@ -506,362 +1156,133 @@ async function proxyToApiSports(request, env, ctx) {
   });
 }
 
-/* =========================
-   Prediction
-   ========================= */
-async function handlePredict(request, env, ctx) {
-  const url = new URL(request.url);
-  const fixtureId = Number(url.searchParams.get("fixture") || 0);
-  if (!fixtureId) return json({ error: "INVALID_FIXTURE" }, 400);
-
+// helper: evita crash se waitUntil non esiste (dipende dal runtime)
+function eventWaitUntilSafe(promise) {
   try {
-    const fxRes = await af(env, ctx, `/fixtures?id=${fixtureId}`, 10 * 60);
-    const fx = fxRes?.[0];
-    if (!fx) return json({ error: "FIXTURE_NOT_FOUND" }, 404);
-
-    const leagueId = fx?.league?.id;
-    const season = fx?.league?.season;
-    const homeId = fx?.teams?.home?.id;
-    const awayId = fx?.teams?.away?.id;
-
-    const homeName = fx?.teams?.home?.name || "Casa";
-    const awayName = fx?.teams?.away?.name || "Trasferta";
-
-    if (!leagueId || !season || !homeId || !awayId) {
-      return json({ error: "FIXTURE_INCOMPLETE" }, 422);
-    }
-
-    const [homeRecent, awayRecent, standings] = await Promise.all([
-      af(env, ctx, `/fixtures?team=${homeId}&last=8&status=FT&timezone=Europe/Rome`, 15 * 60),
-      af(env, ctx, `/fixtures?team=${awayId}&last=8&status=FT&timezone=Europe/Rome`, 15 * 60),
-      af(env, ctx, `/standings?league=${leagueId}&season=${season}`, 10 * 60),
-    ]);
-
-    const homeForm = computeForm(homeRecent, homeId);
-    const awayForm = computeForm(awayRecent, awayId);
-    const table = extractStandings(standings);
-    const homeStanding = table.find((r) => r.teamId === homeId) || null;
-    const awayStanding = table.find((r) => r.teamId === awayId) || null;
-
-    const model = predictMatch({
-      home: homeForm,
-      away: awayForm,
-      homeStanding,
-      awayStanding,
-    });
-
-    return json({
-      ok: true,
-      fixture: fixtureId,
-      generatedAt: new Date().toISOString(),
-      teams: {
-        home: { id: homeId, name: homeName, form: homeForm, standing: homeStanding },
-        away: { id: awayId, name: awayName, form: awayForm, standing: awayStanding },
-      },
-      prediction: model,
-    });
-  } catch (e) {
-    return json({ error: "PREDICTION_FAILED", message: String(e?.message || e) }, 500);
-  }
-}
-
-async function af(env, ctx, pathWithQuery, ttl = 300) {
-  const { response } = await fetchFootballCached(env, ctx, pathWithQuery, ttl);
-  const text = await response.text();
-
-  let parsed = null;
-  try {
-    parsed = JSON.parse(text);
+    // in Cloudflare Workers fetch handler non abbiamo accesso diretto a ctx qui,
+    // quindi best-effort senza bloccare la response.
+    promise.catch(() => {});
   } catch {}
-
-  if (!response.ok || parsed === null || hasApiSportsErrors(parsed)) {
-    const msg = parsed?.errors || parsed?.error || `HTTP ${response.status}`;
-    throw new Error(typeof msg === "string" ? msg : JSON.stringify(msg));
-  }
-
-  return Array.isArray(parsed?.response) ? parsed.response : [];
-}
-
-function computeForm(fixtures, teamId) {
-  const rows = [];
-  for (const fx of Array.isArray(fixtures) ? fixtures : []) {
-    const h = fx?.teams?.home?.id;
-    const a = fx?.teams?.away?.id;
-    const gh = Number(fx?.goals?.home);
-    const ga = Number(fx?.goals?.away);
-    if (!Number.isFinite(gh) || !Number.isFinite(ga)) continue;
-
-    const isHome = h === teamId;
-    const gf = isHome ? gh : ga;
-    const gc = isHome ? ga : gh;
-    const pts = gf > gc ? 3 : gf === gc ? 1 : 0;
-
-    rows.push({ gf, gc, pts });
-  }
-
-  const n = rows.length;
-  const sum = (k) => rows.reduce((a, r) => a + Number(r[k] || 0), 0);
-  return {
-    matches: n,
-    points: sum("pts"),
-    pointsPerGame: n ? round(sum("pts") / n, 2) : 0,
-    goalsForAvg: n ? round(sum("gf") / n, 2) : 0,
-    goalsAgainstAvg: n ? round(sum("gc") / n, 2) : 0,
-  };
-}
-
-function extractStandings(payloadRows) {
-  const league = payloadRows?.[0]?.league;
-  const group = league?.standings?.[0];
-  if (!Array.isArray(group)) return [];
-
-  return group.map((r) => ({
-    rank: r?.rank ?? null,
-    points: r?.points ?? null,
-    teamId: r?.team?.id ?? null,
-    teamName: r?.team?.name ?? "",
-    played: r?.all?.played ?? null,
-    win: r?.all?.win ?? null,
-    draw: r?.all?.draw ?? null,
-    lose: r?.all?.lose ?? null,
-    goalsFor: r?.all?.goals?.for ?? null,
-    goalsAgainst: r?.all?.goals?.against ?? null,
-  }));
-}
-
-function predictMatch({ home, away, homeStanding, awayStanding }) {
-  const homeAttack = Math.max(0.15, Number(home?.goalsForAvg || 0.9));
-  const awayAttack = Math.max(0.15, Number(away?.goalsForAvg || 0.9));
-  const homeDef = Math.max(0.15, Number(home?.goalsAgainstAvg || 1.1));
-  const awayDef = Math.max(0.15, Number(away?.goalsAgainstAvg || 1.1));
-
-  let lambdaHome = 0.55 * homeAttack + 0.45 * awayDef + 0.18;
-  let lambdaAway = 0.55 * awayAttack + 0.45 * homeDef;
-
-  const hp = Number(home?.pointsPerGame || 0);
-  const ap = Number(away?.pointsPerGame || 0);
-  lambdaHome += clamp((hp - ap) * 0.12, -0.28, 0.28);
-  lambdaAway += clamp((ap - hp) * 0.10, -0.24, 0.24);
-
-  if (homeStanding?.rank && awayStanding?.rank) {
-    const delta = Number(awayStanding.rank) - Number(homeStanding.rank);
-    lambdaHome += clamp(delta * 0.025, -0.20, 0.20);
-    lambdaAway -= clamp(delta * 0.020, -0.16, 0.16);
-  }
-
-  lambdaHome = clamp(lambdaHome, 0.15, 3.5);
-  lambdaAway = clamp(lambdaAway, 0.15, 3.5);
-
-  const maxGoals = 7;
-  let pHome = 0;
-  let pDraw = 0;
-  let pAway = 0;
-  let pOver25 = 0;
-  let pBtts = 0;
-
-  for (let i = 0; i <= maxGoals; i++) {
-    for (let j = 0; j <= maxGoals; j++) {
-      const p = poisson(i, lambdaHome) * poisson(j, lambdaAway);
-      if (i > j) pHome += p;
-      else if (i === j) pDraw += p;
-      else pAway += p;
-      if (i + j >= 3) pOver25 += p;
-      if (i >= 1 && j >= 1) pBtts += p;
-    }
-  }
-
-  const total = pHome + pDraw + pAway || 1;
-  pHome /= total;
-  pDraw /= total;
-  pAway /= total;
-
-  const pick = [
-    { key: "1", value: pHome },
-    { key: "X", value: pDraw },
-    { key: "2", value: pAway },
-  ].sort((a, b) => b.value - a.value)[0];
-
-  return {
-    expectedGoals: {
-      home: round(lambdaHome, 2),
-      away: round(lambdaAway, 2),
-      total: round(lambdaHome + lambdaAway, 2),
-    },
-    probabilities: {
-      homeWin: percent(pHome),
-      draw: percent(pDraw),
-      awayWin: percent(pAway),
-      over25: percent(pOver25),
-      btts: percent(pBtts),
-    },
-    pick: {
-      market: "1X2",
-      selection: pick.key,
-      confidence: percent(pick.value),
-    },
-  };
-}
-
-function poisson(k, lambda) {
-  return Math.exp(-lambda) * Math.pow(lambda, k) / factorial(k);
-}
-
-function factorial(n) {
-  let r = 1;
-  for (let i = 2; i <= n; i++) r *= i;
-  return r;
-}
-
-function percent(v) {
-  return round(clamp(v, 0, 1) * 100, 1);
-}
-
-function round(v, d = 2) {
-  const p = Math.pow(10, d);
-  return Math.round((Number(v) + Number.EPSILON) * p) / p;
-}
-
-function clamp(v, min, max) {
-  return Math.min(max, Math.max(min, Number(v)));
 }
 
 /* =========================
-   License helpers
+   Token signing (semplice)
    ========================= */
-async function verifyLicenseCode(env, code) {
-  try {
-    const raw = base64UrlDecode(code);
-    const parsed = JSON.parse(raw);
-    const body = String(parsed.body || "");
-    const sig = String(parsed.sig || "");
-    if (!body || !sig) return { ok: false };
-
-    const expected = await hmacSha256(env.LICENSE_SECRET, body);
-    if (!timingSafeEqual(sig, expected)) return { ok: false };
-
-    const payload = JSON.parse(body);
-    if (!payload?.days) return { ok: false };
-    return { ok: true, days: Number(payload.days) || 30 };
-  } catch {
-    return { ok: false };
-  }
-}
-
-async function createLicenseCode(env, days = 30) {
-  const body = JSON.stringify({ days, issuedAt: new Date().toISOString(), nonce: randomHex(8) });
+async function signToken(env, payload) {
+  const body = base64urlEncode(JSON.stringify(payload));
   const sig = await hmacSha256(env.LICENSE_SECRET, body);
-  return base64UrlEncode(JSON.stringify({ body, sig }));
+  return `${body}.${sig}`;
 }
 
-/* =========================
-   Stripe webhook
-   ========================= */
-async function handleStripeWebhook(request, env) {
-  if (!env.STRIPE_WEBHOOK_SECRET) {
-    return json({ error: "STRIPE_NOT_CONFIGURED" }, 500);
-  }
-
-  const sig = request.headers.get("stripe-signature") || "";
-  const rawBody = await request.text();
-
-  const ok = await verifyStripeSignature(sig, rawBody, env.STRIPE_WEBHOOK_SECRET);
-  if (!ok) return json({ error: "INVALID_SIGNATURE" }, 400);
-
-  let event;
+async function verifySignedToken(env, token) {
+  const parts = String(token || "").split(".");
+  if (parts.length !== 2) return null;
+  const [body, sig] = parts;
+  const expected = await hmacSha256(env.LICENSE_SECRET, body);
+  if (!timingSafeEq(sig, expected)) return null;
   try {
-    event = JSON.parse(rawBody);
+    return JSON.parse(base64urlDecode(body));
   } catch {
-    return json({ error: "INVALID_JSON" }, 400);
-  }
-
-  if (event?.type === "checkout.session.completed") {
-    const session = event?.data?.object || {};
-    const email = normalizeEmail(
-      session?.customer_details?.email || session?.customer_email || ""
-    );
-
-    if (email) {
-      const row = await env.DB.prepare("SELECT paid_until FROM users WHERE email = ?")
-        .bind(email)
-        .first();
-
-      if (row) {
-        const now = Date.now();
-        const current = row.paid_until ? Date.parse(row.paid_until) : 0;
-        const base = Number.isFinite(current) && current > now ? current : now;
-        const paidUntil = new Date(base + 30 * 24 * 60 * 60 * 1000).toISOString();
-
-        await env.DB.prepare(
-          "UPDATE users SET paid_until = ?, paid_activated_at = COALESCE(paid_activated_at, ?) WHERE email = ?"
-        )
-          .bind(paidUntil, new Date().toISOString(), email)
-          .run();
-      }
-    }
-  }
-
-  return json({ received: true });
-}
-
-async function verifyStripeSignature(sigHeader, payload, webhookSecret) {
-  try {
-    const parts = String(sigHeader || "").split(",");
-    let timestamp = "";
-    const signatures = [];
-
-    for (const part of parts) {
-      const [k, v] = part.split("=");
-      if (k === "t") timestamp = v;
-      if (k === "v1") signatures.push(v);
-    }
-
-    if (!timestamp || !signatures.length) return false;
-
-    const age = Math.abs(Date.now() / 1000 - Number(timestamp));
-    if (!Number.isFinite(age) || age > 300) return false;
-
-    const expected = await hmacSha256Hex(webhookSecret, `${timestamp}.${payload}`);
-    return signatures.some((s) => timingSafeEqual(s, expected));
-  } catch {
-    return false;
+    return null;
   }
 }
 
 /* =========================
-   Crypto / misc
+   License code (email+exp)
    ========================= */
-function normalizeEmail(v) {
-  return String(v || "").trim().toLowerCase();
+async function makeLicenseCode(env, payload) {
+  const body = base64urlEncode(JSON.stringify(payload));
+  const sig = await hmacSha256(env.LICENSE_SECRET, body);
+  return `${body}.${sig}`;
 }
 
-async function hashPassword(password, salt) {
-  const enc = new TextEncoder();
-  const data = enc.encode(`${salt}:${password}`);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return bytesToHex(new Uint8Array(digest));
+async function verifyLicenseCode(env, code) {
+  const parts = String(code || "").split(".");
+  if (parts.length !== 2) return null;
+  const [body, sig] = parts;
+  const expected = await hmacSha256(env.LICENSE_SECRET, body);
+  if (!timingSafeEq(sig, expected)) return null;
+  try {
+    return JSON.parse(base64urlDecode(body));
+  } catch {
+    return null;
+  }
 }
 
-function randomHex(bytes = 16) {
-  const arr = new Uint8Array(bytes);
-  crypto.getRandomValues(arr);
-  return bytesToHex(arr);
+/* =========================
+   Helpers
+   ========================= */
+function readBearer(request) {
+  const h = request.headers.get("Authorization") || "";
+  const m = h.match(/^Bearer\s+(.+)$/i);
+  return m ? m[1].trim() : "";
 }
 
-function bytesToHex(bytes) {
-  return Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+function normEmail(s) {
+  const e = String(s || "")
+    .trim()
+    .toLowerCase();
+  return e.includes("@") ? e : "";
 }
 
-function json(obj, status = 200, extraHeaders = {}) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      ...corsHeaders(),
-      ...extraHeaders,
-    },
-  });
+async function sha256(str) {
+  const data = new TextEncoder().encode(str);
+  const hash = await crypto.subtle.digest("SHA-256", data);
+  return bufToHex(hash);
+}
+
+async function hmacSha256(secret, message) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(String(secret || "")),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sigBuf = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(message),
+  );
+  return base64urlFromBytes(new Uint8Array(sigBuf));
+}
+
+function bufToHex(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let hex = "";
+  for (const b of bytes) hex += b.toString(16).padStart(2, "0");
+  return hex;
+}
+
+function base64urlEncode(str) {
+  const bytes = new TextEncoder().encode(str);
+  return base64urlFromBytes(bytes);
+}
+
+function base64urlDecode(s) {
+  const b64 =
+    String(s).replace(/-/g, "+").replace(/_/g, "/") +
+    "===".slice((s.length + 3) % 4);
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+function base64urlFromBytes(bytes) {
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  const b64 = btoa(bin);
+  return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function timingSafeEq(a, b) {
+  a = String(a || "");
+  b = String(b || "");
+  if (a.length !== b.length) return false;
+  let out = 0;
+  for (let i = 0; i < a.length; i++) out |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return out === 0;
 }
 
 function corsHeaders() {
@@ -869,25 +1290,155 @@ function corsHeaders() {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization, x-admin-key",
-    "Access-Control-Expose-Headers": "x-cr-cache, x-cr-relay",
+    "Access-Control-Expose-Headers": "x-cr-cache",
   };
 }
 
-function base64UrlEncode(s) {
-  return btoa(unescape(encodeURIComponent(s)))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/g, "");
+function json(obj, status = 200, extraHeaders = {}) {
+  const h = new Headers({ "content-type": "application/json; charset=utf-8" });
+  for (const [k, v] of Object.entries(extraHeaders || {})) h.set(k, v);
+  return new Response(JSON.stringify(obj), { status, headers: h });
+}
+async function requireActiveUser(request, env) {
+  const token = readBearer(request);
+  if (!token) {
+    return {
+      ok: false,
+      res: json(
+        { error: "AUTH_REQUIRED", message: "Login necessario." },
+        401,
+        corsHeaders(),
+      ),
+    };
+  }
+
+  const sess = await verifySignedToken(env, token);
+  if (!sess?.email) {
+    return {
+      ok: false,
+      res: json(
+        { error: "AUTH_INVALID", message: "Sessione scaduta o non valida." },
+        401,
+        corsHeaders(),
+      ),
+    };
+  }
+
+  const u = await env.DB.prepare(
+    "SELECT trial_ends_at, paid_until, COALESCE(disabled,0) as disabled FROM users WHERE email = ?",
+  )
+    .bind(sess.email)
+    .first();
+
+  if (!u) {
+    return {
+      ok: false,
+      res: json({ error: "USER_NOT_FOUND" }, 404, corsHeaders()),
+    };
+  }
+
+  const now = Date.now();
+  const trialEnds = Number(u.trial_ends_at || 0);
+  const paidUntil = Number(u.paid_until || 0);
+
+  if (now > trialEnds && now > paidUntil) {
+    return {
+      ok: false,
+      res: json(
+        {
+          error: "PAYWALL",
+          message: "Periodo di prova scaduto e nessun abbonamento attivo.",
+          trialEndsAt: trialEnds,
+          paidUntil: paidUntil,
+        },
+        402,
+        corsHeaders(),
+      ),
+    };
+  }
+
+  return { ok: true, email: sess.email };
+}
+/* =========================
+   STRIPE WEBHOOK: attiva PRO automatico
+   Env: STRIPE_WEBHOOK_SECRET = whsec_...
+   Event: checkout.session.completed
+   ========================= */
+
+async function handleStripeWebhook(request, env) {
+  const sig = request.headers.get("stripe-signature") || "";
+  const rawBody = await request.text();
+
+  if (!env.STRIPE_WEBHOOK_SECRET) {
+    return new Response("Missing STRIPE_WEBHOOK_SECRET", { status: 500 });
+  }
+
+  const ok = await verifyStripeSignature(sig, rawBody, env.STRIPE_WEBHOOK_SECRET);
+  if (!ok) return new Response("Invalid signature", { status: 400 });
+
+  let evt;
+  try {
+    evt = JSON.parse(rawBody);
+  } catch {
+    return new Response("Bad JSON", { status: 400 });
+  }
+
+  const type = String(evt?.type || "");
+  if (type !== "checkout.session.completed" && type !== "checkout.session.async_payment_succeeded") {
+    return new Response("Ignored", { status: 200 });
+  }
+
+  const session = evt?.data?.object || {};
+  const email = normEmail(session?.customer_details?.email || session?.customer_email || "");
+  if (!email) return new Response("No email", { status: 200 });
+
+  // Estendi di 30 giorni (se già PRO, estende da fine)
+  const row = await env.DB.prepare("SELECT paid_until FROM users WHERE email = ?")
+    .bind(email)
+    .first();
+
+  const now = Date.now();
+  const currentPaid = Number(row?.paid_until || 0);
+  const base = Math.max(now, currentPaid);
+  const newPaidUntil = base + 30 * 24 * 60 * 60 * 1000;
+
+  if (!row) {
+    // Se l’utente non è ancora registrato, lo creiamo “vuoto”:
+    // così quando si registra con la stessa email risulta già PRO.
+    await env.DB.prepare(
+      "INSERT INTO users (id, email, pass_hash, trial_ends_at, paid_until, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+    )
+      .bind(crypto.randomUUID(), email, "", 0, newPaidUntil, now)
+      .run();
+  } else {
+    await env.DB.prepare("UPDATE users SET paid_until = ? WHERE email = ?")
+      .bind(newPaidUntil, email)
+      .run();
+  }
+
+  return new Response("OK", { status: 200 });
 }
 
-function base64UrlDecode(s) {
-  let x = String(s || "").replace(/-/g, "+").replace(/_/g, "/");
-  while (x.length % 4) x += "=";
-  return decodeURIComponent(escape(atob(x)));
-}
+async function verifyStripeSignature(sigHeader, payload, webhookSecret) {
+  // Stripe-Signature: t=timestamp,v1=hexsignature,...
+  const parts = String(sigHeader || "").split(",").map(s => s.trim());
+  const tPart = parts.find(p => p.startsWith("t=")) || "";
+  const v1Part = parts.find(p => p.startsWith("v1=")) || "";
 
-async function hmacSha256(secret, message) {
-  return hmacSha256Hex(secret, message);
+  const t = tPart.split("=")[1];
+  const v1 = v1Part.split("=")[1];
+  if (!t || !v1) return false;
+
+  // anti-replay: 5 minuti
+  const ts = parseInt(t, 10);
+  if (!Number.isFinite(ts)) return false;
+  const now = Math.floor(Date.now() / 1000);
+  if (Math.abs(now - ts) > 300) return false;
+
+  const signed = `${t}.${payload}`;
+  const expectedHex = await hmacSha256Hex(webhookSecret, signed);
+
+  return timingSafeEq(v1, expectedHex);
 }
 
 async function hmacSha256Hex(secret, message) {
@@ -899,14 +1450,10 @@ async function hmacSha256Hex(secret, message) {
     ["sign"]
   );
   const sigBuf = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(message));
-  return bytesToHex(new Uint8Array(sigBuf));
+  const bytes = new Uint8Array(sigBuf);
+  let hex = "";
+  for (const b of bytes) hex += b.toString(16).padStart(2, "0");
+  return hex;
 }
+  
 
-function timingSafeEqual(a, b) {
-  const x = String(a || "");
-  const y = String(b || "");
-  if (x.length !== y.length) return false;
-  let diff = 0;
-  for (let i = 0; i < x.length; i++) diff |= x.charCodeAt(i) ^ y.charCodeAt(i);
-  return diff === 0;
-}
