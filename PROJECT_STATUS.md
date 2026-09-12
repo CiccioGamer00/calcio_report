@@ -6,7 +6,17 @@ This file is the operational source of truth for the current Core V2 rebuild. Ke
 
 ## Product direction
 
-Calcio Report is a football analysis web app. The current visual identity should be preserved unless a change is explicitly agreed. The goal is to rebuild the core so search, fixture loading, panels, caching, auth and monetization behave deterministically and scale to real users.
+Calcio Report is a football analysis web app. The current visual identity should be preserved unless a change is explicitly agreed. The goal is to rebuild the core so search, fixture loading, caching, auth and monetization behave deterministically and scale to real users.
+
+### Functional parity contract
+
+- `main` is the working functional/product reference for Core V2.
+- Core V2 is an internal orchestration and efficiency refactor, not a product rewrite.
+- Existing useful data, panels, calculations, layout and user flows must remain functionally equivalent unless a visible change is explicitly agreed.
+- Change structure only when it reduces/controls API calls, removes race conditions, improves cache/error handling or is required by the relay architecture.
+- Do not rewrite an unchanged working panel merely to call it "V2"; audit and reuse it.
+- A Core V2 regression or missing datum must be restored before merge even if the equivalent feature still exists in legacy code.
+- The agreed lineup optimization preserves the feature while changing cost: lightweight official check on main load; expensive estimate only on explicit user request when official lineups are absent.
 
 ## Non-negotiable architecture
 
@@ -21,7 +31,7 @@ Calcio Report is a football analysis web app. The current visual identity should
   - TRIAL / PRO gate;
   - payment-related backend routes;
   - edge cache with TTL;
-  - expose `x-cr-cache` diagnostics;
+  - expose `x-cr-cache` and `x-cr-relay` diagnostics;
   - never cache upstream errors.
 - Frontend responsibilities:
   - async/await;
@@ -204,6 +214,10 @@ Live end-to-end validation completed:
 - no abnormal API-Football rate-limit error reappeared during the sequence;
 - because the deployed Worker has no direct API-Football fallback and uses a fresh relay cache namespace, the successful live data confirms the Worker → OVH relay → API-Football path;
 - automated transport tests separately confirmed canonical cache keys, MISS → HIT reuse, correct HMAC signatures, and that HTTP 200 responses containing semantic `errors` are not cached.
+- local Core V2 test with raw `milan` + Enter resolved AC Milan (`team.id = 489`) and loaded the correct fixture;
+- first local fixture request showed `cacheWorker=MISS`, `cacheBrowser=MISS`, `relay=1`;
+- after a hard refresh, the same request showed `cacheWorker=HIT`, `cacheBrowser=MISS`, `relay=1`;
+- opponent-next data was restored as a non-blocking background request; Lazio's next fixture against Venezia rendered correctly after the main Lazio–Milan card.
 
 Observed frontend behavior on the currently published legacy UI: pressing Enter on raw `milan` produced a false empty result, while selecting `AC Milan` from suggestions loaded the fixture correctly. Treat this as a frontend flow bug; do not infer an upstream/relay failure from it. Core V2 must keep Enter, Cerca and suggestion click on one shared deterministic path.
 
@@ -354,21 +368,19 @@ Relay code integration, deployment, local transport tests and the live team sequ
 
 ## Immediate next objective
 
-Resume Core V2 frontend work from the existing modular files. First verify the shared search path and stale-request protection in the Core V2 implementation, then continue the planned panel migration without changing the current visual identity.
-
-Only after that resume Core V2 feature migration.
+Resume Core V2 frontend work from the existing modular files. Preserve `main` behavior while optimizing only the call/orchestration layer. Verify shared search and stale-request protection, restore any main-card data bypassed by the new controller, then audit the unchanged panels for parity and unnecessary API calls before deciding whether any panel code needs modification.
 
 ## Planned Core V2 sequence after relay validation
 
-1. main match secondary data (opponent next match etc.) without blocking main render;
-2. Panel Manager with states `idle/loading/success/empty/error`;
-3. migrate panels one at a time;
-4. lightweight official lineup check;
-5. estimated lineup only on demand;
+1. main-card parity: secondary match data without blocking the first render;
+2. verify Enter, Cerca and suggestion click plus stale-search protection;
+3. audit every existing panel against `main`; keep byte-identical code when it already behaves correctly;
+4. add shared panel states `idle/loading/success/empty/error` only where they improve orchestration without changing output;
+5. lightweight official lineup check, with estimated lineup only on demand;
 6. formation parser fixes for multi-line shapes such as 4-2-3-1, 4-1-4-1, 3-4-2-1;
-7. optimize/cache historical calls;
-8. mobile search/tabs polish;
-9. security/performance review before merging to `main`.
+7. optimize/cache historical calls only after measuring actual request duplication;
+8. agreed mobile search/tabs polish;
+9. full functional parity, security and performance review before merging to `main`.
 
 ## Existing UI/product behavior to preserve
 
