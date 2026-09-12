@@ -116,7 +116,8 @@
       `searchId=${searchId ?? "—"}`,
       `tipo=${result?.kind || "—"}`,
       `http=${result?.status ?? "—"}`,
-      `cache=${result?.cache || result?.frontendCache || "—"}`,
+      `cacheWorker=${result?.cache || "—"}`,
+      `cacheBrowser=${result?.frontendCache || "—"}`,
       `relay=${result?.relay || "—"}`,
     ];
 
@@ -677,6 +678,18 @@
 
       window.CR_STATE.matchExtras.nextTeam = nextTeamFixture;
       renderMainFixture(rawFixture, nextTeamFixture, team);
+
+      const successDiagnostic = localDiagnostic({
+        phase: "success",
+        result: fixtureResult,
+        team,
+        searchId,
+      });
+      if (successDiagnostic) {
+        document
+          .getElementById("match")
+          ?.insertAdjacentHTML("beforeend", successDiagnostic);
+      }
 
       window.__CR_LAST_SEARCH_DEBUG__ = {
         phase: "success",
