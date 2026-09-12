@@ -440,9 +440,21 @@
     );
   }
 
-  function renderMainFixture(rawFixture, nextTeamFixture, team) {
+  function renderMainFixture(
+    rawFixture,
+    nextTeamFixture,
+    team,
+    nextOpponentFixture = null,
+  ) {
     if (typeof window.renderMatchBasic === "function") {
-      setMatch(window.renderMatchBasic(rawFixture, nextTeamFixture || null, null, team.id));
+      setMatch(
+        window.renderMatchBasic(
+          rawFixture,
+          nextTeamFixture || null,
+          nextOpponentFixture,
+          team.id,
+        ),
+      );
       return;
     }
 
@@ -455,6 +467,71 @@
     setMatch(
       `<div class="matchHero"><div class="mh-main"><div class="mh-name">${safe(home)}</div><div class="mh-score">VS</div><div class="mh-name">${safe(away)}</div></div><div class="mh-meta">${safe(when)}</div></div>`,
     );
+  }
+
+  function appendSuccessDiagnostic(result, team, searchId) {
+    const html = localDiagnostic({
+      phase: "success",
+      result,
+      team,
+      searchId,
+    });
+    if (html) document.getElementById("match")?.insertAdjacentHTML("beforeend", html);
+  }
+
+  async function loadOpponentNext({
+    rawFixture,
+    fixture,
+    nextTeamFixture,
+    team,
+    searchId,
+    signal,
+    mainResult,
+  }) {
+    let opponentId = null;
+    if (Number(team.id) === Number(fixture.home.id)) opponentId = fixture.away.id;
+    if (Number(team.id) === Number(fixture.away.id)) opponentId = fixture.home.id;
+    if (!opponentId) return;
+
+    const result = await window.apiGetV2(
+      `/fixtures?team=${encodeURIComponent(opponentId)}&next=2&timezone=Europe/Rome`,
+      {
+        retries: 0,
+        signal,
+        searchId,
+        cache: true,
+      },
+    );
+
+    debug("opponent next fixture", {
+      searchId,
+      opponentId,
+      kind: result.kind,
+      status: result.status,
+      cache: result.cache,
+      relay: result.relay,
+      reqId: result.reqId,
+    });
+
+    if (!window.crIsSearchActive(searchId) || result.kind === "aborted") return;
+    if (Number(window.CR_STATE.selection.fixture?.id) !== Number(fixture.id)) return;
+    if (result.kind !== "success") return;
+
+    const nextOpponentFixture = (result.arr || []).find(
+      (candidate) =>
+        candidate?.fixture?.id &&
+        Number(candidate.fixture.id) !== Number(fixture.id),
+    );
+    if (!nextOpponentFixture) return;
+
+    window.CR_STATE.matchExtras.nextOpponent = nextOpponentFixture;
+    renderMainFixture(
+      rawFixture,
+      nextTeamFixture,
+      team,
+      nextOpponentFixture,
+    );
+    appendSuccessDiagnostic(mainResult, team, searchId);
   }
 
   function errorMessage(result, phase) {
@@ -678,18 +755,7 @@
 
       window.CR_STATE.matchExtras.nextTeam = nextTeamFixture;
       renderMainFixture(rawFixture, nextTeamFixture, team);
-
-      const successDiagnostic = localDiagnostic({
-        phase: "success",
-        result: fixtureResult,
-        team,
-        searchId,
-      });
-      if (successDiagnostic) {
-        document
-          .getElementById("match")
-          ?.insertAdjacentHTML("beforeend", successDiagnostic);
-      }
+      appendSuccessDiagnostic(fixtureResult, team, searchId);
 
       window.__CR_LAST_SEARCH_DEBUG__ = {
         phase: "success",
@@ -704,6 +770,20 @@
         source: teamResolved.source,
         teamId: team.id,
         fixtureId: fixture.id,
+      });
+
+      loadOpponentNext({
+        rawFixture,
+        fixture,
+        nextTeamFixture,
+        team,
+        searchId,
+        signal,
+        mainResult: fixtureResult,
+      }).catch((err) => {
+        if (window.crIsSearchActive(searchId) && err?.name !== "AbortError") {
+          console.error("CR V2 opponent next fixture", err);
+        }
       });
     } catch (err) {
       if (!window.crIsSearchActive(searchId) || err?.name === "AbortError") return;
