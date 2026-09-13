@@ -634,12 +634,103 @@ function mean(a, b) {
   return (x + y) / 2;
 }
 
-// scala lineare -> 0..100 (indice interno)
-function scoreLinear(value, minV, maxV) {
-  const v = Number(value) || 0;
-  if (maxV <= minV) return 0;
-  const t = (v - minV) / (maxV - minV);
-  return Math.round(clamp(t, 0, 1) * 100);
+function strengthFromDistance(distance, fullStrengthDistance) {
+  const d = Math.max(0, Number(distance) || 0);
+  const span = Math.max(0.01, Number(fullStrengthDistance) || 1);
+  return Math.round(50 + clamp(d / span, 0, 1) * 45);
+}
+
+function volumePrediction(type, expected) {
+  if (expected == null || expected === "" || !Number.isFinite(Number(expected))) {
+    const emptyLabels = {
+      corners: "Corner —",
+      shots: "Tiri —",
+      cards: "Cartellini —",
+      fouls: "Falli —",
+    };
+    return { label: emptyLabels[type] || "—", strength: null };
+  }
+
+  const value = Number(expected);
+
+  if (type === "corners") {
+    if (value >= 11.5) {
+      return {
+        label: "Corner: Over 10.5",
+        strength: strengthFromDistance(value - 10.5, 4),
+      };
+    }
+    if (value >= 9.5) {
+      return {
+        label: "Corner: Over 8.5",
+        strength: strengthFromDistance(value - 8.5, 4),
+      };
+    }
+    return {
+      label: "Corner: Under 10.5",
+      strength: strengthFromDistance(10.5 - value, 4),
+    };
+  }
+
+  if (type === "shots") {
+    if (value >= 28) {
+      return {
+        label: "Tiri: Alto volume",
+        strength: strengthFromDistance(value - 28, 6),
+      };
+    }
+    if (value >= 22) {
+      const distanceFromEdge = Math.min(value - 22, 28 - value);
+      return {
+        label: "Tiri: Medio volume",
+        strength: strengthFromDistance(distanceFromEdge, 3),
+      };
+    }
+    return {
+      label: "Tiri: Basso volume",
+      strength: strengthFromDistance(22 - value, 6),
+    };
+  }
+
+  if (type === "cards") {
+    if (value >= 5.5) {
+      return {
+        label: "Cartellini: Over 4.5",
+        strength: strengthFromDistance(value - 4.5, 2.5),
+      };
+    }
+    if (value >= 4.5) {
+      return {
+        label: "Cartellini: Over 3.5",
+        strength: strengthFromDistance(value - 3.5, 2.5),
+      };
+    }
+    return {
+      label: "Cartellini: Under 4.5",
+      strength: strengthFromDistance(4.5 - value, 2.5),
+    };
+  }
+
+  if (type === "fouls") {
+    if (value >= 27.5) {
+      return {
+        label: "Falli: Over 26.5",
+        strength: strengthFromDistance(value - 26.5, 6),
+      };
+    }
+    if (value >= 24.5) {
+      return {
+        label: "Falli: Over 23.5",
+        strength: strengthFromDistance(value - 23.5, 6),
+      };
+    }
+    return {
+      label: "Falli: Under 26.5",
+      strength: strengthFromDistance(26.5 - value, 6),
+    };
+  }
+
+  return { label: "—", strength: null };
 }
 
 function fmt2(n) {
@@ -705,38 +796,6 @@ function pickLabel(type, ctx) {
     return "Gol 2T: Basso";
   }
 
-  if (type === "corners") {
-    const tot = Number(ctx.cornersExpected);
-    if (!Number.isFinite(tot)) return "Corner —";
-    if (tot >= 11.5) return "Corner: Over 10.5";
-    if (tot >= 9.5) return "Corner: Over 8.5";
-    return "Corner: Under 10.5";
-  }
-
-  if (type === "shots") {
-    const tot = Number(ctx.shotsExpected);
-    if (!Number.isFinite(tot)) return "Tiri —";
-    if (tot >= 28) return "Tiri: Alto volume";
-    if (tot >= 22) return "Tiri: Medio volume";
-    return "Tiri: Basso volume";
-  }
-
-  if (type === "cards") {
-    const tot = Number(ctx.cardsExpected);
-    if (!Number.isFinite(tot)) return "Cartellini —";
-    if (tot >= 5.5) return "Cartellini: Over 4.5";
-    if (tot >= 4.5) return "Cartellini: Over 3.5";
-    return "Cartellini: Under 4.5";
-  }
-
-  if (type === "fouls") {
-    const tot = Number(ctx.foulsExpected);
-    if (!Number.isFinite(tot)) return "Falli —";
-    if (tot >= 27.5) return "Falli: Over 26.5";
-    if (tot >= 24.5) return "Falli: Over 23.5";
-    return "Falli: Under 26.5";
-  }
-
   return "—";
 }
 
@@ -756,6 +815,7 @@ function tile(opts) {
     icon,
     title,
     score, // indice 0..100
+    scoreIsStrength = false,
     label, // bookmaker style
     sub, // numeri attesi
     homeTeam,
@@ -773,7 +833,13 @@ function tile(opts) {
           <span class="ind-ico">${safeHTML(icon)}</span>
           <span>${safeHTML(title)}</span>
         </div>
-        <span class="ind-score ${cls}">${score == null ? "—" : `${safeHTML(score)}%`}</span>
+        <span class="ind-score ${cls}">${
+          score == null
+            ? "—"
+            : scoreIsStrength
+              ? `Forza ${safeHTML(score)}/100`
+              : `${safeHTML(score)}%`
+        }</span>
       </div>
 
       <div class="ind-label">${safeHTML(label || "—")}</div>
@@ -879,7 +945,6 @@ function renderIndicators() {
     cornersHome = mean(corners.home.avgCorners, corners.away.avgCornersAgainst);
     cornersAway = mean(corners.away.avgCorners, corners.home.avgCornersAgainst);
     cornersExpected = cornersHome + cornersAway;
-    cornersScore = scoreLinear(cornersExpected, 6, 14);
   }
 
   // --- TIRI attesi
@@ -888,7 +953,6 @@ function renderIndicators() {
     shotsHome = mean(shots.home.avgShotsFor, shots.away.avgShotsAgainst);
     shotsAway = mean(shots.away.avgShotsFor, shots.home.avgShotsAgainst);
     shotsExpected = shotsHome + shotsAway;
-    shotsScore = scoreLinear(shotsExpected, 16, 32);
 
     otHome = mean(shots.home.avgOnTargetFor, shots.away.avgOnTargetAgainst);
     otAway = mean(shots.away.avgOnTargetFor, shots.home.avgOnTargetAgainst);
@@ -900,7 +964,6 @@ function renderIndicators() {
   if (h && a) {
     const teamsCards = Number(h.avgCards) + Number(a.avgCards) || 0;
     cardsExpected = ref?.avgCards != null ? mean(teamsCards, Number(ref.avgCards)) : teamsCards;
-    cardsScore = scoreLinear(cardsExpected, 2, 7);
   }
 
   // --- FALLI attesi
@@ -909,10 +972,18 @@ function renderIndicators() {
     foulsHome = mean(fouls.home.avgFoulsFor, fouls.away.avgFoulsAgainst);
     foulsAway = mean(fouls.away.avgFoulsFor, fouls.home.avgFoulsAgainst);
     foulsExpected = foulsHome + foulsAway;
-    foulsScore = scoreLinear(foulsExpected, 16, 32);
   }
 
   const ctx = { goal1T, goal2T, cornersExpected, shotsExpected, cardsExpected, foulsExpected };
+  const cornersPrediction = volumePrediction("corners", cornersExpected);
+  const shotsPrediction = volumePrediction("shots", shotsExpected);
+  const cardsPrediction = volumePrediction("cards", cardsExpected);
+  const foulsPrediction = volumePrediction("fouls", foulsExpected);
+
+  cornersScore = cornersPrediction.strength;
+  shotsScore = shotsPrediction.strength;
+  cardsScore = cardsPrediction.strength;
+  foulsScore = foulsPrediction.strength;
 
   // Sezione bookmaker
   const homeId = homeMeta?.id || fx?.home?.id || null;
@@ -979,7 +1050,8 @@ if (el) el.innerHTML = html;
         icon: "🚩",
         title: "Corner",
         score: cornersScore == null ? null : cornersScore,
-        label: pickLabel("corners", ctx),
+        scoreIsStrength: true,
+        label: cornersPrediction.label,
         sub: cornersExpected == null ? "" : `Tot attesi: <strong>${fmt2(cornersExpected)}</strong>`,
         homeTeam: homeMeta,
         awayTeam: awayMeta,
@@ -991,7 +1063,8 @@ if (el) el.innerHTML = html;
         icon: "🎯",
         title: "Tiri",
         score: shotsScore == null ? null : shotsScore,
-        label: pickLabel("shots", ctx),
+        scoreIsStrength: true,
+        label: shotsPrediction.label,
         sub: shotsExpected == null ? "" : `Tot attesi: <strong>${fmt2(shotsExpected)}</strong> · In porta attesi: <strong>${fmt2(otExpected)}</strong>`,
         homeTeam: homeMeta,
         awayTeam: awayMeta,
@@ -1003,7 +1076,8 @@ if (el) el.innerHTML = html;
         icon: "🟨",
         title: "Cartellini",
         score: cardsScore == null ? null : cardsScore,
-        label: pickLabel("cards", ctx),
+        scoreIsStrength: true,
+        label: cardsPrediction.label,
         sub: cardsExpected == null ? "" : `Attesi: <strong>${fmt2(cardsExpected)}</strong>${ref?.avgCards == null ? "" : ` · Arbitro: <strong>${fmt2(ref.avgCards)}</strong>`}`,
         homeTeam: homeMeta,
         awayTeam: awayMeta,
@@ -1015,7 +1089,8 @@ if (el) el.innerHTML = html;
         icon: "🦵",
         title: "Falli",
         score: foulsScore == null ? null : foulsScore,
-        label: pickLabel("fouls", ctx),
+        scoreIsStrength: true,
+        label: foulsPrediction.label,
         sub: foulsExpected == null ? "" : `Tot attesi: <strong>${fmt2(foulsExpected)}</strong>`,
         homeTeam: homeMeta,
         awayTeam: awayMeta,

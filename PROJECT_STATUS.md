@@ -432,11 +432,11 @@ The real-data visual test was approved on Inter–Udinese: Inter's `3-5-2` rende
 - **Squadre — VERIFIED.** `js/features/teamsPanel.js` is byte-identical to `main`. Manual test on Lazio–AC Milan confirmed both team cards, last-5 results, W/D/L counts, GF/GS, cards and opponent/home-away presentation. Returning to the panel after visiting Match is immediate and does not reload it. Existing shared event caching remains in use; no reproduced regression and no code change required.
 - Panel help/toast persistence was also checked: `Non mostrare più` is intentionally stored per hint key (`hint_referee`, `hint_teams`, etc.) in `localStorage`; focused retest confirmed the same disabled hint does not reappear. No bug.
 
-### Indicators score semantics investigation — 2026-09-12
+### Indicators score semantics — closed 2026-09-13
 
 A visual audit of the Indicators tiles found a real interpretation problem in `js/features/indicatorsPanel.js`.
 
-Current behavior:
+Reproduced behavior:
 
 - the large percentage shown on Corner, Tiri, Cartellini and Falli tiles is **not a probability of the displayed betting label**;
 - it is a linear 0–100 intensity index produced by `scoreLinear()` from the expected raw volume;
@@ -444,17 +444,21 @@ Current behavior:
 - the same issue explains examples such as Corner 20%, Tiri 26% and Falli 5%;
 - the separate Bookmaker section above is different: those percentages are actual historical hit rates (`hit / total`) over recent matches.
 
-Required follow-up:
+Implemented behavior:
 
-- do not present the tile intensity index as if it were the probability/confidence of the betting label;
-- preferred product direction is for the prominent tile score to express the strength/coherence of the displayed prediction, so a strong `Under 4.5` signal from low expected cards should score high rather than low;
-- define the final score semantics consistently across Corner, Tiri, Cartellini and Falli before changing code;
-- no extra API calls are needed for this correction; reuse the data already calculated by the Indicators panel.
+- Corner, Tiri, Cartellini and Falli now show `Forza N/100` instead of a percentage that could be mistaken for probability;
+- `50/100` represents a value near the decision boundary and the strength increases, up to `95/100`, as the expected value supports the displayed label;
+- Under labels become stronger as the expected value falls below their threshold, while Over labels become stronger as it rises above the threshold;
+- the medium-shots band is strongest near its center and weaker at its boundaries;
+- Gol 1T and Gol 2T retain their existing percentage presentation;
+- the Bookmaker section remains unchanged and continues to show real historical hit rates;
+- no expected-value calculation, endpoint or request count was changed.
+
+Focused automated tests passed for Under/Over direction, decision boundaries, the medium-shots band, missing values, the new `Forza N/100` rendering and unchanged goal percentages. The real UI test was completed successfully after a hard refresh and one `Carica dati` action. The Indicators score-semantics bug is closed.
 
 Open bugs / required work, in priority order:
 
-1. **Indicators score semantics — OPEN.** Decide and implement a clear score meaning for the main Indicator tiles; current `%` values are intensity indexes and are misleading beside labels such as `Under 4.5`.
-2. **Panel parity and call audit.** Continue testing each unchanged panel against `main`. Preserve its content and presentation; change code only for a reproduced bug, duplicated request or measurable efficiency improvement. `Arbitro` and `Squadre` are verified; continue with the remaining panels.
+1. **Panel parity and call audit.** Continue testing each unchanged panel against `main`. Preserve its content and presentation; change code only for a reproduced bug, duplicated request or measurable efficiency improvement. `Arbitro`, `Squadre` and the corrected Indicatori score presentation are verified; continue with the remaining panels.
 
 Closed frontend regressions:
 
@@ -463,6 +467,7 @@ Closed frontend regressions:
 - **Main-card parity:** the mini standings/rank pills bypassed by the new controller are loaded in background again, with `searchId` and fixture checks preventing stale re-renders.
 - **Lineup request cost:** automatic loading now stops after one official `/fixtures/lineups` check when data is absent; the existing multi-request estimator runs only after an explicit click, while transport errors remain distinguishable from an empty response.
 - **Four-line estimated formations:** the XI builder now consumes every formation row, preserves natural role constraints and uses historical `grid` affinity for hybrid rows; automated and real-data Inter–Udinese tests passed without adding API calls.
+- **Indicators score semantics:** Corner, Tiri, Cartellini and Falli now expose a direction-aware `Forza N/100` score instead of presenting a raw intensity index as a percentage; focused automated and real UI tests passed without adding API calls.
 
 ### Scope guardrails for the next chat
 
