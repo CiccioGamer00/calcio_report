@@ -445,7 +445,11 @@ The unchanged `main` implementation requested up to four `/players` pages for ea
 - injuries for one team: only that team's player pages are requested;
 - injuries for both teams: the existing behavior is preserved.
 
-The real Inter test confirmed that the panel still renders and reopens immediately. It also exposed a separate pre-existing display bug: duplicate API injury records are currently rendered as duplicate players. That issue is not part of this request-cost change and remains open. A click/tap player-detail view using already-loaded player statistics is a possible later enhancement; it must not introduce one request per click.
+The first real Inter test confirmed that the panel still renders and reopens immediately. It also exposed a separate pre-existing display bug: duplicate API injury records were counted and rendered as duplicate players.
+
+The duplicate-row fix now keeps one record per team/player, preferring the player ID and falling back to a normalized name when the ID is absent. If only one duplicate contains an absence reason, that reason is preserved. A focused test passed without adding API calls, and the follow-up Inter–Udinese visual test confirmed Inter reduced from four rows to the two unique players Dimarco and Spence, while Udinese reduced from twelve rows to six unique players.
+
+The Indisponibili panel and its request optimization are verified. A click/tap player-detail view using already-loaded player statistics remains a possible later enhancement; it must not introduce one request per click.
 
 ### Indicators score semantics — closed 2026-09-13
 
@@ -473,8 +477,7 @@ Focused automated tests passed for Under/Over direction, decision boundaries, th
 
 Open bugs / required work, in priority order:
 
-1. **Indisponibili duplicate rows — OPEN.** Deduplicate repeated injury records for the same team/player before counting and rendering them. Preserve the available reason and do not add API calls.
-2. **Panel parity and call audit.** Continue testing each unchanged panel against `main`. Preserve its content and presentation; change code only for a reproduced bug, duplicated request or measurable efficiency improvement. `Arbitro`, `Squadre`, `Predizione`, `Corner`, `Tiri` and the corrected Indicatori score presentation are verified; continue with the remaining panels.
+1. **Panel parity and call audit.** Continue testing each unchanged panel against `main`. Preserve its content and presentation; change code only for a reproduced bug, duplicated request or measurable efficiency improvement. `Arbitro`, `Squadre`, `Predizione`, `Corner`, `Tiri`, `Indisponibili` and the corrected Indicatori score presentation are verified; continue with the remaining panels.
 
 Closed frontend regressions:
 
@@ -484,6 +487,7 @@ Closed frontend regressions:
 - **Lineup request cost:** automatic loading now stops after one official `/fixtures/lineups` check when data is absent; the existing multi-request estimator runs only after an explicit click, while transport errors remain distinguishable from an empty response.
 - **Four-line estimated formations:** the XI builder now consumes every formation row, preserves natural role constraints and uses historical `grid` affinity for hybrid rows; automated and real-data Inter–Udinese tests passed without adding API calls.
 - **Indicators score semantics:** Corner, Tiri, Cartellini and Falli now expose a direction-aware `Forza N/100` score instead of presenting a raw intensity index as a percentage; focused automated and real UI tests passed without adding API calls.
+- **Indisponibili duplicate rows:** repeated injury records are deduplicated per team/player before counting and rendering; reasons are preserved and the real Inter–Udinese test passed without adding API calls.
 
 ### Scope guardrails for the next chat
 

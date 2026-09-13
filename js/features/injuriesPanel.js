@@ -35,6 +35,46 @@ function extractPositionFromPlayerRow(row) {
   return String(fromStats || "").trim();
 }
 
+function dedupeInjuryRows(items) {
+  const unique = [];
+  const indexes = new Map();
+
+  for (const item of items || []) {
+    const teamId = item?.team?.id ? String(item.team.id) : "";
+    const playerId = item?.player?.id ? String(item.player.id) : "";
+    const playerName = String(item?.player?.name || "").trim().toLowerCase();
+    const playerKey = playerId
+      ? `id:${playerId}`
+      : playerName
+        ? `name:${playerName}`
+        : "";
+    const key = teamId && playerKey ? `${teamId}:${playerKey}` : "";
+
+    if (!key) {
+      unique.push(item);
+      continue;
+    }
+
+    const index = indexes.get(key);
+    if (index === undefined) {
+      indexes.set(key, unique.length);
+      unique.push(item);
+      continue;
+    }
+
+    const currentReason = String(unique[index]?.player?.reason || "").trim();
+    const candidateReason = String(item?.player?.reason || "").trim();
+    if (!currentReason && candidateReason) {
+      unique[index] = {
+        ...unique[index],
+        player: { ...unique[index].player, reason: item.player.reason },
+      };
+    }
+  }
+
+  return unique;
+}
+
 async function fetchTeamPositions(teamId, season) {
   const key = `${teamId}:${season}`;
   if (__TEAM_POS_CACHE__.has(key)) return __TEAM_POS_CACHE__.get(key);
@@ -172,7 +212,7 @@ async function loadInjuries() {
     return;
   }
 
-  const all = Array.isArray(r.arr) ? r.arr : [];
+  const all = dedupeInjuryRows(Array.isArray(r.arr) ? r.arr : []);
 
   const home = fx.home || {};
   const away = fx.away || {};
