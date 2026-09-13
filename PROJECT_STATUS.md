@@ -430,6 +430,7 @@ The real-data visual test was approved on Inter–Udinese: Inter's `3-5-2` rende
 
 - **Arbitro — VERIFIED.** `js/features/refereePanel.js` is byte-identical to `main`. Manual test on Lazio–AC Milan confirmed fixture referee/stadium/city rendering, referee-history fallback, card summary, grouped match-history toggle and per-team detail toggle. Returning to the panel after visiting Match is immediate and does not reload it. No reproduced regression and no code change required.
 - **Squadre — VERIFIED.** `js/features/teamsPanel.js` is byte-identical to `main`. Manual test on Lazio–AC Milan confirmed both team cards, last-5 results, W/D/L counts, GF/GS, cards and opponent/home-away presentation. Returning to the panel after visiting Match is immediate and does not reload it. Existing shared event caching remains in use; no reproduced regression and no code change required.
+- **Predizione — VERIFIED.** `js/features/predictionPanel.js` is byte-identical to `main`, and its response contract matches the deployed Worker `/predict` route. Manual test on Inter confirmed 1X2 probabilities, confidence/risk, expected goals, likely scorelines, drivers, Over 2.5 and BTTS rendering. Returning from Match to Predizione is immediate and does not issue a second browser `/predict` request. No reproduced regression and no code change required.
 - Panel help/toast persistence was also checked: `Non mostrare più` is intentionally stored per hint key (`hint_referee`, `hint_teams`, etc.) in `localStorage`; focused retest confirmed the same disabled hint does not reappear. No bug.
 
 ### Indicators score semantics — closed 2026-09-13
@@ -458,7 +459,7 @@ Focused automated tests passed for Under/Over direction, decision boundaries, th
 
 Open bugs / required work, in priority order:
 
-1. **Panel parity and call audit.** Continue testing each unchanged panel against `main`. Preserve its content and presentation; change code only for a reproduced bug, duplicated request or measurable efficiency improvement. `Arbitro`, `Squadre` and the corrected Indicatori score presentation are verified; continue with the remaining panels.
+1. **Panel parity and call audit.** Continue testing each unchanged panel against `main`. Preserve its content and presentation; change code only for a reproduced bug, duplicated request or measurable efficiency improvement. `Arbitro`, `Squadre`, `Predizione` and the corrected Indicatori score presentation are verified; continue with the remaining panels.
 
 Closed frontend regressions:
 
