@@ -1179,6 +1179,90 @@ function formationMode(arr) {
   return Object.keys(map).reduce((a, b) => (map[a] > map[b] ? a : b), "4-4-2");
 }
 
+function parseEstimatedFormationRows(formation) {
+  const rows = String(formation || "4-4-2")
+    .split("-")
+    .map((value) => parseInt(value, 10))
+    .filter((value) => Number.isFinite(value) && value > 0);
+
+  return rows.length && rows.reduce((sum, value) => sum + value, 0) === 10
+    ? rows
+    : [4, 4, 2];
+}
+
+function estimatedRowKind(rows, rowIndex) {
+  if (rowIndex === 0) return "DEF";
+  if (rowIndex === rows.length - 1) return "ATT";
+  if (rows.length >= 4 && rowIndex === rows.length - 2) return "HYBRID";
+  return "MID";
+}
+
+function buildRoleAwareEstimatedXI(pool, formation, fallbackSort) {
+  const rows = parseEstimatedFormationRows(formation);
+  const chosenIds = new Set();
+  const selectedRows = new Map();
+
+  const allowedRoles = {
+    GK: new Set(["GK"]),
+    DEF: new Set(["DEF"]),
+    MID: new Set(["MID"]),
+    HYBRID: new Set(["MID", "ATT"]),
+    ATT: new Set(["ATT"]),
+  };
+
+  const rowAffinity = (player, kind) => {
+    const usage = player?.lineWeights || {};
+    if (kind === "HYBRID") {
+      return (
+        Number(usage.HYBRID || 0) * 4 +
+        Math.max(Number(usage.MID || 0), Number(usage.ATT || 0)) * 0.25
+      );
+    }
+    return Number(usage[kind] || 0) * 4;
+  };
+
+  const takeRow = (kind, count, rowIndex) => {
+    const candidates = (Array.isArray(pool) ? pool : [])
+      .filter(
+        (player) =>
+          player?.id &&
+          !chosenIds.has(player.id) &&
+          allowedRoles[kind].has(player.pos),
+      )
+      .sort((a, b) => {
+        const affinity = rowAffinity(b, kind) - rowAffinity(a, kind);
+        return affinity || fallbackSort(a, b);
+      });
+
+    const selected = candidates.slice(0, count).map((player) => {
+      chosenIds.add(player.id);
+      return {
+        ...player,
+        formationRow: rowIndex,
+        formationRowKind: kind,
+      };
+    });
+    selectedRows.set(rowIndex, selected);
+  };
+
+  takeRow("GK", 1, -1);
+
+  // Prima riserviamo le righe a ruolo rigido; la riga ibrida usa i MID/ATT rimasti.
+  rows.forEach((count, rowIndex) => {
+    const kind = estimatedRowKind(rows, rowIndex);
+    if (kind !== "HYBRID") takeRow(kind, count, rowIndex);
+  });
+  rows.forEach((count, rowIndex) => {
+    const kind = estimatedRowKind(rows, rowIndex);
+    if (kind === "HYBRID") takeRow(kind, count, rowIndex);
+  });
+
+  return [
+    ...(selectedRows.get(-1) || []),
+    ...rows.flatMap((_, rowIndex) => selectedRows.get(rowIndex) || []),
+  ].slice(0, 11);
+}
+
 async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
   if (!teamId) return null;
 
@@ -1238,6 +1322,7 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
 
     const formation = String(block?.formation || "").trim();
     if (formation) formations.push({ f: formation, w });
+    const formationRows = parseEstimatedFormationRows(formation);
 
     const startXI = Array.isArray(block?.startXI) ? block.startXI : [];
     for (const row of startXI) {
@@ -1248,9 +1333,22 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
       if (injured.has(pid)) continue;
       if (squadIds && !squadIds.has(pid)) continue;
 
-      const prev = counts.get(pid) || { w: 0, player: null };
+      const gridLine = parseInt(String(pl?.grid || "").split(":")[0], 10);
+      const rowIndex = Number.isFinite(gridLine) ? gridLine - 2 : -1;
+      const rowKind =
+        rowIndex >= 0 && rowIndex < formationRows.length
+          ? estimatedRowKind(formationRows, rowIndex)
+          : null;
+      const prev = counts.get(pid) || {
+        w: 0,
+        player: null,
+        lineWeights: {},
+      };
+      const lineWeights = { ...(prev.lineWeights || {}) };
+      if (rowKind) lineWeights[rowKind] = (lineWeights[rowKind] || 0) + w;
       counts.set(pid, {
         w: prev.w + w,
+        lineWeights,
         player: {
           id: pid,
           name: pl?.name || "—",
@@ -1300,18 +1398,6 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
     return "MID";
   }
 
-  function parseFormationCounts(fStr) {
-    const parts = String(fStr || "4-4-2")
-      .split("-")
-      .map((x) => parseInt(x, 10))
-      .filter((n) => Number.isFinite(n) && n > 0);
-
-    const def = parts[0] ?? 4;
-    const mid = parts[1] ?? 4;
-    const att = parts[2] ?? 2;
-    return { GK: 1, DEF: def, MID: mid, ATT: att };
-  }
-
   function stableFallbackSort(a, b) {
     const sa = a?.score ?? 0;
     const sb = b?.score ?? 0;
@@ -1340,10 +1426,6 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
   const rankedList = Array.from(counts.values()).sort((a, b) => b.w - a.w);
 
   async function buildXIBySectors() {
-    const need = parseFormationCounts(bestForm || "4-4-2");
-    const countRole = (role) => chosen.filter((x) => x.pos === role).length;
-    const missing = (role) => Math.max(0, (need[role] || 0) - countRole(role));
-
     const scoreById = new Map();
     for (const [pid, obj] of counts.entries()) scoreById.set(pid, obj?.w ?? 0);
 
@@ -1385,6 +1467,7 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
 
         const role = macroRoleFromSquadPosition(posRaw);
         const recent = scoreById.get(pid) ?? 0;
+        const lineWeights = counts.get(pid)?.lineWeights || {};
 
         // score: prima recent, poi presenze competizione
         const score =
@@ -1398,6 +1481,7 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
           pos: role,
           apps: Number(apps || 0),
           score,
+          lineWeights,
         };
       })
       .filter(Boolean);
@@ -1419,6 +1503,7 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
             pos: role,
             apps: Number(appsMap?.get?.(pl.id) || 0),
             score: (it.w || 0) * 1000 + Number(appsMap?.get?.(pl.id) || 0),
+            lineWeights: it?.lineWeights || {},
           };
         })
         .filter(Boolean);
@@ -1430,154 +1515,25 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
       if (nonZero.length >= 11) pool = nonZero;
     }
 
-    // indicizza pool per ruolo
-    const poolByRole = { GK: [], DEF: [], MID: [], ATT: [] };
-    for (const p of pool) {
-      const r = macroRoleFromPos(p.pos);
-      (poolByRole[r] || (poolByRole[r] = [])).push(p);
-    }
-    for (const k of ["GK", "DEF", "MID", "ATT"])
-      poolByRole[k].sort(stableFallbackSort);
-    console.log(
-      "POOL GK (top5):",
-      (poolByRole.GK || [])
-        .slice(0, 5)
-        .map((p) => `${p.name} apps:${p.apps} score:${p.score}`),
-    );
-    console.log(
-      "POOL MID (top8):",
-      (poolByRole.MID || [])
-        .slice(0, 8)
-        .map((p) => `${p.name} apps:${p.apps} score:${p.score}`),
-    );
-    // Se il pool GK è vuoto (bug API/players), prendo il GK dai lineups reali (rankedList)
-    let forceGkFromRanked = (poolByRole.GK || []).length === 0;
-    const chosen = [];
-    const chosenIds = new Set();
-
-    const takeFromRanked = (role, n) => {
-      for (const it of rankedList) {
-        if (chosen.length >= 11) break;
-        const pl = it?.player;
-        if (!pl?.id) continue;
-        if (chosenIds.has(pl.id)) continue;
-
-        const r = macroRoleFromPos(pl.pos);
-        if (r !== role) continue;
-
-        chosen.push({
-          id: pl.id,
-          name: pl.name || "—",
-          number: pl.number ?? "",
-          photo: pl.photo || "",
-          pos: role,
-        });
-        chosenIds.add(pl.id);
-
-        if (chosen.filter((x) => x.pos === role).length >= n) break;
-      }
-    };
-
-    const fillRole = (role, n) => {
-      while (chosen.filter((x) => x.pos === role).length < n) {
-        const listAll = (poolByRole[role] || []).filter(
-          (p) => !chosenIds.has(p.id),
-        );
-        const listNZ = listAll.filter((p) => (p.apps ?? 0) > 0);
-        const source = listNZ.length ? listNZ : listAll;
-        const cand = source[0];
-        if (!cand) break;
-
-        chosen.push({
-          id: cand.id,
-          name: cand.name,
-          number: cand.number,
-          photo: cand.photo,
-          pos: role,
-        });
-        chosenIds.add(cand.id);
-      }
-    };
-
-    // 1) titolari storici: sempre per DEF/MID/ATT
-    takeFromRanked("DEF", need.DEF);
-    takeFromRanked("MID", need.MID);
-    takeFromRanked("ATT", need.ATT);
-
-    // 1b) GK: SOLO se il pool GK è vuoto (fallback deterministico)
-    if (forceGkFromRanked) {
-      takeFromRanked("GK", need.GK);
+    // Integra i titolari recenti eventualmente mancanti dal feed /players.
+    const poolIds = new Set(pool.map((player) => player?.id).filter(Boolean));
+    for (const item of rankedList) {
+      const player = item?.player;
+      if (!player?.id || poolIds.has(player.id)) continue;
+      pool.push({
+        id: player.id,
+        name: player.name || "—",
+        number: player.number ?? "",
+        photo: player.photo || "",
+        pos: macroRoleFromPos(player.pos),
+        apps: Number(appsMap?.get?.(player.id) || 0),
+        score: (item.w || 0) * 1000 + Number(appsMap?.get?.(player.id) || 0),
+        lineWeights: item?.lineWeights || {},
+      });
+      poolIds.add(player.id);
     }
 
-    // 2) fill dal pool rispettando il modulo
-    fillRole("GK", need.GK);
-    fillRole("DEF", need.DEF);
-    fillRole("MID", need.MID);
-    fillRole("ATT", need.ATT);
-
-    // 3) se mancano ancora, riempio SOLO i ruoli ancora mancanti secondo il modulo
-    const order = ["GK", "DEF", "MID", "ATT"];
-
-    while (chosen.length < 11) {
-      let added = false;
-
-      // prova a colmare i "buchi" del modulo
-      for (const role of order) {
-        if (missing(role) <= 0) continue; // ruolo già pieno: NON aggiungere
-
-        const listAll = (poolByRole[role] || []).filter(
-          (p) => !chosenIds.has(p.id),
-        );
-        const listNZ = listAll.filter((p) => (p.apps ?? 0) > 0);
-        const source = listNZ.length ? listNZ : listAll;
-        const cand = source[0];
-
-        if (cand) {
-          chosen.push({
-            id: cand.id,
-            name: cand.name,
-            number: cand.number,
-            photo: cand.photo,
-            pos: role,
-          });
-          chosenIds.add(cand.id);
-          added = true;
-          break;
-        }
-      }
-
-      // se per quel ruolo non c'è nessuno nel pool, prendo il "best disponibile" da QUALSIASI ruolo
-      // ma lo assegno al ruolo che manca di più (così la formazione resta 3-5-2)
-      if (!added) {
-        const deficitRole = order
-          .map((r) => ({ r, m: missing(r) }))
-          .sort((a, b) => b.m - a.m)[0]?.r;
-
-        if (!deficitRole || missing(deficitRole) <= 0) break;
-
-        const any = ["MID", "DEF", "ATT", "GK"]
-          .flatMap((r) => poolByRole[r] || [])
-          .filter((p) => !chosenIds.has(p.id))
-          .sort(stableFallbackSort)[0];
-
-        if (!any) break;
-
-        chosen.push({
-          id: any.id,
-          name: any.name,
-          number: any.number,
-          photo: any.photo,
-          pos: deficitRole,
-        });
-        chosenIds.add(any.id);
-      }
-    }
-
-    // ordina finale: GK, DEF, MID, ATT
-    const roleRank = { GK: 1, DEF: 2, MID: 3, ATT: 4 };
-    chosen.sort((a, b) => (roleRank[a.pos] || 9) - (roleRank[b.pos] || 9));
-
-    return chosen.slice(0, 11);
+    return buildRoleAwareEstimatedXI(pool, bestForm, stableFallbackSort);
   }
 
   // ======= COSTRUZIONE OUTPUT =======

@@ -1,6 +1,6 @@
 # Calcio Report — Project Status
 
-_Last updated: 2026-09-12_
+_Last updated: 2026-09-13_
 
 This file is the operational source of truth for the current Core V2 rebuild. Keep it updated when architecture, infrastructure, or implementation status changes.
 
@@ -408,6 +408,24 @@ Required behavior for the eventual fix:
 - do not add API calls solely to solve row placement;
 - repeat visual tests before closing the bug.
 
+### Role-aware four-line implementation — 2026-09-13
+
+The estimated-XI builder now consumes every row of the selected formation instead of collapsing it into only `DEF/MID/ATT` totals. This fixes the concrete `4-2-3-1` defect where the final `1` was ignored and the result could contain only ten players.
+
+Implemented behavior:
+
+- goalkeeper, defensive, midfield, hybrid advanced-midfield and final attacking rows are assigned separately;
+- normal defensive, midfield and attacking rows accept only their natural macro role;
+- only the intentional hybrid row in four-line shapes accepts both `MID` and `ATT`;
+- fixed-role rows are reserved before the hybrid row, preventing the only available striker from being consumed as an attacking midfielder;
+- historical lineup `grid` usage is converted into semantic row affinity and used to rank otherwise valid candidates;
+- recent starters missing from the `/players` pool are reused from data already collected by the estimator;
+- no endpoint or request count was added.
+
+Focused automated tests pass for `4-2-3-1`, `4-1-4-1` and `3-4-2-1`: each contains eleven unique players and respects the row-role constraints. Search-button, first-click tab, shared-standings and estimate-on-demand regressions also pass.
+
+The real-data visual test was approved on Inter–Udinese: Inter's `3-5-2` rendered as goalkeeper + 3 defenders + 5 midfielders + 2 attackers; Udinese's `3-4-2-1` rendered as goalkeeper + 3 defenders + 4 midfielders + 2 hybrid MID/ATT players + 1 final attacker. No natural defender appeared on an advanced row. The role-aware four-line bug is closed.
+
 ### Panel parity audit — started 2026-09-12
 
 - **Arbitro — VERIFIED.** `js/features/refereePanel.js` is byte-identical to `main`. Manual test on Lazio–AC Milan confirmed fixture referee/stadium/city rendering, referee-history fallback, card summary, grouped match-history toggle and per-team detail toggle. Returning to the panel after visiting Match is immediate and does not reload it. No reproduced regression and no code change required.
@@ -435,9 +453,8 @@ Required follow-up:
 
 Open bugs / required work, in priority order:
 
-1. **Four-line formations — NOT CLOSED.** Implement role-aware estimated XI row assignment for formations such as `4-2-3-1`, `4-1-4-1` and `3-4-2-1`, respecting natural roles and allowing only intentional MID/ATT mixing on hybrid attacking-midfield rows. Current GitHub code remains at the last verified checkpoint; the unsuccessful local experiment was reverted.
-2. **Indicators score semantics — OPEN.** Decide and implement a clear score meaning for the main Indicator tiles; current `%` values are intensity indexes and are misleading beside labels such as `Under 4.5`.
-3. **Panel parity and call audit.** Continue testing each unchanged panel against `main`. Preserve its content and presentation; change code only for a reproduced bug, duplicated request or measurable efficiency improvement. `Arbitro` and `Squadre` are verified; continue with the remaining panels.
+1. **Indicators score semantics — OPEN.** Decide and implement a clear score meaning for the main Indicator tiles; current `%` values are intensity indexes and are misleading beside labels such as `Under 4.5`.
+2. **Panel parity and call audit.** Continue testing each unchanged panel against `main`. Preserve its content and presentation; change code only for a reproduced bug, duplicated request or measurable efficiency improvement. `Arbitro` and `Squadre` are verified; continue with the remaining panels.
 
 Closed frontend regressions:
 
@@ -445,6 +462,7 @@ Closed frontend regressions:
 - **Tabs/cards first click:** reproduced as a timing race. A tab clicked before `selectedFixture` was committed opened visually but skipped its on-demand loader permanently; `cr:selection` now resumes the already-active tab once the fixture is valid, without starting extra panels or duplicating successful loads.
 - **Main-card parity:** the mini standings/rank pills bypassed by the new controller are loaded in background again, with `searchId` and fixture checks preventing stale re-renders.
 - **Lineup request cost:** automatic loading now stops after one official `/fixtures/lineups` check when data is absent; the existing multi-request estimator runs only after an explicit click, while transport errors remain distinguishable from an empty response.
+- **Four-line estimated formations:** the XI builder now consumes every formation row, preserves natural role constraints and uses historical `grid` affinity for hybrid rows; automated and real-data Inter–Udinese tests passed without adding API calls.
 
 ### Scope guardrails for the next chat
 
