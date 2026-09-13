@@ -435,6 +435,18 @@ The real-data visual test was approved on Inter–Udinese: Inter's `3-5-2` rende
 - **Tiri — VERIFIED.** `js/features/shotsPanel.js` and its shared helpers in `js/features/panelsShared.js` are byte-identical to `main`. Manual test on Inter confirmed both team cards, total/on-target/against averages and five coherent match rows. Opening Tiri immediately after Corner reused the same frontend-cached fixture and `/fixtures/statistics` responses; returning from Match to Tiri was immediate and did not reload the panel. No reproduced regression and no code change required.
 - Panel help/toast persistence was also checked: `Non mostrare più` is intentionally stored per hint key (`hint_referee`, `hint_teams`, etc.) in `localStorage`; focused retest confirmed the same disabled hint does not reappear. No bug.
 
+### Injuries request optimization — 2026-09-13
+
+The unchanged `main` implementation requested up to four `/players` pages for each team even when `/injuries?fixture=...` returned no unavailable players. A focused test reproduced nine calls for an empty injury list: one `/injuries` request plus eight unnecessary `/players` requests.
+
+`js/features/injuriesPanel.js` now loads player-position pages only for a team that actually has at least one injury record. Focused tests confirm:
+
+- no injuries: one request instead of nine;
+- injuries for one team: only that team's player pages are requested;
+- injuries for both teams: the existing behavior is preserved.
+
+The real Inter test confirmed that the panel still renders and reopens immediately. It also exposed a separate pre-existing display bug: duplicate API injury records are currently rendered as duplicate players. That issue is not part of this request-cost change and remains open. A click/tap player-detail view using already-loaded player statistics is a possible later enhancement; it must not introduce one request per click.
+
 ### Indicators score semantics — closed 2026-09-13
 
 A visual audit of the Indicators tiles found a real interpretation problem in `js/features/indicatorsPanel.js`.
@@ -461,7 +473,8 @@ Focused automated tests passed for Under/Over direction, decision boundaries, th
 
 Open bugs / required work, in priority order:
 
-1. **Panel parity and call audit.** Continue testing each unchanged panel against `main`. Preserve its content and presentation; change code only for a reproduced bug, duplicated request or measurable efficiency improvement. `Arbitro`, `Squadre`, `Predizione`, `Corner`, `Tiri` and the corrected Indicatori score presentation are verified; continue with the remaining panels.
+1. **Indisponibili duplicate rows — OPEN.** Deduplicate repeated injury records for the same team/player before counting and rendering them. Preserve the available reason and do not add API calls.
+2. **Panel parity and call audit.** Continue testing each unchanged panel against `main`. Preserve its content and presentation; change code only for a reproduced bug, duplicated request or measurable efficiency improvement. `Arbitro`, `Squadre`, `Predizione`, `Corner`, `Tiri` and the corrected Indicatori score presentation are verified; continue with the remaining panels.
 
 Closed frontend regressions:
 

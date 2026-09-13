@@ -186,10 +186,14 @@ async function loadInjuries() {
   let homePosMap = new Map();
   let awayPosMap = new Map();
 
-  if (season && home.id && away.id) {
+  if (season) {
     [homePosMap, awayPosMap] = await Promise.all([
-      fetchTeamPositions(home.id, season),
-      fetchTeamPositions(away.id, season),
+      home.id && homeItems.length
+        ? fetchTeamPositions(home.id, season)
+        : new Map(),
+      away.id && awayItems.length
+        ? fetchTeamPositions(away.id, season)
+        : new Map(),
     ]);
   }
 
