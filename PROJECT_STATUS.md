@@ -603,6 +603,28 @@ Initial offline assertions passed and consumed no API-Football calls. They confi
 
 No production Worker/frontend behavior changed during this milestone. The next Prediction Lab task is to define historical input snapshots and a leakage-safe rolling backtest before testing replacement formulas.
 
+### Prediction Lab baseline implementation — 2026-09-14
+
+Development branch:
+
+```text
+codex/prediction-lab-baseline
+```
+
+Added without changing production frontend or Worker behavior:
+
+- reusable offline replica of `poisson_v1_3_dc_cached`;
+- CSV validation and chronological multi-league/multi-season backtest;
+- same-kickoff batching so no result is visible to another prediction at the same kickoff time;
+- current-model metrics: 1X2 accuracy, multiclass log loss, Brier score, Ranked Probability Score, calibration error, exact-score accuracy and expected-goals MAE;
+- separate legacy and minimum-data-coverage summaries;
+- deterministic anti-leakage regression tests;
+- synthetic demonstration data and local run instructions.
+
+The committed code was executed in an isolated in-memory test using the synthetic 12-fixture dataset. Parsing, normalization, same-kickoff isolation, no-history reproduction and finite metric checks passed. Four of the twelve synthetic fixtures met the initial coverage guard. These synthetic scores validate the test harness only and are not evidence of football forecasting quality.
+
+No API-Football request was consumed. The next milestone is a cached real historical dataset and a first out-of-sample baseline report.
+
 ## Working rules
 
 - one coherent task at a time;
