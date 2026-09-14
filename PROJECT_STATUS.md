@@ -633,6 +633,15 @@ First real baseline run completed locally on Serie A 2025/26:
 - the coverage guard improves every primary probability metric slightly, but this does not yet prove predictive quality because naive league priors and alternative models have not been measured;
 - the downloaded CSV is a reusable private raw snapshot and must not be committed to the public repository.
 
+Leakage-safe baseline comparison on the same 380 fixtures:
+
+- uniform 1X2: 38.95% accuracy, log loss 1.0986, Brier 0.6667, RPS 0.2344, calibration error 0.0561;
+- progressive league prior: 38.16% accuracy, log loss 1.0958, Brier 0.6649, RPS 0.2350, calibration error 0.0472;
+- Poisson DC v1 on all fixtures: 48.16% accuracy, log loss 1.1219, Brier 0.6635, RPS 0.2281, calibration error 0.0872;
+- on the 350 guarded fixtures, Poisson DC v1 reaches 48.57% accuracy and beats the progressive prior on log loss by 0.0136, Brier by 0.0187 and RPS by 0.0137;
+- interpretation: the model has useful ranking/predictive signal once enough history exists, but sparse early-season forecasts and overconfident probabilities damage full-season log loss and calibration;
+- next test: add Serie A 2024/25 as prior history for predictions on 2025/26, preserving chronological isolation and measuring early-season buckets separately.
+
 Local `prediction-lab/data/` and `prediction-lab/reports/` are now ignored by Git.
 
 The committed code was executed in an isolated in-memory test using the synthetic 12-fixture dataset. Parsing, normalization, same-kickoff isolation, no-history reproduction and finite metric checks passed. Four of the twelve synthetic fixtures met the initial coverage guard. These synthetic scores validate the test harness only and are not evidence of football forecasting quality.
