@@ -144,6 +144,14 @@ function characterize(input) {
   };
   scorelines.sort((left, right) => right.probability - left.probability);
 
+  const ordered1X2 = Object.values(probabilities).sort(
+    (left, right) => right - left,
+  );
+  const confidenceEdge = Math.max(0, ordered1X2[0] - ordered1X2[1]);
+  const confidenceScore = Math.round(
+    Math.max(0, Math.min(1, confidenceEdge / 0.4)) * 100,
+  );
+
   const homeMass = Array.from({ length: 6 }, (_, goals) =>
     poissonPmf(goals, lambdaHome),
   ).reduce((sum, probability) => sum + probability, 0);
@@ -159,6 +167,7 @@ function characterize(input) {
       probabilities.homeWin + probabilities.draw + probabilities.awayWin,
     topScore: scorelines[0].score,
     topScoreProbability: scorelines[0].probability / sumMatrix,
+    confidenceScore,
     truncatedIndependentMass: homeMass * awayMass,
     discardedIndependentTail: 1 - homeMass * awayMass,
     negativeCellsBeforeClamp,
@@ -192,6 +201,7 @@ assert.equal(noHistory.lambdaAway, 0.2);
 assert.equal(noHistory.topScore, "0-0");
 assert.ok(noHistory.probabilities.draw > 0.70);
 assert.ok(noHistory.topScoreProbability > 0.67);
+assert.equal(noHistory.confidenceScore, 100);
 
 const normal = characterize({
   leagueHomeGoals: 1.45,
