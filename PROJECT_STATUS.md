@@ -537,6 +537,53 @@ Closed frontend regressions:
 - header status badges for PRO / TRIAL / expired state;
 - auth/login/register/payment flows should not be casually rewritten during Core migration.
 
+## Public deployment checkpoint — 2026-09-14
+
+- The public site is online at `https://app.calcioreport.com/`.
+- GitHub Pages currently deploys the stable `main` branch, whose Core V2 base commit is `a595ad710c1dba96e151cf2acab66b8b4514d28f`.
+- The tested `core-v2` frontend is not yet the public version.
+- The deployed Cloudflare Worker and OVH relay already serve the live backend path.
+- Do not describe Core V2 as publicly released until the final parity, security and performance review is complete and the production deployment source has been deliberately switched or merged.
+
+## Prediction model review — 2026-09-14
+
+The current Worker `/predict` implementation remains a statistically valid and interpretable baseline:
+
+- independent Poisson score probabilities with Dixon-Coles correction for low scores;
+- league averages plus home/away team attack and defence;
+- fixed blend of 70% season context and 30% recent same-league form;
+- fixed home multiplier, Dixon-Coles rho and lambda bounds;
+- 1X2, expected goals, likely scores, Over 2.5 and BTTS output.
+
+The review identified that the model is not yet empirically validated:
+
+- no rolling out-of-sample backtest or probability calibration is recorded;
+- the UI confidence value is derived from the gap between the first and second 1X2 probabilities, not from measured historical reliability;
+- fixed weights and parameters are hand-set rather than learned per league/season;
+- recent results are not sufficiently adjusted for opponent strength;
+- sparse current-season data can fall through to zero averages and then to the minimum lambda clamp, producing a plausible-looking low-score forecast instead of an explicit insufficient-data state;
+- live prediction can require up to six upstream API-Football calls on a cold cache.
+
+Agreed direction:
+
+1. Preserve the current model as `poisson_dc_v1`; do not replace the public prediction panel before comparison.
+2. Build a repeatable offline Prediction Lab with time-ordered historical evaluation and no future-data leakage.
+3. Add a sparse-data fallback hierarchy: current same-league season, previous same-league season with time decay, recent all-competition matches at lower weight, team-strength/league priors, then an explicit insufficient-coverage state.
+4. Benchmark learned/time-decayed Dixon-Coles plus Elo or pi-rating before adding ML.
+5. Benchmark a calibrated tabular model such as CatBoost/XGBoost for 1X2; use deep learning only if the available historical dataset justifies it.
+6. Evaluate a validated ensemble: count model for score/goal markets plus calibrated tabular model for 1X2.
+7. Treat generative AI only as an explanation layer, never as the source of numeric probabilities.
+8. Measure multiclass log loss, Ranked Probability Score, Brier score and calibration; treat exact-score accuracy as secondary.
+9. Compare against simple league priors and, when available, de-margined bookmaker odds or API-Football predictions as external benchmarks.
+10. Prefer scheduled feature snapshots on the VPS so a future model does not increase live API calls.
+
+First test milestone:
+
+- characterize `poisson_dc_v1` deterministically;
+- reproduce the early-season/no-history fallback;
+- verify probability normalization and finite non-negative outputs;
+- record the current behavior before proposing any production code change.
+
 ## Working rules
 
 - one coherent task at a time;
