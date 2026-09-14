@@ -584,6 +584,25 @@ First test milestone:
 - verify probability normalization and finite non-negative outputs;
 - record the current behavior before proposing any production code change.
 
+### First prediction characterization results — 2026-09-14
+
+A repeatable Node characterization script is stored in:
+
+```text
+tests/prediction-model-characterization.test.mjs
+```
+
+Initial offline assertions passed and consumed no API-Football calls. They confirm:
+
+- all tested outputs are finite, non-negative and normalized to a total 1X2 probability of 1;
+- with no current-season statistics and no recent fixtures, both lambdas fall to the minimum `0.2`;
+- that no-history case produces approximately 70.28% draw probability, with 0-0 at approximately 67.30%;
+- the current edge-based formula labels that artificial no-history forecast with confidence 100/100, proving that it must not be presented as measured reliability;
+- at the maximum lambdas `3.2 / 3.2`, limiting the matrix to scores 0–5 discards approximately 19.97% of the independent Poisson mass before renormalization;
+- the allowed extreme `rho=+0.3` can create a negative low-score cell before the existing zero clamp, so parameter bounds also require validation.
+
+No production Worker/frontend behavior changed during this milestone. The next Prediction Lab task is to define historical input snapshots and a leakage-safe rolling backtest before testing replacement formulas.
+
 ## Working rules
 
 - one coherent task at a time;
