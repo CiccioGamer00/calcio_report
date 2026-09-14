@@ -215,7 +215,7 @@ function actualOutcome(fixture) {
   return "draw";
 }
 
-function summarize(predictions) {
+export function summarizePredictions(predictions) {
   if (!predictions.length) return {
     matches: 0, accuracy: null, logLoss: null, brier: null,
     rankedProbabilityScore: null, exactScoreAccuracy: null,
@@ -363,8 +363,8 @@ export function runBacktest(fixtures, options = {}) {
       guardedFixtures: guardedPredictions.length,
       guardedRate: predictions.length ? guardedPredictions.length / predictions.length : 0,
     },
-    legacy: summarize(predictions),
-    guarded: summarize(guardedPredictions),
+    legacy: summarizePredictions(predictions),
+    guarded: summarizePredictions(guardedPredictions),
     predictions,
   };
 }
