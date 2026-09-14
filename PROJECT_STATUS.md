@@ -653,6 +653,16 @@ Previous-season experiment implementation:
 - deterministic synthetic tests passed, including future-history rejection and unchanged baseline behavior;
 - no production Worker or frontend code changed.
 
+Real previous-season comparison, target Serie A 2025/26 with 2024/25 at weight `0.35`:
+
+- both teams had matching previous-season history in 22/30 of the first fixtures (73.33%);
+- full season: accuracy 48.16% → 48.68%, log loss 1.1219 → 1.0647, Brier 0.6635 → 0.6460, RPS 0.2281 → 0.2213, calibration error 0.0872 → 0.0709;
+- first 30 fixtures: accuracy 43.33% → 50.00%, log loss 1.6208 → 1.2435, Brier 0.8864 → 0.7147, RPS 0.3119 → 0.2453, calibration error 0.4362 → 0.3082;
+- first 50 fixtures: accuracy 46.00% → 50.00%, log loss 1.4165 → 1.1722, Brier 0.8016 → 0.6846, RPS 0.2770 → 0.2337, calibration error 0.3556 → 0.2206;
+- guarded fixtures: accuracy unchanged at 48.57%, with small improvements in log loss, Brier, RPS and calibration;
+- conclusion: previous-season memory materially repairs the sparse early-season failure and remains beneficial across the full target season;
+- weight `0.35` is still an experimental candidate, not a production setting. To avoid tuning on the test season, obtain Serie A 2023/24, select the weight on target 2024/25, then lock it and evaluate once on 2025/26.
+
 Local `prediction-lab/data/` and `prediction-lab/reports/` are now ignored by Git.
 
 The committed code was executed in an isolated in-memory test using the synthetic 12-fixture dataset. Parsing, normalization, same-kickoff isolation, no-history reproduction and finite metric checks passed. Four of the twelve synthetic fixtures met the initial coverage guard. These synthetic scores validate the test harness only and are not evidence of football forecasting quality.
