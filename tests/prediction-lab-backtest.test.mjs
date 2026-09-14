@@ -84,7 +84,6 @@ console.log(
   JSON.stringify(
     {
       status: "PASS",
-      assertions: 74,
       totalFixtures: report.coverage.totalFixtures,
       guardedFixtures: report.coverage.guardedFixtures,
       legacy: report.legacy,
