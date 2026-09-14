@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Calcio Report — Prediction Lab Export</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: system-ui, sans-serif;
+        background: #071015;
+        color: #f4f7f8;
+      }
+      body {
+        max-width: 760px;
+        margin: 40px auto;
+        padding: 0 18px;
+      }
+      .card {
+        border: 1px solid #285247;
+        border-radius: 16px;
+        padding: 22px;
+        background: #101a20;
+      }
+      h1 { margin-top: 0; }
+      .muted { color: #b8c7cb; }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 14px;
+        margin: 22px 0;
+      }
+      label {
+        display: grid;
+        gap: 7px;
+        font-weight: 700;
+      }
+      input {
+        padding: 11px;
+        border: 1px solid #496068;
+        border-radius: 10px;
+        background: #081116;
+        color: inherit;
+      }
+      button {
+        border: 0;
+        border-radius: 12px;
+        padding: 12px 18px;
+        background: #26c281;
+        color: #04130d;
+        font-weight: 800;
+        cursor: pointer;
+      }
+      button:disabled { opacity: 0.55; cursor: wait; }
+      #status {
+        white-space: pre-wrap;
+        margin-top: 18px;
+        padding: 14px;
+        border-radius: 10px;
+        background: #081116;
+        min-height: 48px;
+      }
+      .ok { color: #66e2a7; }
+      .error { color: #ff8d8d; }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <h1>Prediction Lab — esportazione storica</h1>
+      <p class="muted">
+        Strumento locale separato dall'app. Scarica una stagione conclusa
+        attraverso il Worker già configurato e crea un CSV riutilizzabile.
+        Una pressione del pulsante corrisponde a una richiesta.
+      </p>
+
+      <form id="collector">
+        <div class="grid">
+          <label>
+            ID competizione
+            <input id="leagueId" type="number" min="1" value="135" required />
+          </label>
+          <label>
+            Stagione API
+            <input id="season" type="number" min="2000" value="2025" required />
+          </label>
+        </div>
+        <button id="downloadButton" type="submit">
+          Scarica stagione in CSV
+        </button>
+      </form>
+
+      <div id="status" role="status" aria-live="polite"></div>
+    </main>
+
+    <script src="../config.js"></script>
+    <script type="module">
+      import {
+        apiFootballFixturesToRows,
+        fixturesRowsToCsv,
+      } from "./lib/api-football-fixtures.mjs";
+
+      const form = document.getElementById("collector");
+      const button = document.getElementById("downloadButton");
+      const status = document.getElementById("status");
+
+      function show(message, type = "") {
+        status.textContent = message;
+        status.className = type;
+      }
+
+      function safeFilename(value) {
+        return String(value || "competition")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "");
+      }
+
+      const token = localStorage.getItem("CR_TOKEN") || "";
+      if (token) {
+        show("Login locale rilevato. Pronto per il download.", "ok");
+      } else {
+        show(
+          "Login non rilevato. Apri prima http://localhost:5500, effettua il login e poi torna qui.",
+          "error",
+        );
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const activeToken = localStorage.getItem("CR_TOKEN") || "";
+        const baseUrl = window.API_CONFIG?.baseUrl || "";
+        const leagueId = Number(document.getElementById("leagueId").value);
+        const season = Number(document.getElementById("season").value);
+
+        if (!activeToken) {
+          show("Devi prima effettuare il login nell'app locale.", "error");
+          return;
+        }
+        if (!baseUrl || !Number.isInteger(leagueId) || !Number.isInteger(season)) {
+          show("Configurazione o valori non validi.", "error");
+          return;
+        }
+
+        button.disabled = true;
+        show("Download in corso… Non premere nuovamente il pulsante.");
+
+        try {
+          const url = new URL(baseUrl + "/fixtures");
+          url.searchParams.set("league", String(leagueId));
+          url.searchParams.set("season", String(season));
+          url.searchParams.set("status", "FT");
+          url.searchParams.set("timezone", "Europe/Rome");
+
+          const response = await fetch(url, {
+            headers: { Authorization: `Bearer ${activeToken}` },
+          });
+          const payload = await response.json().catch(() => null);
+
+          if (!response.ok) {
+            const message =
+              payload?.message ||
+              payload?.error ||
+              `Richiesta non riuscita: HTTP ${response.status}`;
+            throw new Error(message);
+          }
+
+          const rows = apiFootballFixturesToRows(payload);
+          const csv = fixturesRowsToCsv(rows);
+          const competitionName = rows[0]?.league || `league-${leagueId}`;
+          const filename =
+            `${safeFilename(competitionName)}-${season}-fixtures.csv`;
+
+          const objectUrl = URL.createObjectURL(
+            new Blob([csv + "\n"], { type: "text/csv;charset=utf-8" }),
+          );
+          const link = document.createElement("a");
+          link.href = objectUrl;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          URL.revokeObjectURL(objectUrl);
+
+          const workerCache = response.headers.get("x-cr-cache") || "n/d";
+          const relay = response.headers.get("x-cr-relay") || "n/d";
+          show(
+            `Completato: ${rows.length} partite.\nFile: ${filename}\nCache Worker: ${workerCache} · Relay: ${relay}`,
+            "ok",
+          );
+        } catch (error) {
+          show(error?.message || String(error), "error");
+        } finally {
+          button.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>
