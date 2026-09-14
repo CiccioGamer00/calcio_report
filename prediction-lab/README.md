@@ -100,6 +100,29 @@ Il convertitore può essere verificato senza chiamate di rete:
 node tests/prediction-lab-collector.test.mjs
 ```
 
+## Confronto con la stagione precedente
+
+Dopo aver conservato due stagioni in `prediction-lab/data/`, il confronto 2025/26 con memoria 2024/25 si esegue con:
+
+```powershell
+node prediction-lab/compare-previous-season.mjs "prediction-lab\data\serie-a-2025-fixtures.csv" "prediction-lab\data\serie-a-2024-fixtures.csv" --weight=0.35 --json="prediction-lab\reports\serie-a-2025-previous-season.json"
+```
+
+Il peso `0.35` rende ogni partita della stagione precedente meno influente di una partita corrente. Il suo contributo diminuisce automaticamente mentre cresce lo storico della nuova stagione.
+
+Il report confronta:
+
+- intera stagione;
+- prime 30 partite;
+- prime 50 partite;
+- partite con copertura minima.
+
+Il test automatico usa stagioni sintetiche e verifica anche che uno storico datato dopo la stagione target venga ignorato:
+
+```powershell
+node tests/prediction-lab-previous-season.test.mjs
+```
+
 ## Limite attuale
 
 Il CSV sintetico non misura l'accuratezza calcistica. Il primo risultato reale richiederà uno storico API-Football di almeno una stagione completa, salvato una sola volta e poi riutilizzato offline.
