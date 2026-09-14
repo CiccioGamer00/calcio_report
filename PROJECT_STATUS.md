@@ -669,6 +669,32 @@ The committed code was executed in an isolated in-memory test using the syntheti
 
 No API-Football request was consumed. The next milestone is a cached real historical dataset and a first out-of-sample baseline report.
 
+### Prediction Lab pause checkpoint — 2026-09-14
+
+Safe stopping point:
+
+- active experiment branch: `codex/prediction-lab-baseline`;
+- public `main`, production frontend and deployed Worker remain unchanged;
+- Prediction Lab implementation, tests, collector, baseline comparison and previous-season comparison are committed on the experiment branch;
+- local automated tests and real Serie A 2025/26 runs passed;
+- private local datasets already stored under ignored `prediction-lab/data/`: Serie A 2025/26 and 2024/25, 380 completed fixtures each;
+- their generated reports are stored under ignored `prediction-lab/reports/`;
+- Serie A 2023/24 was successfully downloaded with 380 completed fixtures (`x-cr-cache: MISS`, `x-cr-relay: 1`) as `serie-a-2023-fixtures.csv`;
+- the 2023/24 CSV is currently confirmed in the Windows Downloads folder and still needs to be copied into `prediction-lab/data/`;
+- no API-Football calls need to be repeated for the three downloaded seasons.
+
+Exact restart sequence:
+
+1. pull the experiment branch;
+2. copy `$HOME\Downloads\serie-a-2023-fixtures.csv` to `prediction-lab\data\serie-a-2023-fixtures.csv`;
+3. verify `git status --short` remains empty;
+4. implement a leakage-safe weight sweep using 2023/24 as prior and 2024/25 as the tuning target;
+5. select and lock the previous-season weight using probability metrics, not accuracy alone;
+6. evaluate that locked weight once on 2025/26 as the untouched test season;
+7. only after this comparison decide whether the candidate merits a production Worker change.
+
+Current evidence: previous-season memory at experimental weight `0.35` materially improves the first 30/50 fixtures and all full-season probability metrics on 2025/26, but the weight is not yet validated and must not be deployed.
+
 ## Working rules
 
 - one coherent task at a time;
