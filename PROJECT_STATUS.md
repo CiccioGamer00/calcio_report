@@ -623,6 +623,18 @@ Added without changing production frontend or Worker behavior:
 
 A local authenticated collector is also available at `prediction-lab/collect.html`. It reuses the existing localhost login, performs one Worker request for a selected league/season, filters completed fixtures and downloads a reusable CSV without exposing credentials. Serie A 2025/26 (`league=135`, `season=2025`) is the agreed first real sample. No real API request was executed while implementing the collector.
 
+First real baseline run completed locally on Serie A 2025/26:
+
+- one collector request returned all 380 completed fixtures;
+- transport diagnostics were `x-cr-cache: MISS` and `x-cr-relay: 1`;
+- 350/380 fixtures (92.11%) met the initial minimum coverage guard;
+- all-fixture legacy sample: 48.16% 1X2 accuracy, log loss 1.1219, Brier 0.6635, RPS 0.2281, calibration error 0.0872, exact score 8.68%, expected-goals MAE 0.9564;
+- guarded sample: 48.57% 1X2 accuracy, log loss 1.0792, Brier 0.6444, RPS 0.2209, calibration error 0.0726, exact score 8.57%, expected-goals MAE 0.9347;
+- the coverage guard improves every primary probability metric slightly, but this does not yet prove predictive quality because naive league priors and alternative models have not been measured;
+- the downloaded CSV is a reusable private raw snapshot and must not be committed to the public repository.
+
+Local `prediction-lab/data/` and `prediction-lab/reports/` are now ignored by Git.
+
 The committed code was executed in an isolated in-memory test using the synthetic 12-fixture dataset. Parsing, normalization, same-kickoff isolation, no-history reproduction and finite metric checks passed. Four of the twelve synthetic fixtures met the initial coverage guard. These synthetic scores validate the test harness only and are not evidence of football forecasting quality.
 
 No API-Football request was consumed. The next milestone is a cached real historical dataset and a first out-of-sample baseline report.
