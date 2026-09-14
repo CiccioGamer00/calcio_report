@@ -43,20 +43,45 @@ export function parseFixturesCsv(source) {
     const timestamp = Date.parse(raw.date);
     const homeGoals = Number(raw.home_goals);
     const awayGoals = Number(raw.away_goals);
+    const leagueId = raw.league_id ? Number(raw.league_id) : null;
+    const homeTeamId = raw.home_team_id ? Number(raw.home_team_id) : null;
+    const awayTeamId = raw.away_team_id ? Number(raw.away_team_id) : null;
     if (!Number.isFinite(timestamp)) throw new Error(`Riga ${rowIndex + 2}: data non valida.`);
     if (!raw.league || !raw.season || !raw.home_team || !raw.away_team)
       throw new Error(`Riga ${rowIndex + 2}: campi identificativi mancanti.`);
     if (raw.home_team === raw.away_team) throw new Error(`Riga ${rowIndex + 2}: squadra contro se stessa.`);
     if (!Number.isInteger(homeGoals) || homeGoals < 0 || !Number.isInteger(awayGoals) || awayGoals < 0)
       throw new Error(`Riga ${rowIndex + 2}: risultato non valido.`);
+    if (
+      (raw.league_id && !Number.isInteger(leagueId)) ||
+      (raw.home_team_id && !Number.isInteger(homeTeamId)) ||
+      (raw.away_team_id && !Number.isInteger(awayTeamId))
+    ) {
+      throw new Error(`Riga ${rowIndex + 2}: ID API non valido.`);
+    }
+    const leagueKey = leagueId
+      ? `id:${leagueId}`
+      : `name:${raw.league.toLowerCase()}`;
+    const homeTeamKey = homeTeamId
+      ? `id:${homeTeamId}`
+      : `name:${raw.home_team.toLowerCase()}`;
+    const awayTeamKey = awayTeamId
+      ? `id:${awayTeamId}`
+      : `name:${raw.away_team.toLowerCase()}`;
     return {
       sourceRow: rowIndex + 2,
       id: raw.fixture_id || null,
       date: new Date(timestamp).toISOString(),
       timestamp,
+      leagueId,
+      leagueKey,
       league: raw.league,
       season: raw.season,
+      homeTeamId,
+      homeTeamKey,
       homeTeam: raw.home_team,
+      awayTeamId,
+      awayTeamKey,
       awayTeam: raw.away_team,
       homeGoals,
       awayGoals,
@@ -65,7 +90,7 @@ export function parseFixturesCsv(source) {
 
   const keys = new Set();
   fixtures.forEach((fixture) => {
-    const key = [fixture.date, fixture.league, fixture.season, fixture.homeTeam, fixture.awayTeam].join("|");
+    const key = [fixture.date, fixture.leagueKey, fixture.season, fixture.homeTeamKey, fixture.awayTeamKey].join("|");
     if (keys.has(key)) throw new Error(`Partita duplicata alla riga ${fixture.sourceRow}.`);
     keys.add(key);
   });
@@ -76,24 +101,90 @@ function average(values) {
   return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
 }
 
-function goalsForAgainst(team, fixture) {
-  if (fixture.homeTeam === team) return { gf: fixture.homeGoals, ga: fixture.awayGoals };
-  if (fixture.awayTeam === team) return { gf: fixture.awayGoals, ga: fixture.homeGoals };
-  throw new Error(`La squadra ${team} non appartiene alla partita.`);
+function weightedAverage(currentValues, previousValues, previousWeight) {
+  const current = currentValues.filter(Number.isFinite);
+  const previous = previousValues.filter(Number.isFinite);
+  const denominator = current.length + previous.length * previousWeight;
+  if (!denominator) return null;
+  return (
+    current.reduce((sum, value) => sum + value, 0) +
+    previous.reduce((sum, value) => sum + value, 0) * previousWeight
+  ) / denominator;
 }
 
-function buildFeatures(history, fixture, recentMatches) {
+function goalsForAgainst(teamKey, fixture) {
+  if (fixture.homeTeamKey === teamKey) return { gf: fixture.homeGoals, ga: fixture.awayGoals };
+  if (fixture.awayTeamKey === teamKey) return { gf: fixture.awayGoals, ga: fixture.homeGoals };
+  throw new Error(`La squadra ${teamKey} non appartiene alla partita.`);
+}
+
+function buildFeatures(
+  history,
+  fixture,
+  recentMatches,
+  previousSeasonHistory = [],
+  previousSeasonWeight = 0,
+) {
   const leagueLast = history.slice(-50);
-  const leagueHomeGoals = leagueLast.length ? average(leagueLast.map((match) => match.homeGoals)) : 1.25;
-  const leagueAwayGoals = leagueLast.length ? average(leagueLast.map((match) => match.awayGoals)) : 1.05;
-  const homeSeasonVenue = history.filter((match) => match.homeTeam === fixture.homeTeam);
-  const awaySeasonVenue = history.filter((match) => match.awayTeam === fixture.awayTeam);
-  const homeLast = history.filter((match) => match.homeTeam === fixture.homeTeam || match.awayTeam === fixture.homeTeam).slice(-recentMatches);
-  const awayLast = history.filter((match) => match.homeTeam === fixture.awayTeam || match.awayTeam === fixture.awayTeam).slice(-recentMatches);
-  const homeContext = homeLast.filter((match) => match.homeTeam === fixture.homeTeam);
-  const awayContext = awayLast.filter((match) => match.awayTeam === fixture.awayTeam);
+  const previousLeagueLast = previousSeasonHistory.slice(-50);
+  const leagueHomeGoals =
+    weightedAverage(
+      leagueLast.map((match) => match.homeGoals),
+      previousLeagueLast.map((match) => match.homeGoals),
+      previousSeasonWeight,
+    ) ?? 1.25;
+  const leagueAwayGoals =
+    weightedAverage(
+      leagueLast.map((match) => match.awayGoals),
+      previousLeagueLast.map((match) => match.awayGoals),
+      previousSeasonWeight,
+    ) ?? 1.05;
+  const homeSeasonVenue = history.filter((match) => match.homeTeamKey === fixture.homeTeamKey);
+  const awaySeasonVenue = history.filter((match) => match.awayTeamKey === fixture.awayTeamKey);
+  const homeLast = history.filter((match) => match.homeTeamKey === fixture.homeTeamKey || match.awayTeamKey === fixture.homeTeamKey).slice(-recentMatches);
+  const awayLast = history.filter((match) => match.homeTeamKey === fixture.awayTeamKey || match.awayTeamKey === fixture.awayTeamKey).slice(-recentMatches);
+  const homeContext = homeLast.filter((match) => match.homeTeamKey === fixture.homeTeamKey);
+  const awayContext = awayLast.filter((match) => match.awayTeamKey === fixture.awayTeamKey);
   const homeUse = homeContext.length >= 3 ? homeContext : homeLast;
   const awayUse = awayContext.length >= 3 ? awayContext : awayLast;
+
+  const previousHomeLast = previousSeasonHistory
+    .filter((match) => match.homeTeamKey === fixture.homeTeamKey || match.awayTeamKey === fixture.homeTeamKey)
+    .slice(-recentMatches);
+  const previousAwayLast = previousSeasonHistory
+    .filter((match) => match.homeTeamKey === fixture.awayTeamKey || match.awayTeamKey === fixture.awayTeamKey)
+    .slice(-recentMatches);
+  const previousHomeContext = previousHomeLast.filter(
+    (match) => match.homeTeamKey === fixture.homeTeamKey,
+  );
+  const previousAwayContext = previousAwayLast.filter(
+    (match) => match.awayTeamKey === fixture.awayTeamKey,
+  );
+  const previousHomeUse =
+    previousHomeContext.length >= 3 ? previousHomeContext : previousHomeLast;
+  const previousAwayUse =
+    previousAwayContext.length >= 3 ? previousAwayContext : previousAwayLast;
+
+  const recentHomeGF = weightedAverage(
+    homeUse.map((match) => goalsForAgainst(fixture.homeTeamKey, match).gf),
+    previousHomeUse.map((match) => goalsForAgainst(fixture.homeTeamKey, match).gf),
+    previousSeasonWeight,
+  );
+  const recentHomeGA = weightedAverage(
+    homeUse.map((match) => goalsForAgainst(fixture.homeTeamKey, match).ga),
+    previousHomeUse.map((match) => goalsForAgainst(fixture.homeTeamKey, match).ga),
+    previousSeasonWeight,
+  );
+  const recentAwayGF = weightedAverage(
+    awayUse.map((match) => goalsForAgainst(fixture.awayTeamKey, match).gf),
+    previousAwayUse.map((match) => goalsForAgainst(fixture.awayTeamKey, match).gf),
+    previousSeasonWeight,
+  );
+  const recentAwayGA = weightedAverage(
+    awayUse.map((match) => goalsForAgainst(fixture.awayTeamKey, match).ga),
+    previousAwayUse.map((match) => goalsForAgainst(fixture.awayTeamKey, match).ga),
+    previousSeasonWeight,
+  );
 
   return {
     leagueHomeGoals,
@@ -102,16 +193,18 @@ function buildFeatures(history, fixture, recentMatches) {
     seasonHomeGA: average(homeSeasonVenue.map((match) => match.awayGoals)),
     seasonAwayGF: average(awaySeasonVenue.map((match) => match.awayGoals)),
     seasonAwayGA: average(awaySeasonVenue.map((match) => match.homeGoals)),
-    recentHomeGF: homeUse.map((match) => goalsForAgainst(fixture.homeTeam, match).gf),
-    recentHomeGA: homeUse.map((match) => goalsForAgainst(fixture.homeTeam, match).ga),
-    recentAwayGF: awayUse.map((match) => goalsForAgainst(fixture.awayTeam, match).gf),
-    recentAwayGA: awayUse.map((match) => goalsForAgainst(fixture.awayTeam, match).ga),
+    recentHomeGF: recentHomeGF == null ? [] : [recentHomeGF],
+    recentHomeGA: recentHomeGA == null ? [] : [recentHomeGA],
+    recentAwayGF: recentAwayGF == null ? [] : [recentAwayGF],
+    recentAwayGA: recentAwayGA == null ? [] : [recentAwayGA],
     coverage: {
       priorLeagueMatches: history.length,
       priorHomeTeamMatches: homeLast.length,
       priorAwayTeamMatches: awayLast.length,
       priorHomeVenueMatches: homeSeasonVenue.length,
       priorAwayVenueMatches: awaySeasonVenue.length,
+      previousSeasonHomeMatches: previousHomeLast.length,
+      previousSeasonAwayMatches: previousAwayLast.length,
     },
   };
 }
@@ -188,12 +281,24 @@ export function runBacktest(fixtures, options = {}) {
   const recentMatches = Number.isInteger(options.recentMatches) ? options.recentMatches : 10;
   const minLeagueMatches = Number.isInteger(options.minLeagueMatches) ? options.minLeagueMatches : 8;
   const minTeamMatches = Number.isInteger(options.minTeamMatches) ? options.minTeamMatches : 3;
+  const previousSeasonWeight = Number.isFinite(options.previousSeasonWeight)
+    ? Math.max(0, Math.min(1, options.previousSeasonWeight))
+    : 0;
+  const priorFixtures = Array.isArray(options.priorFixtures)
+    ? options.priorFixtures
+    : [];
   const groups = new Map();
+  const priorGroups = new Map();
 
   fixtures.forEach((fixture) => {
-    const key = `${fixture.league}|${fixture.season}`;
+    const key = `${fixture.leagueKey}|${fixture.season}`;
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(fixture);
+  });
+  priorFixtures.forEach((fixture) => {
+    const key = `${fixture.leagueKey}|${fixture.season}`;
+    if (!priorGroups.has(key)) priorGroups.set(key, []);
+    priorGroups.get(key).push(fixture);
   });
 
   const predictions = [];
@@ -201,6 +306,14 @@ export function runBacktest(fixtures, options = {}) {
     const ordered = [...group].sort((left, right) =>
       left.timestamp - right.timestamp || left.sourceRow - right.sourceRow);
     const history = [];
+    const target = ordered[0];
+    const previousSeasonKey =
+      Number.isFinite(Number(target.season))
+        ? `${target.leagueKey}|${Number(target.season) - 1}`
+        : "";
+    const previousSeasonHistory = (priorGroups.get(previousSeasonKey) || [])
+      .filter((match) => match.timestamp < target.timestamp)
+      .sort((left, right) => left.timestamp - right.timestamp);
 
     for (let index = 0; index < ordered.length;) {
       const timestamp = ordered[index].timestamp;
@@ -211,7 +324,13 @@ export function runBacktest(fixtures, options = {}) {
       }
 
       const batchPredictions = batch.map((fixture) => {
-        const features = buildFeatures(history, fixture, recentMatches);
+        const features = buildFeatures(
+          history,
+          fixture,
+          recentMatches,
+          previousSeasonHistory,
+          previousSeasonWeight,
+        );
         const prediction = predictPoissonDcV1(features);
         const eligible =
           features.coverage.priorLeagueMatches >= minLeagueMatches &&
@@ -232,7 +351,13 @@ export function runBacktest(fixtures, options = {}) {
 
   return {
     generatedAt: new Date().toISOString(),
-    settings: { recentMatches, minLeagueMatches, minTeamMatches, sameKickoffBatching: true },
+    settings: {
+      recentMatches,
+      minLeagueMatches,
+      minTeamMatches,
+      previousSeasonWeight,
+      sameKickoffBatching: true,
+    },
     coverage: {
       totalFixtures: predictions.length,
       guardedFixtures: guardedPredictions.length,
