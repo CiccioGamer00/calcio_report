@@ -718,6 +718,10 @@ function setupTabs() {
     // Match: niente fetch extra qui
     if (viewId === "matchView") return;
     if (viewId === "standingsPanel" && typeof loadStandings === "function") {
+      // Se la tabella è già stata caricata per la selezione corrente,
+      // tornando sulla scheda mostriamo subito il contenuto esistente.
+      if (window.__PANEL_LOADED__.standingsPanel) return;
+
       // La card Match usa la stessa classifica per le mini-pillole.
       // Aspettiamo quella richiesta così il pannello riusa la cache locale.
       if (window.__CR_MAIN_STANDINGS_PROMISE__) {
