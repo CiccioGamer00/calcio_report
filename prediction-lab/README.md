@@ -80,6 +80,26 @@ Il riepilogo mostra due campioni:
 
 Il filtro di copertura non è ancora un nuovo modello: serve a misurare separatamente quanto il vecchio algoritmo dipenda dalla disponibilità di dati.
 
+## Raccolta di una stagione reale
+
+La pagina locale `prediction-lab/collect.html` riutilizza il login dell'app sullo stesso `localhost:5500`. Non mostra e non salva il token.
+
+Procedura:
+
+1. avvia il server locale e accedi normalmente all'app;
+2. apri `http://localhost:5500/prediction-lab/collect.html`;
+3. lascia `135` e `2025` per la Serie A 2025/26;
+4. premi una sola volta **Scarica stagione in CSV**;
+5. conserva il CSV nella cartella `prediction-lab/data/`.
+
+Il download esegue una richiesta al Worker per l'intera competizione/stagione. Eventuali pressioni ripetute non sono necessarie. La pagina accetta solo partite concluse e segnala errori semantici API-Football.
+
+Il convertitore può essere verificato senza chiamate di rete:
+
+```powershell
+node tests/prediction-lab-collector.test.mjs
+```
+
 ## Limite attuale
 
 Il CSV sintetico non misura l'accuratezza calcistica. Il primo risultato reale richiederà uno storico API-Football di almeno una stagione completa, salvato una sola volta e poi riutilizzato offline.
