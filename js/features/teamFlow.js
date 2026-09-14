@@ -1830,7 +1830,7 @@ function wirePitchClicks() {
   });
 }
 
-async function openPlayerModal(playerId, playerName) {
+async function openPlayerModal(playerId, playerName, prefetchedRow = null) {
   const auth = document.getElementById("authModal");
   if (auth && !auth.classList.contains("hidden")) return;
   const modal = document.getElementById("playerModal");
@@ -1853,8 +1853,16 @@ async function openPlayerModal(playerId, playerName) {
     { once: true },
   );
 
-  const leagueId = selectedFixture?.leagueId || "39"; // Fallback Serie A
-  const season = selectedFixture?.season || new Date().getFullYear();
+  const leagueId =
+    selectedFixture?.leagueId ?? selectedFixture?.league?.id ?? null;
+  const fixtureLeagueName =
+    selectedFixture?.leagueName ||
+    selectedFixture?.league?.name ||
+    "Competizione";
+  const season =
+    selectedFixture?.season ??
+    selectedFixture?.league?.season ??
+    new Date().getFullYear();
   const key = `${playerId}|${leagueId}|${season}`;
 
   const cached = __PLAYER_STATS_CACHE__.get(key);
@@ -1863,39 +1871,109 @@ async function openPlayerModal(playerId, playerName) {
     return;
   }
 
-  const r = await apiGet(
-    `/players?id=${encodeURIComponent(playerId)}&season=${encodeURIComponent(season)}`,
-    { retries: 1 },
-  );
+  let playerRow = prefetchedRow;
+  if (!playerRow) {
+    const r = await apiGet(
+      `/players?id=${encodeURIComponent(playerId)}&season=${encodeURIComponent(season)}`,
+      { retries: 1 },
+    );
 
-  if (!r.ok || r.errors || !Array.isArray(r.arr) || r.arr.length === 0) {
-    body.innerHTML = `<p class="muted"><em>Nessuna statistica dettagliata trovata per questo giocatore.</em></p>`;
-    return;
+    if (!r.ok || r.errors || !Array.isArray(r.arr) || r.arr.length === 0) {
+      body.innerHTML = `<p class="muted"><em>Nessuna statistica dettagliata trovata per questo giocatore.</em></p>`;
+      return;
+    }
+    playerRow = r.arr[0];
   }
 
-  const p = r.arr[0]?.player || {};
-  // Cerchiamo le statistiche specifiche del campionato attuale (leagueId)
-  const allStats = r.arr[0]?.statistics || [];
+  const p = playerRow?.player || {};
+  const allStats = Array.isArray(playerRow?.statistics)
+    ? playerRow.statistics
+    : [];
+
+  const fixtureTeamIds = new Set(
+    [selectedFixture?.home?.id, selectedFixture?.away?.id]
+      .filter((id) => id != null)
+      .map(String),
+  );
+  const rowsWithTeamId = allStats.filter((row) => row?.team?.id != null);
+  const teamStats =
+    fixtureTeamIds.size && rowsWithTeamId.length
+      ? allStats.filter((row) =>
+          fixtureTeamIds.has(String(row?.team?.id)),
+        )
+      : allStats;
+
   const stats =
-    allStats.find((s) => String(s.league?.id) === String(leagueId)) ||
-    allStats[0] ||
-    {};
+    teamStats.find(
+      (row) => String(row?.league?.id) === String(leagueId),
+    ) || null;
+
+  const seenSeasonStats = new Set();
+  const seasonStats = teamStats.filter((row) => {
+    if (Number(row?.league?.season) !== Number(season)) return false;
+    const statKey = `${row?.team?.id ?? ""}|${row?.league?.id ?? ""}`;
+    if (seenSeasonStats.has(statKey)) return false;
+    seenSeasonStats.add(statKey);
+    return true;
+  });
+
   const games = stats?.games || {};
   const goals = stats?.goals || {};
   const cards = stats?.cards || {};
+  const role =
+    games?.position ||
+    seasonStats.find((row) => row?.games?.position)?.games?.position ||
+    "—";
+
+  const totals = seasonStats.reduce(
+    (sum, row) => {
+      sum.appearances +=
+        Number(
+          row?.games?.appearences ?? row?.games?.appearances ?? 0,
+        ) || 0;
+      sum.goals += Number(row?.goals?.total ?? 0) || 0;
+      sum.assists += Number(row?.goals?.assists ?? 0) || 0;
+      sum.yellow += Number(row?.cards?.yellow ?? 0) || 0;
+      sum.red += Number(row?.cards?.red ?? 0) || 0;
+      return sum;
+    },
+    { appearances: 0, goals: 0, assists: 0, yellow: 0, red: 0 },
+  );
+
+  const seasonStart = Number(season);
+  const seasonLabel = Number.isFinite(seasonStart)
+    ? `${seasonStart}/${String(seasonStart + 1).slice(-2)}`
+    : String(season || "—");
+  const currentAppearances =
+    games?.appearences ?? games?.appearances ?? "—";
+  const currentGoals = stats ? (goals?.total ?? "0") : "—";
+  const currentAssists = stats ? (goals?.assists ?? "0") : "—";
+  const currentYellow = stats ? (cards?.yellow ?? "0") : "—";
+  const currentRed = stats ? (cards?.red ?? "0") : "—";
+  const totalAppearances = seasonStats.length ? totals.appearances : "—";
+  const totalGoals = seasonStats.length ? totals.goals : "—";
+  const totalAssists = seasonStats.length ? totals.assists : "—";
+  const totalYellow = seasonStats.length ? totals.yellow : "—";
+  const totalRed = seasonStats.length ? totals.red : "—";
 
   const html = `
     <div class="kv">
       <div class="kv-row"><div class="k">Nome</div><div class="v"><strong>${safeHTML(p?.name || playerName)}</strong></div></div>
       <div class="kv-row"><div class="k">Età</div><div class="v">${safeHTML(p?.age ?? "—")}</div></div>
-      <div class="kv-row"><div class="k">Ruolo</div><div class="v">${safeHTML(games?.position ?? "—")}</div></div>
-      <div class="kv-row"><div class="k">Presenze</div><div class="v">${safeHTML(games?.appearences ?? games?.appearances ?? "—")}</div></div>
-      <div class="kv-row"><div class="k">Gol / Assist</div><div class="v">${safeHTML(goals?.total ?? "0")} / ${safeHTML(goals?.assists ?? "0")}</div></div>
-      <div class="kv-row"><div class="k">Cartellini (G/R)</div><div class="v">🟨 ${safeHTML(cards?.yellow ?? "0")} / 🟥 ${safeHTML(cards?.red ?? "0")}</div></div>
+      <div class="kv-row"><div class="k">Ruolo</div><div class="v">${safeHTML(role)}</div></div>
+      <div class="kv-row"><div class="k">Competizione</div><div class="v"><strong>${safeHTML(fixtureLeagueName)} · ${safeHTML(seasonLabel)}</strong></div></div>
+      <div class="kv-row"><div class="k">Presenze</div><div class="v">${safeHTML(currentAppearances)}</div></div>
+      <div class="kv-row"><div class="k">Gol / Assist</div><div class="v">${safeHTML(currentGoals)} / ${safeHTML(currentAssists)}</div></div>
+      <div class="kv-row"><div class="k">Cartellini (G/R)</div><div class="v">🟨 ${safeHTML(currentYellow)} / 🟥 ${safeHTML(currentRed)}</div></div>
+      <div class="kv-row"><div class="k">Totale stagione</div><div class="v"><strong>Tutte le competizioni · ${safeHTML(seasonLabel)}</strong></div></div>
+      <div class="kv-row"><div class="k">Presenze totali</div><div class="v">${safeHTML(totalAppearances)}</div></div>
+      <div class="kv-row"><div class="k">Gol / Assist totali</div><div class="v">${safeHTML(totalGoals)} / ${safeHTML(totalAssists)}</div></div>
+      <div class="kv-row"><div class="k">Cartellini totali (G/R)</div><div class="v">🟨 ${safeHTML(totalYellow)} / 🟥 ${safeHTML(totalRed)}</div></div>
     </div>
   `;
   __PLAYER_STATS_CACHE__.set(key, html);
   body.innerHTML = html;
 }
 
+window.openPlayerModal = openPlayerModal;
 window.showTeam = showTeam;

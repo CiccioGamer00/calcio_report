@@ -1,6 +1,6 @@
 # Calcio Report — Project Status
 
-_Last updated: 2026-09-13_
+_Last updated: 2026-09-14_
 
 This file is the operational source of truth for the current Core V2 rebuild. Keep it updated when architecture, infrastructure, or implementation status changes.
 
@@ -449,7 +449,20 @@ The first real Inter test confirmed that the panel still renders and reopens imm
 
 The duplicate-row fix now keeps one record per team/player, preferring the player ID and falling back to a normalized name when the ID is absent. If only one duplicate contains an absence reason, that reason is preserved. A focused test passed without adding API calls, and the follow-up Inter–Udinese visual test confirmed Inter reduced from four rows to the two unique players Dimarco and Spence, while Udinese reduced from twelve rows to six unique players.
 
-The Indisponibili panel and its request optimization are verified. A click/tap player-detail view using already-loaded player statistics remains a possible later enhancement; it must not introduce one request per click.
+The Indisponibili panel and its request optimization are verified.
+
+### Unavailable-player details — 2026-09-14
+
+Unavailable-player chips now open the existing player-details modal on click/tap. The panel keeps the already-fetched `/players?team=...&season=...&page=...` row in memory and passes it to the modal, so opening an unavailable player adds no API request. Formation-player clicks preserve their existing `/players?id=...&season=...` fallback.
+
+The modal now keeps statistics tied to the selected fixture:
+
+- the first block shows only the selected competition and season, for example `Serie A · 2026/27`;
+- it never substitutes the first unrelated competition returned by API-Football when the selected league is missing;
+- a second block aggregates the same club's available statistics across the current season's competitions, deduplicated by team and competition;
+- when API-Football has no statistics associated with the fixture team/competition, the modal displays unavailable values instead of presenting unrelated numbers.
+
+The real-data regression exposed the previous fallback on Spence, which incorrectly showed World Cup statistics for an Inter–Udinese context. After the fix, Spence correctly shows Serie A as the requested competition with unavailable values because no relevant Inter statistics are present. Zaniolo showed one Serie A appearance and two total seasonal appearances, while the existing formation-player path was verified with Dimarco (three Serie A appearances, zero goals and one assist). No request was added to the injuries click path.
 
 ### Indicators score semantics — closed 2026-09-13
 

@@ -7,6 +7,7 @@ function setInjuries(html) {
 
 // Cache: teamId:season -> Map(playerId|nameLower -> position)
 const __TEAM_POS_CACHE__ = new Map();
+const __INJURY_PLAYER_ROWS__ = new Map(); // playerId|season -> /players row
 
 function seasonFromFixtureISO(dateISO) {
   if (!dateISO) return null;
@@ -99,6 +100,8 @@ async function fetchTeamPositions(teamId, season) {
       const pname = String(row?.player?.name || "").trim().toLowerCase();
       const pos = extractPositionFromPlayerRow(row);
 
+      if (pid) __INJURY_PLAYER_ROWS__.set(`${pid}|${season}`, row);
+
       if (pos) {
         if (pid) map.set(pid, pos);
         if (pname) map.set(pname, pos);
@@ -117,6 +120,7 @@ async function fetchTeamPositions(teamId, season) {
 function playerChipHTML(p) {
   const name = p?.player?.name ?? p?.name ?? "—";
   const photo = p?.player?.photo ?? p?.photo ?? "";
+  const playerId = p?.player?.id ?? p?.id ?? "";
 
   const img = photo
     ? `<img class="pimg" src="${safeHTML(photo)}" alt="${safeHTML(name)}"
@@ -125,8 +129,32 @@ function playerChipHTML(p) {
          onerror="this.style.display='none'">`
     : `<span class="pimg" style="display:inline-block"></span>`;
 
-  return `<span class="pchip">${img}<span class="pname">${safeHTML(name)}</span></span>`;
+  const content = `${img}<span class="pname">${safeHTML(name)}</span>`;
+  if (!playerId) return `<span class="pchip">${content}</span>`;
+
+  return `<button type="button" class="pchip injPlayerButton"
+    data-player-id="${safeHTML(playerId)}"
+    data-player-name="${safeHTML(name)}">${content}</button>`;
 }
+
+function wireInjuryPlayerClicks() {
+  const root = document.getElementById("injuriesPanel");
+  if (!root || root.__injuryPlayerClicksWired) return;
+  root.__injuryPlayerClicksWired = true;
+
+  root.addEventListener("click", async (event) => {
+    const button = event.target?.closest?.(".injPlayerButton");
+    if (!button || typeof window.openPlayerModal !== "function") return;
+
+    const playerId = button.getAttribute("data-player-id") || "";
+    const playerName = button.getAttribute("data-player-name") || "Giocatore";
+    const season = seasonFromFixtureISO(selectedFixture?.date);
+    const playerRow = __INJURY_PLAYER_ROWS__.get(`${playerId}|${season}`) || null;
+
+    await window.openPlayerModal(playerId, playerName, playerRow);
+  });
+}
+
 function renderTeamInjuries(teamName, teamLogo, items, posMap) {
   const rows = (items || [])
     .map((it) => {
@@ -243,6 +271,7 @@ async function loadInjuries() {
       ${renderTeamInjuries(away.name || "Trasferta", away.logo || "", awayItems, awayPosMap)}
     </div>
   `);
+  wireInjuryPlayerClicks();
 }
 
 
