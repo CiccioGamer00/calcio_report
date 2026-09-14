@@ -642,6 +642,17 @@ Leakage-safe baseline comparison on the same 380 fixtures:
 - interpretation: the model has useful ranking/predictive signal once enough history exists, but sparse early-season forecasts and overconfident probabilities damage full-season log loss and calibration;
 - next test: add Serie A 2024/25 as prior history for predictions on 2025/26, preserving chronological isolation and measuring early-season buckets separately.
 
+Previous-season experiment implementation:
+
+- Serie A 2024/25 was downloaded locally in one request with 380 completed fixtures (`x-cr-cache: MISS`, `x-cr-relay: 1`) and stored in the ignored private data folder;
+- the parser now preserves API league/team IDs and falls back to normalized names only when IDs are unavailable;
+- the candidate model uses previous-season league/team results at weight `0.35`; current-season matches have full weight, so the old season's relative contribution decreases as new data accumulates;
+- prior results dated at or after the target season start are rejected;
+- promoted teams without matching prior-season history remain explicitly distinguishable;
+- the comparison reports the whole season, first 30, first 50 and minimum-coverage samples;
+- deterministic synthetic tests passed, including future-history rejection and unchanged baseline behavior;
+- no production Worker or frontend code changed.
+
 Local `prediction-lab/data/` and `prediction-lab/reports/` are now ignored by Git.
 
 The committed code was executed in an isolated in-memory test using the synthetic 12-fixture dataset. Parsing, normalization, same-kickoff isolation, no-history reproduction and finite metric checks passed. Four of the twelve synthetic fixtures met the initial coverage guard. These synthetic scores validate the test harness only and are not evidence of football forecasting quality.
