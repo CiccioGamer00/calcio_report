@@ -621,6 +621,8 @@ Added without changing production frontend or Worker behavior:
 - deterministic anti-leakage regression tests;
 - synthetic demonstration data and local run instructions.
 
+A local authenticated collector is also available at `prediction-lab/collect.html`. It reuses the existing localhost login, performs one Worker request for a selected league/season, filters completed fixtures and downloads a reusable CSV without exposing credentials. Serie A 2025/26 (`league=135`, `season=2025`) is the agreed first real sample. No real API request was executed while implementing the collector.
+
 The committed code was executed in an isolated in-memory test using the synthetic 12-fixture dataset. Parsing, normalization, same-kickoff isolation, no-history reproduction and finite metric checks passed. Four of the twelve synthetic fixtures met the initial coverage guard. These synthetic scores validate the test harness only and are not evidence of football forecasting quality.
 
 No API-Football request was consumed. The next milestone is a cached real historical dataset and a first out-of-sample baseline report.
