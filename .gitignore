@@ -1,0 +1,4 @@
+# Local Prediction Lab artifacts (API-Football data is not published)
+prediction-lab/data/
+prediction-lab/reports/
+prediction-lab/*.report.json
