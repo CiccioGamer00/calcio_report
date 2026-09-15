@@ -24,6 +24,14 @@ assert.equal(DEFAULT_WEIGHT_GRID.at(-1), 1);
 assert.ok(DEFAULT_WEIGHT_GRID.includes(0.35));
 assert.equal(report.candidates.length, 21);
 assert.equal(report.selectionRule.finalTestSeasonUsed, false);
+assert.equal(report.datasets.target.fixtures, target.length);
+assert.equal(report.datasets.previous.fixtures, previous.length);
+assert.deepEqual(report.datasets.target.seasons, ["2026"]);
+assert.deepEqual(report.datasets.previous.seasons, ["2025"]);
+assert.ok(
+  report.datasets.previous.lastTimestamp <
+    report.datasets.target.firstTimestamp,
+);
 assert.ok(report.weights.includes(report.selectedWeight));
 assert.equal(
   report.candidates.find((candidate) => candidate.weight === 0)
