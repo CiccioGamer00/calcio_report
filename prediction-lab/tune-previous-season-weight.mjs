@@ -177,7 +177,7 @@ function printReport(report) {
     (candidate) => candidate.weight === report.selectedWeight,
   );
   console.log(
-    `\nPeso selezionato sul 2024/25: ${report.selectedWeight.toFixed(2)}`,
+    `\nPeso selezionato sul target ${report.datasets.target.seasons.join(", ")}: ${report.selectedWeight.toFixed(2)}`,
   );
   console.log(
     `Delta vs peso 0 — LogLoss intera ${signed(selected.deltaVsZero.allLogLoss)}, prime50 ${signed(selected.deltaVsZero.first50LogLoss)}, Brier ${signed(selected.deltaVsZero.allBrier)}, RPS ${signed(selected.deltaVsZero.allRps)}, calibrazione ${signed(selected.deltaVsZero.allCalibration)}`,
