@@ -1,6 +1,6 @@
 # Calcio Report — Project Status
 
-_Last updated: 2026-09-14_
+_Last updated: 2026-09-15_
 
 This file is the operational source of truth for the current Core V2 rebuild. Keep it updated when architecture, infrastructure, or implementation status changes.
 
@@ -705,3 +705,38 @@ Current evidence: previous-season memory at experimental weight `0.35` materiall
 - test after each block;
 - if a failure can be diagnosed in-app, add diagnostics rather than requiring browser developer tools;
 - update this file whenever a meaningful milestone or architectural decision changes.
+
+### Prediction Lab morning checkpoint — 2026-09-15
+
+Work completed on `codex/prediction-lab-baseline` while local real-data execution was unavailable:
+
+- added a leakage-safe previous-season weight selector with a fixed `0.00–1.00` grid in `0.05` steps;
+- the tuning report records league, season, fixture count and first/last timestamp for both development datasets;
+- selection uses 2024/25 only as the development target and explicitly marks `finalTestSeasonUsed: false`;
+- added a separate final evaluator that reads the selected weight from the saved tuning report and never retunes on 2025/26;
+- the evaluator requires the supplied 2024/25 CSV to match the dataset identity recorded during tuning;
+- it rejects a mismatched league, a final season that is not strictly later, and previous-season rows contemporary with or later than the final target;
+- synthetic checks passed for the locked weight, chronological guard and dataset-identity guard;
+- no production frontend, Worker, `core-v2`, `main` or deployed service changed;
+- no API-Football request was made.
+
+Private data status remains unchanged:
+
+- `serie-a-2025-fixtures.csv`: already under ignored `prediction-lab/data/`;
+- `serie-a-2024-fixtures.csv`: already under ignored `prediction-lab/data/`;
+- `serie-a-2023-fixtures.csv`: already downloaded once with 380 fixtures and still to be copied from Windows Downloads into the ignored data folder;
+- the three seasons must not be committed.
+
+Evening restart sequence, one command at a time:
+
+1. `git pull`;
+2. `Copy-Item "$HOME\Downloads\serie-a-2023-fixtures.csv" "prediction-lab\data\serie-a-2023-fixtures.csv"`;
+3. `git status --short` — expected: no output;
+4. `node tests/prediction-lab-weight-tuning.test.mjs` — expected: `status: PASS`;
+5. run the 2024/25 weight tuning and save `prediction-lab/reports/serie-a-2024-weight-tuning.json`;
+6. inspect and record the selected weight before opening the 2025/26 final result;
+7. `node tests/prediction-lab-locked-weight.test.mjs` — expected: `status: PASS`;
+8. run the locked 2025/26 evaluation once and save `prediction-lab/reports/serie-a-2025-locked-weight.json`;
+9. compare the locked candidate with `poisson_dc_v1`; do not alter production code until the result is reviewed.
+
+The next user interaction should begin with step 1 only. After each output is confirmed, provide the next command.
