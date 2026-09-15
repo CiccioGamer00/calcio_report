@@ -74,15 +74,49 @@ async function loadPrediction() {
   const top = data.topScorelines || [];
   const extras = data.extras || {};
   const drivers = data.drivers || [];
-    const conf = data.confidence || null;
+  const conf = data.confidence || null;
+  const coverage = data.coverage || null;
 
-  function fmtConf(c) {
-    if (!c || !Number.isFinite(Number(c.score))) return "—";
-    const score = `${Math.round(Number(c.score))}/100`;
-    const level = c.level ? ` · ${safeHTML(c.level)}` : "";
-    const risk = c.risk ? ` · Rischio ${safeHTML(c.risk)}` : "";
-    return `${safeHTML(score)}${level}${risk}`;
+  function signalEdgePoints(c, probabilities) {
+    const apiEdge = Number(c?.edge);
+    if (Number.isFinite(apiEdge)) return Math.max(0, Math.round(apiEdge));
+
+    const values = [
+      Number(probabilities?.homeWin),
+      Number(probabilities?.draw),
+      Number(probabilities?.awayWin),
+    ]
+      .filter(Number.isFinite)
+      .sort((a, b) => b - a);
+
+    if (values.length < 2) return null;
+    return Math.max(0, Math.round((values[0] - values[1]) * 100));
   }
+
+  function fmtSignal(c, cov, probabilities) {
+    if (cov?.sufficient === false) {
+      return "Non valutabile · Storico insufficiente";
+    }
+
+    const edgePoints = signalEdgePoints(c, probabilities);
+    if (!Number.isFinite(edgePoints)) return "—";
+
+    const strength =
+      edgePoints >= 40
+        ? "molto netto"
+        : edgePoints >= 22
+          ? "netto"
+          : edgePoints >= 14
+            ? "moderato"
+            : "debole";
+
+    return `Distacco ${safeHTML(edgePoints)} punti · Segnale ${strength}`;
+  }
+
+  const signalNote =
+    coverage?.sufficient === false && conf?.note
+      ? conf.note
+      : "Differenza tra primo e secondo esito 1X2; non è una probabilità di successo.";
 
   setPrediction(`
     <div class="kv">
@@ -94,11 +128,11 @@ async function loadPrediction() {
           <span class="pill">Trasferta ${safeHTML(pct1(p.awayWin))}</span>
         </div>
       </div>
-            <div class="kv-row">
-        <div class="k">Affidabilità</div>
+      <div class="kv-row">
+        <div class="k">Segnale modello</div>
         <div class="v">
-          <span class="pill">${fmtConf(conf)}</span>
-          ${conf?.note ? `<div class="muted" style="margin-top:6px">${safeHTML(conf.note)}</div>` : ""}
+          <span class="pill">${fmtSignal(conf, coverage, p)}</span>
+          <div class="muted" style="margin-top:6px">${safeHTML(signalNote)}</div>
         </div>
       </div>
 
