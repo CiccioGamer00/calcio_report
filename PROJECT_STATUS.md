@@ -639,3 +639,27 @@ Fast release path:
 8. immediately run an online smoke test and keep the previous stable `main` commit available as the rollback point.
 
 Prediction research remains documented on `codex/prediction-lab-baseline` and is not a release blocker.
+
+### Core V2 release-candidate verification — 2026-09-15
+
+Release-candidate checks completed:
+
+- `tests/prediction-model-characterization.test.mjs`: PASS;
+- syntax check: all 18 frontend JavaScript files passed;
+- raw lowercase `milan` + Enter resolved AC Milan and loaded the next match on the first attempt;
+- live local diagnostics showed HTTP 200, Worker cache MISS and relay path active;
+- searched-team and opponent following fixtures rendered;
+- all visible tabs opened on the first click and returned coherent content;
+- PRO account loaded Indicatori and Predizione data;
+- newly registered TRIAL account was correctly blocked from PRO content and shown the upgrade action;
+- a clock-source display bug was reproduced: an exact seven-day trial could show `8g rim.` when the client clock lagged the Worker;
+- `app.js` now calculates remaining days using the Worker-provided `now`; the Worker still grants exactly seven days and no API request was added;
+- `tests/auth-days-left.test.mjs`: PASS; real UI retest shows `TRIAL · 7g rim.`;
+- all 18 local CSS/JavaScript asset references now use release cache version `20260915r1`;
+- `tests/release-assets.test.mjs`: PASS;
+- compact mobile-width test passed for header, search, horizontally scrollable tabs, match card and estimated `4-2-3-1` formation;
+- the visible mobile tab scrollbar is accepted as non-blocking polish for a later release;
+- `core-v2...main` review found no embedded secret, no direct API-Football frontend URL and no public literal IP;
+- localhost diagnostics are guarded by hostname and remain absent from the public site.
+
+Release candidate status: functionally ready for a deliberate merge/deployment after confirming a clean local worktree and receiving explicit final approval. The existing stable `main` commit remains the rollback point.
