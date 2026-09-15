@@ -169,4 +169,4 @@ Verifica offline delle protezioni:
 node tests/prediction-lab-locked-weight.test.mjs
 ```
 
-Il risultato 2025/26 va letto una sola volta dopo aver bloccato il peso. Se il risultato non è favorevole, non si modifica il peso sulla stessa stagione: si registra l'esito e si progetta un nuovo esperimento per una futura stagione di test.
+Il risultato con il nuovo peso bloccato va generato una sola volta. Il 2025/26 era già stato osservato nel confronto preliminare con peso sperimentale `0.35`: non viene usato dalla procedura di selezione, ma non può essere definito un holdout mai visto. Se il risultato bloccato non è favorevole, non si modifica il peso sulla stessa stagione; si registra l'esito e si riserva una stagione futura alla conferma completamente indipendente.
