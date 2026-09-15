@@ -741,3 +741,44 @@ Evening restart sequence, one command at a time:
 9. compare the locked candidate with `poisson_dc_v1`; do not alter production code until the result is reviewed.
 
 The next user interaction should begin with step 1 only. After each output is confirmed, provide the next command.
+
+### Locked-weight evaluation and schedule-context idea — 2026-09-15
+
+The real locked evaluation completed successfully using the weight selected on 2024/25 with 2023/24 as prior. The 2025/26 target was not read by the tuning command.
+
+Selected development weight: `1.00`.
+
+Locked 2025/26 comparison:
+
+- full season: accuracy 48.16% → 47.37%, log loss 1.1219 → 1.0770, Brier 0.6635 → 0.6418, RPS 0.2281 → 0.2198, calibration error 0.0872 → 0.0739;
+- first 30 fixtures: accuracy 43.33% → 53.33%, log loss 1.6208 → 1.1626, Brier 0.8864 → 0.6683, RPS 0.3119 → 0.2272, calibration error 0.4362 → 0.2302;
+- first 50 fixtures: accuracy 46.00% → 52.00%, log loss 1.4165 → 1.1199, Brier 0.8016 → 0.6513, RPS 0.2770 → 0.2222, calibration error 0.3556 → 0.1619;
+- minimum-coverage sample: accuracy 48.57% → 46.86%, while log loss, Brier and RPS improve slightly and calibration is effectively unchanged.
+
+Interpretation:
+
+- previous-season memory strongly repairs the sparse first 30/50 fixtures;
+- over the full season it improves every probability-quality metric but slightly reduces top-choice 1X2 accuracy;
+- the next model experiment should test a weight that starts strong and decays further as current-season evidence grows, aiming to preserve the early gain without retaining excessive old-season influence later;
+- no production change is justified yet.
+
+New candidate feature recorded for later testing: schedule pressure / likely rotation caused by the following fixture.
+
+Potential leakage-safe inputs known before the predicted match:
+
+- days since the previous fixture and days until the following fixture;
+- number of fixtures in the surrounding 7/14 days;
+- competition and round of the following fixture;
+- relative importance of current and following fixtures;
+- whether the following fixture is a final, semifinal or knockout match;
+- official lineup, when available, must supersede any inferred rotation risk.
+
+Proposed product behavior:
+
+1. first expose a factual indication such as `Rischio turnover alto: finale europea tra 3 giorni`;
+2. keep the effect separate from the numeric prediction until a chronological backtest proves an improvement;
+3. if validated, apply only a capped soft adjustment to team strength/confidence, never assume turnover as certain;
+4. do not use generative AI to invent the adjustment;
+5. avoid extra live API calls by preparing/caching cross-competition schedule features on the VPS where possible.
+
+The current single-league CSV files are insufficient to test this feature because Champions League, domestic cups and other competitions are absent. A future collector/export must join each team's fixtures across competitions while preserving what was knowable before kickoff. Historical round labels require special care so later qualification information is not leaked backward.
