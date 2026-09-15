@@ -10,6 +10,22 @@ export const DEFAULT_WEIGHT_GRID = Object.freeze(
   Array.from({ length: 21 }, (_, index) => index / 20),
 );
 
+function describeFixtures(fixtures) {
+  const ordered = [...fixtures].sort(
+    (left, right) => left.timestamp - right.timestamp,
+  );
+  return {
+    fixtures: fixtures.length,
+    leagueKeys: [...new Set(fixtures.map((fixture) => fixture.leagueKey))],
+    leagues: [...new Set(fixtures.map((fixture) => fixture.league))],
+    seasons: [...new Set(fixtures.map((fixture) => fixture.season))],
+    firstTimestamp: ordered[0]?.timestamp ?? null,
+    lastTimestamp: ordered.at(-1)?.timestamp ?? null,
+    firstDate: ordered[0]?.date ?? null,
+    lastDate: ordered.at(-1)?.date ?? null,
+  };
+}
+
 function sampleMetrics(predictions) {
   return {
     all: summarizePredictions(predictions),
@@ -92,6 +108,10 @@ export function tunePreviousSeasonWeight(
     generatedAt: new Date().toISOString(),
     targetFixtures: targetFixtures.length,
     previousFixtures: previousFixtures.length,
+    datasets: {
+      target: describeFixtures(targetFixtures),
+      previous: describeFixtures(previousFixtures),
+    },
     selectionRule: {
       primary: "minimum full-season log loss",
       guard:
