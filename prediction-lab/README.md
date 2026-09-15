@@ -133,3 +133,40 @@ Il prossimo blocco dovrà:
 2. includere più stagioni per gestire le prime giornate;
 3. confrontare `poisson_dc_v1` con prior di lega, rating Elo e Dixon-Coles stimato;
 4. produrre risultati separati per lega, stagione e livello di copertura.
+
+## Selezione del peso senza contaminare il test finale
+
+Il peso della stagione precedente viene scelto usando Serie A 2023/24 come storico e Serie A 2024/25 come target di sviluppo. Il comando salva nel report anche l'identità dei due dataset (lega, stagione, numero di partite e intervallo temporale):
+
+```powershell
+node prediction-lab/tune-previous-season-weight.mjs "prediction-lab\data\serie-a-2024-fixtures.csv" "prediction-lab\data\serie-a-2023-fixtures.csv" --json="prediction-lab\reports\serie-a-2024-weight-tuning.json"
+```
+
+La griglia predefinita prova i pesi da `0.00` a `1.00` a intervalli di `0.05`. La scelta minimizza la log loss dell'intera stagione; sono ammessi soltanto pesi che non peggiorano la log loss né sull'intera stagione né sulle prime 50 partite rispetto al peso zero. RPS, Brier e infine il peso più basso risolvono eventuali parità.
+
+Il controllo automatico è offline:
+
+```powershell
+node tests/prediction-lab-weight-tuning.test.mjs
+```
+
+## Test finale con peso bloccato
+
+Serie A 2025/26 viene valutata con un comando separato che legge il peso già scelto dal report. Il comando non contiene una nuova ricerca dei pesi e rifiuta l'esecuzione se:
+
+- il report non certifica che il test finale sia rimasto fuori dalla taratura;
+- il CSV 2024/25 non coincide con il target usato durante la scelta;
+- lega o ordine cronologico non coincidono con il protocollo;
+- lo storico contiene partite contemporanee o future rispetto al test.
+
+```powershell
+node prediction-lab/evaluate-locked-weight.mjs "prediction-lab\reports\serie-a-2024-weight-tuning.json" "prediction-lab\data\serie-a-2025-fixtures.csv" "prediction-lab\data\serie-a-2024-fixtures.csv" --json="prediction-lab\reports\serie-a-2025-locked-weight.json"
+```
+
+Verifica offline delle protezioni:
+
+```powershell
+node tests/prediction-lab-locked-weight.test.mjs
+```
+
+Il risultato 2025/26 va letto una sola volta dopo aver bloccato il peso. Se il risultato non è favorevole, non si modifica il peso sulla stessa stagione: si registra l'esito e si progetta un nuovo esperimento per una futura stagione di test.
