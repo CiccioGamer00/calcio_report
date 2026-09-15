@@ -713,6 +713,7 @@ Work completed on `codex/prediction-lab-baseline` while local real-data executio
 - added a leakage-safe previous-season weight selector with a fixed `0.00–1.00` grid in `0.05` steps;
 - the tuning report records league, season, fixture count and first/last timestamp for both development datasets;
 - selection uses 2024/25 only as the development target and explicitly marks `finalTestSeasonUsed: false`;
+- this flag means the tuner does not read 2025/26; it does not make 2025/26 a pristine holdout, because that season was already inspected in the earlier fixed-weight `0.35` comparison;
 - added a separate final evaluator that reads the selected weight from the saved tuning report and never retunes on 2025/26;
 - the evaluator requires the supplied 2024/25 CSV to match the dataset identity recorded during tuning;
 - it rejects a mismatched league, a final season that is not strictly later, and previous-season rows contemporary with or later than the final target;
