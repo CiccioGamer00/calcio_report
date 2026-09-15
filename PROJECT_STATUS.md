@@ -613,3 +613,29 @@ No production Worker/frontend behavior changed during this milestone. The next P
 - test after each block;
 - if a failure can be diagnosed in-app, add diagnostics rather than requiring browser developer tools;
 - update this file whenever a meaningful milestone or architectural decision changes.
+
+## Release-first decision — 2026-09-15
+
+The immediate product objective is to publish the tested Core V2 frontend as soon as the essential release checks pass.
+
+Scope decision:
+
+- freeze Prediction Lab development and keep the current production prediction model unchanged for the first Core V2 release;
+- defer previous-season decay, schedule pressure, likely-turnover context, ML and other prediction refinements until after Core V2 is online;
+- do not merge the experimental `codex/prediction-lab-baseline` branch into `core-v2` for this release;
+- do not add new panels, redesign the interface or reopen closed infrastructure work before release;
+- limit remaining work to automated regression tests, a short real-data smoke test, authentication/PRO verification, quick responsive-layout verification and deliberate deployment;
+- keep `main` unchanged until the release candidate has passed those checks.
+
+Fast release path:
+
+1. return the local checkout to `core-v2` and pull the branch;
+2. run the existing automated regression suite;
+3. perform one compact desktop smoke test covering search, main match and all visible tabs without exhaustive re-auditing;
+4. verify login plus one PRO-gated interaction;
+5. perform one compact mobile-width visual check;
+6. review the `core-v2...main` diff for unexpected files or secrets;
+7. merge/deploy only after explicit approval of the release candidate;
+8. immediately run an online smoke test and keep the previous stable `main` commit available as the rollback point.
+
+Prediction research remains documented on `codex/prediction-lab-baseline` and is not a release blocker.
