@@ -731,12 +731,14 @@ async function handlePredict(request, env) {
     // 4) medie lega ultime 50 (cache 30 min)
     let leagueHomeGoals = 1.25;
     let leagueAwayGoals = 1.05;
+    let leagueMatches = 0;
     try {
       const leagueLast = await af(
         `/fixtures?league=${leagueId}&season=${season}&last=50&status=FT&timezone=Europe/Rome`,
         TTL_LEAGUE50,
       );
-      if (leagueLast && leagueLast.length) {
+      leagueMatches = Array.isArray(leagueLast) ? leagueLast.length : 0;
+      if (leagueMatches > 0) {
         leagueHomeGoals = avg(
           leagueLast.map((m) => Number(m?.goals?.home ?? 0)),
         );
@@ -745,6 +747,20 @@ async function handlePredict(request, env) {
         );
       }
     } catch (_) {}
+
+    const MIN_TEAM_HISTORY = 3;
+    const MIN_LEAGUE_HISTORY = 8;
+    const coverage = {
+      homeMatches: homeLast.length,
+      awayMatches: awayLast.length,
+      leagueMatches,
+      minimumTeamMatches: MIN_TEAM_HISTORY,
+      minimumLeagueMatches: MIN_LEAGUE_HISTORY,
+      sufficient:
+        homeLast.length >= MIN_TEAM_HISTORY &&
+        awayLast.length >= MIN_TEAM_HISTORY &&
+        leagueMatches >= MIN_LEAGUE_HISTORY,
+    };
 
     // medie stagione contestuali
     const seasonHomeGF = nOr0(homeSeason?.goals?.for?.average?.home);
@@ -866,14 +882,14 @@ async function handlePredict(request, env) {
       riskLabel = "Alto";
     }
 
-    // Nota breve
+    // Il punteggio misura solo il distacco fra i primi due esiti 1X2.
+    // Non va presentato come probabilità di successo o affidabilità reale.
     const edgePct = Math.round(edge * 100);
-    const confidenceNote =
-      confidenceScore >= 75
-        ? `Esito principale abbastanza favorito (edge ${edgePct}%).`
-        : confidenceScore <= 35
-          ? `Quote vicine: partita più incerta (edge ${edgePct}%).`
-          : `Vantaggio moderato per l’esito principale (edge ${edgePct}%).`;
+    const homeName = fx?.teams?.home?.name || "Casa";
+    const awayName = fx?.teams?.away?.name || "Trasferta";
+    const confidenceNote = coverage.sufficient
+      ? `Distacco tra primo e secondo esito: ${edgePct} punti. Non è una probabilità di successo.`
+      : `Storico insufficiente nella competizione: ${homeName} ${coverage.homeMatches}/${MIN_TEAM_HISTORY}, ${awayName} ${coverage.awayMatches}/${MIN_TEAM_HISTORY}, lega ${coverage.leagueMatches}/${MIN_LEAGUE_HISTORY}. Le probabilità sono un fallback matematico.`;
     // extras normalizzati su denom
     const over25 = over25Raw / denom;
     const bttsYes = bttsYesRaw / denom;
@@ -933,11 +949,14 @@ async function handlePredict(request, env) {
           },
 
           confidence: {
-            score: confidenceScore,
-            level: confidenceLabel,
-            risk: riskLabel,
+            score: coverage.sufficient ? confidenceScore : null,
+            signalScore: confidenceScore,
+            edge: edgePct,
+            level: coverage.sufficient ? confidenceLabel : "Non valutabile",
+            risk: coverage.sufficient ? riskLabel : null,
             note: confidenceNote,
           },
+          coverage,
 
           expectedGoals: { home: lambdaHome, away: lambdaAway },
           probabilities: { homeWin, draw, awayWin },
