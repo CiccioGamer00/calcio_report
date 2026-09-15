@@ -9,8 +9,8 @@ const SESSION_MAX_MS = 6 * 60 * 60 * 1000; // 6 ore
 const LS_TOKEN = "CR_TOKEN";
 const LS_LOGIN_TS = "CR_LOGIN_TS";
 
-function daysLeft(ts) {
-  const diff = Number(ts || 0) - Date.now();
+function daysLeft(ts, referenceNow = Date.now()) {
+  const diff = Number(ts || 0) - Number(referenceNow || Date.now());
   if (diff <= 0) return 0;
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
@@ -115,7 +115,7 @@ async function refreshTopAuthUI() {
   if (now < paidUntil) {
     btn.classList.add("pro-active");
     btn.classList.remove("trial-active", "expired");
-    setBadge("pro", `PRO • ${daysLeft(paidUntil)}g rim.`);
+    setBadge("pro", `PRO • ${daysLeft(paidUntil, now)}g rim.`);
     __IS_PRO__ = true;
     if (up) up.classList.add("hidden");
     return;
@@ -125,7 +125,7 @@ async function refreshTopAuthUI() {
   if (now < trialEndsAt) {
     btn.classList.add("trial-active");
     btn.classList.remove("pro-active", "expired");
-    setBadge("trial", `TRIAL • ${daysLeft(trialEndsAt)}g rim.`);
+    setBadge("trial", `TRIAL • ${daysLeft(trialEndsAt, now)}g rim.`);
     __IS_PRO__ = false;
     if (up) up.classList.remove("hidden");
     return;
@@ -166,9 +166,9 @@ async function showRemainingInPopup() {
   const paidUntil = Number(json.paidUntil || 0);
 
   if (now < paidUntil) {
-    setAuthMsg(`PRO attivo: ${daysLeft(paidUntil)} giorni rimanenti.`);
+    setAuthMsg(`PRO attivo: ${daysLeft(paidUntil, now)} giorni rimanenti.`);
   } else if (now < trialEndsAt) {
-    setAuthMsg(`TRIAL attivo: ${daysLeft(trialEndsAt)} giorni rimanenti.`);
+    setAuthMsg(`TRIAL attivo: ${daysLeft(trialEndsAt, now)} giorni rimanenti.`);
   } else {
     setAuthMsg("Prova scaduta: inserisci codice o contattami per attivazione.");
   }
@@ -264,7 +264,9 @@ function setupAuthActions() {
       const me = await fetchMe();
       const json = me?.json;
 
-      const d = json?.trialEndsAt ? daysLeft(json.trialEndsAt) : 7;
+      const d = json?.trialEndsAt
+        ? daysLeft(json.trialEndsAt, Number(json.now || Date.now()))
+        : 7;
 
       setAuthMsg(
         `✅ Registrazione completata!\n` +
@@ -718,6 +720,15 @@ function setupTabs() {
     // Match: niente fetch extra qui
     if (viewId === "matchView") return;
     if (viewId === "standingsPanel" && typeof loadStandings === "function") {
+      // Se la tabella è già stata caricata per la selezione corrente,
+      // tornando sulla scheda mostriamo subito il contenuto esistente.
+      if (window.__PANEL_LOADED__.standingsPanel) return;
+
+      // La card Match usa la stessa classifica per le mini-pillole.
+      // Aspettiamo quella richiesta così il pannello riusa la cache locale.
+      if (window.__CR_MAIN_STANDINGS_PROMISE__) {
+        await window.__CR_MAIN_STANDINGS_PROMISE__;
+      }
       window.__PANEL_LOADED__.standingsPanel = true;
       await loadStandings();
     }
@@ -829,6 +840,22 @@ function setupTabs() {
     if (h) showToast(h);
 
     await autoLoadFor(viewId);
+  });
+
+  // Se la scheda è stata aperta mentre la ricerca stava ancora risolvendo
+  // la fixture, avvia il suo caricamento appena la selezione diventa valida.
+  window.addEventListener("cr:selection", () => {
+    const activeTab = nav.querySelector(".tab.is-active");
+    const view = activeTab?.getAttribute("data-view");
+    if (!view || view === "match") return;
+
+    // Il controller assegna nella stessa iterazione le richieste secondarie
+    // condivise; partiamo subito dopo per poterle riusare senza duplicarle.
+    Promise.resolve().then(() =>
+      autoLoadFor(view).catch((e) =>
+        console.error("deferred autoLoadFor error", view, e),
+      ),
+    );
   });
 
   // default: Match

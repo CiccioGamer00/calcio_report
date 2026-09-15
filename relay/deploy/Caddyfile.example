@@ -1,0 +1,14 @@
+relay.calcioreport.com {
+    encode zstd gzip
+
+    reverse_proxy 127.0.0.1:8788
+
+    header {
+        -Server
+    }
+
+    log {
+        output file /var/log/caddy/calcio-report-relay.log
+        format json
+    }
+}

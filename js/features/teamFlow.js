@@ -676,10 +676,18 @@ function initTeamSearchUX() {
 }
 
 initTeamSearchUX();
-async function loadLineupsPitch() {
+async function loadLineupsPitch(options = {}) {
   const box = document.getElementById("lineupsBox");
   const content = document.getElementById("lineupsContent");
   if (!box || !content) return;
+
+  const estimateOnDemand = options?.estimateOnDemand === true;
+  const signal = options?.signal || null;
+  const searchId = Number.isFinite(options?.searchId)
+    ? options.searchId
+    : Number.isFinite(window.CR_STATE?.search?.activeId)
+      ? window.CR_STATE.search.activeId
+      : null;
 
   // Mostra sempre il box
   box.classList.remove("hidden");
@@ -689,19 +697,90 @@ async function loadLineupsPitch() {
     return;
   }
 
-  content.innerHTML = `<p class="muted"><em>Recupero formazioni…</em></p>`;
+  const fixtureId = selectedFixture.id;
+  const isStillCurrent = () => {
+    if (Number(selectedFixture?.id) !== Number(fixtureId)) return false;
+    if (searchId === null || typeof window.crIsSearchActive !== "function") {
+      return true;
+    }
+    return window.crIsSearchActive(searchId);
+  };
 
-  const r = await apiGet(`/fixtures/lineups?fixture=${selectedFixture.id}`, {
-    retries: 2,
-    delays: [350, 900],
-  });
+  content.innerHTML = estimateOnDemand
+    ? `<p class="muted"><em>Calcolo formazione stimata…</em></p>`
+    : `<p class="muted"><em>Verifico le formazioni ufficiali…</em></p>`;
 
-  // Se non disponibili ufficialmente: provo STIMATA (storico + indisponibili)
-  if (!r.ok || r.errors || !Array.isArray(r.arr) || r.arr.length === 0) {
+  let r = null;
+  if (!estimateOnDemand) {
+    r = await apiGet(`/fixtures/lineups?fixture=${fixtureId}`, {
+      retries: 0,
+      signal,
+      searchId,
+    });
+
+    if (!isStillCurrent() || r?.kind === "aborted") return;
+
+    const hasOfficial =
+      r?.ok && !r?.errors && Array.isArray(r?.arr) && r.arr.length > 0;
+
+    if (!hasOfficial) {
+      const isEmpty =
+        r?.kind === "empty" ||
+        (r?.ok && !r?.errors && Array.isArray(r?.arr) && r.arr.length === 0);
+
+      if (isEmpty) {
+        content.innerHTML = `
+          ${renderPitchPlaceholder("Formazioni non disponibili.")}
+          <div style="margin-top:10px; text-align:center;">
+            <button type="button" class="btn primary" id="btnEstimateLineups">
+              Calcola formazione stimata
+            </button>
+          </div>
+        `;
+
+        document.getElementById("btnEstimateLineups")?.addEventListener(
+          "click",
+          () => {
+            loadLineupsPitch({ estimateOnDemand: true, signal, searchId }).catch(
+              (e) => console.error("estimated lineups on demand", e),
+            );
+          },
+          { once: true },
+        );
+        return;
+      }
+
+      content.innerHTML = `
+        ${renderPitchPlaceholder("Impossibile verificare le formazioni ufficiali.")}
+        <div style="margin-top:10px; text-align:center;">
+          <button type="button" class="btn" id="btnRetryOfficialLineups">
+            Riprova
+          </button>
+        </div>
+      `;
+
+      document.getElementById("btnRetryOfficialLineups")?.addEventListener(
+        "click",
+        () => {
+          loadLineupsPitch({ signal, searchId }).catch((e) =>
+            console.error("official lineups retry", e),
+          );
+        },
+        { once: true },
+      );
+      return;
+    }
+  }
+
+  // La stima pesante parte esclusivamente dal pulsante esplicito.
+  if (estimateOnDemand) {
     const est = await estimateLineupsForFixture().catch((e) => {
       console.error("estimateLineupsForFixture ERROR:", e);
       return null;
     });
+
+    if (!isStillCurrent()) return;
+
     if (est?.home && est?.away) {
       // join foto da /players/squads (così le facce ci sono anche nella STIMATA)
       async function fetchSquadPhotoMap(teamId) {
@@ -737,6 +816,8 @@ async function loadLineupsPitch() {
         fetchSquadPhotoMap(homeId),
         fetchSquadPhotoMap(awayId),
       ]);
+
+      if (!isStillCurrent()) return;
 
       // applico foto a startXI stimata
       (est.home.startXI || []).forEach((p) => {
@@ -1098,6 +1179,90 @@ function formationMode(arr) {
   return Object.keys(map).reduce((a, b) => (map[a] > map[b] ? a : b), "4-4-2");
 }
 
+function parseEstimatedFormationRows(formation) {
+  const rows = String(formation || "4-4-2")
+    .split("-")
+    .map((value) => parseInt(value, 10))
+    .filter((value) => Number.isFinite(value) && value > 0);
+
+  return rows.length && rows.reduce((sum, value) => sum + value, 0) === 10
+    ? rows
+    : [4, 4, 2];
+}
+
+function estimatedRowKind(rows, rowIndex) {
+  if (rowIndex === 0) return "DEF";
+  if (rowIndex === rows.length - 1) return "ATT";
+  if (rows.length >= 4 && rowIndex === rows.length - 2) return "HYBRID";
+  return "MID";
+}
+
+function buildRoleAwareEstimatedXI(pool, formation, fallbackSort) {
+  const rows = parseEstimatedFormationRows(formation);
+  const chosenIds = new Set();
+  const selectedRows = new Map();
+
+  const allowedRoles = {
+    GK: new Set(["GK"]),
+    DEF: new Set(["DEF"]),
+    MID: new Set(["MID"]),
+    HYBRID: new Set(["MID", "ATT"]),
+    ATT: new Set(["ATT"]),
+  };
+
+  const rowAffinity = (player, kind) => {
+    const usage = player?.lineWeights || {};
+    if (kind === "HYBRID") {
+      return (
+        Number(usage.HYBRID || 0) * 4 +
+        Math.max(Number(usage.MID || 0), Number(usage.ATT || 0)) * 0.25
+      );
+    }
+    return Number(usage[kind] || 0) * 4;
+  };
+
+  const takeRow = (kind, count, rowIndex) => {
+    const candidates = (Array.isArray(pool) ? pool : [])
+      .filter(
+        (player) =>
+          player?.id &&
+          !chosenIds.has(player.id) &&
+          allowedRoles[kind].has(player.pos),
+      )
+      .sort((a, b) => {
+        const affinity = rowAffinity(b, kind) - rowAffinity(a, kind);
+        return affinity || fallbackSort(a, b);
+      });
+
+    const selected = candidates.slice(0, count).map((player) => {
+      chosenIds.add(player.id);
+      return {
+        ...player,
+        formationRow: rowIndex,
+        formationRowKind: kind,
+      };
+    });
+    selectedRows.set(rowIndex, selected);
+  };
+
+  takeRow("GK", 1, -1);
+
+  // Prima riserviamo le righe a ruolo rigido; la riga ibrida usa i MID/ATT rimasti.
+  rows.forEach((count, rowIndex) => {
+    const kind = estimatedRowKind(rows, rowIndex);
+    if (kind !== "HYBRID") takeRow(kind, count, rowIndex);
+  });
+  rows.forEach((count, rowIndex) => {
+    const kind = estimatedRowKind(rows, rowIndex);
+    if (kind === "HYBRID") takeRow(kind, count, rowIndex);
+  });
+
+  return [
+    ...(selectedRows.get(-1) || []),
+    ...rows.flatMap((_, rowIndex) => selectedRows.get(rowIndex) || []),
+  ].slice(0, 11);
+}
+
 async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
   if (!teamId) return null;
 
@@ -1157,6 +1322,7 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
 
     const formation = String(block?.formation || "").trim();
     if (formation) formations.push({ f: formation, w });
+    const formationRows = parseEstimatedFormationRows(formation);
 
     const startXI = Array.isArray(block?.startXI) ? block.startXI : [];
     for (const row of startXI) {
@@ -1167,9 +1333,22 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
       if (injured.has(pid)) continue;
       if (squadIds && !squadIds.has(pid)) continue;
 
-      const prev = counts.get(pid) || { w: 0, player: null };
+      const gridLine = parseInt(String(pl?.grid || "").split(":")[0], 10);
+      const rowIndex = Number.isFinite(gridLine) ? gridLine - 2 : -1;
+      const rowKind =
+        rowIndex >= 0 && rowIndex < formationRows.length
+          ? estimatedRowKind(formationRows, rowIndex)
+          : null;
+      const prev = counts.get(pid) || {
+        w: 0,
+        player: null,
+        lineWeights: {},
+      };
+      const lineWeights = { ...(prev.lineWeights || {}) };
+      if (rowKind) lineWeights[rowKind] = (lineWeights[rowKind] || 0) + w;
       counts.set(pid, {
         w: prev.w + w,
+        lineWeights,
         player: {
           id: pid,
           name: pl?.name || "—",
@@ -1219,18 +1398,6 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
     return "MID";
   }
 
-  function parseFormationCounts(fStr) {
-    const parts = String(fStr || "4-4-2")
-      .split("-")
-      .map((x) => parseInt(x, 10))
-      .filter((n) => Number.isFinite(n) && n > 0);
-
-    const def = parts[0] ?? 4;
-    const mid = parts[1] ?? 4;
-    const att = parts[2] ?? 2;
-    return { GK: 1, DEF: def, MID: mid, ATT: att };
-  }
-
   function stableFallbackSort(a, b) {
     const sa = a?.score ?? 0;
     const sb = b?.score ?? 0;
@@ -1259,10 +1426,6 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
   const rankedList = Array.from(counts.values()).sort((a, b) => b.w - a.w);
 
   async function buildXIBySectors() {
-    const need = parseFormationCounts(bestForm || "4-4-2");
-    const countRole = (role) => chosen.filter((x) => x.pos === role).length;
-    const missing = (role) => Math.max(0, (need[role] || 0) - countRole(role));
-
     const scoreById = new Map();
     for (const [pid, obj] of counts.entries()) scoreById.set(pid, obj?.w ?? 0);
 
@@ -1304,6 +1467,7 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
 
         const role = macroRoleFromSquadPosition(posRaw);
         const recent = scoreById.get(pid) ?? 0;
+        const lineWeights = counts.get(pid)?.lineWeights || {};
 
         // score: prima recent, poi presenze competizione
         const score =
@@ -1317,6 +1481,7 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
           pos: role,
           apps: Number(apps || 0),
           score,
+          lineWeights,
         };
       })
       .filter(Boolean);
@@ -1338,6 +1503,7 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
             pos: role,
             apps: Number(appsMap?.get?.(pl.id) || 0),
             score: (it.w || 0) * 1000 + Number(appsMap?.get?.(pl.id) || 0),
+            lineWeights: it?.lineWeights || {},
           };
         })
         .filter(Boolean);
@@ -1349,154 +1515,25 @@ async function estimateLineupForTeam(teamId, leagueId, season, limit = 10) {
       if (nonZero.length >= 11) pool = nonZero;
     }
 
-    // indicizza pool per ruolo
-    const poolByRole = { GK: [], DEF: [], MID: [], ATT: [] };
-    for (const p of pool) {
-      const r = macroRoleFromPos(p.pos);
-      (poolByRole[r] || (poolByRole[r] = [])).push(p);
-    }
-    for (const k of ["GK", "DEF", "MID", "ATT"])
-      poolByRole[k].sort(stableFallbackSort);
-    console.log(
-      "POOL GK (top5):",
-      (poolByRole.GK || [])
-        .slice(0, 5)
-        .map((p) => `${p.name} apps:${p.apps} score:${p.score}`),
-    );
-    console.log(
-      "POOL MID (top8):",
-      (poolByRole.MID || [])
-        .slice(0, 8)
-        .map((p) => `${p.name} apps:${p.apps} score:${p.score}`),
-    );
-    // Se il pool GK è vuoto (bug API/players), prendo il GK dai lineups reali (rankedList)
-    let forceGkFromRanked = (poolByRole.GK || []).length === 0;
-    const chosen = [];
-    const chosenIds = new Set();
-
-    const takeFromRanked = (role, n) => {
-      for (const it of rankedList) {
-        if (chosen.length >= 11) break;
-        const pl = it?.player;
-        if (!pl?.id) continue;
-        if (chosenIds.has(pl.id)) continue;
-
-        const r = macroRoleFromPos(pl.pos);
-        if (r !== role) continue;
-
-        chosen.push({
-          id: pl.id,
-          name: pl.name || "—",
-          number: pl.number ?? "",
-          photo: pl.photo || "",
-          pos: role,
-        });
-        chosenIds.add(pl.id);
-
-        if (chosen.filter((x) => x.pos === role).length >= n) break;
-      }
-    };
-
-    const fillRole = (role, n) => {
-      while (chosen.filter((x) => x.pos === role).length < n) {
-        const listAll = (poolByRole[role] || []).filter(
-          (p) => !chosenIds.has(p.id),
-        );
-        const listNZ = listAll.filter((p) => (p.apps ?? 0) > 0);
-        const source = listNZ.length ? listNZ : listAll;
-        const cand = source[0];
-        if (!cand) break;
-
-        chosen.push({
-          id: cand.id,
-          name: cand.name,
-          number: cand.number,
-          photo: cand.photo,
-          pos: role,
-        });
-        chosenIds.add(cand.id);
-      }
-    };
-
-    // 1) titolari storici: sempre per DEF/MID/ATT
-    takeFromRanked("DEF", need.DEF);
-    takeFromRanked("MID", need.MID);
-    takeFromRanked("ATT", need.ATT);
-
-    // 1b) GK: SOLO se il pool GK è vuoto (fallback deterministico)
-    if (forceGkFromRanked) {
-      takeFromRanked("GK", need.GK);
+    // Integra i titolari recenti eventualmente mancanti dal feed /players.
+    const poolIds = new Set(pool.map((player) => player?.id).filter(Boolean));
+    for (const item of rankedList) {
+      const player = item?.player;
+      if (!player?.id || poolIds.has(player.id)) continue;
+      pool.push({
+        id: player.id,
+        name: player.name || "—",
+        number: player.number ?? "",
+        photo: player.photo || "",
+        pos: macroRoleFromPos(player.pos),
+        apps: Number(appsMap?.get?.(player.id) || 0),
+        score: (item.w || 0) * 1000 + Number(appsMap?.get?.(player.id) || 0),
+        lineWeights: item?.lineWeights || {},
+      });
+      poolIds.add(player.id);
     }
 
-    // 2) fill dal pool rispettando il modulo
-    fillRole("GK", need.GK);
-    fillRole("DEF", need.DEF);
-    fillRole("MID", need.MID);
-    fillRole("ATT", need.ATT);
-
-    // 3) se mancano ancora, riempio SOLO i ruoli ancora mancanti secondo il modulo
-    const order = ["GK", "DEF", "MID", "ATT"];
-
-    while (chosen.length < 11) {
-      let added = false;
-
-      // prova a colmare i "buchi" del modulo
-      for (const role of order) {
-        if (missing(role) <= 0) continue; // ruolo già pieno: NON aggiungere
-
-        const listAll = (poolByRole[role] || []).filter(
-          (p) => !chosenIds.has(p.id),
-        );
-        const listNZ = listAll.filter((p) => (p.apps ?? 0) > 0);
-        const source = listNZ.length ? listNZ : listAll;
-        const cand = source[0];
-
-        if (cand) {
-          chosen.push({
-            id: cand.id,
-            name: cand.name,
-            number: cand.number,
-            photo: cand.photo,
-            pos: role,
-          });
-          chosenIds.add(cand.id);
-          added = true;
-          break;
-        }
-      }
-
-      // se per quel ruolo non c'è nessuno nel pool, prendo il "best disponibile" da QUALSIASI ruolo
-      // ma lo assegno al ruolo che manca di più (così la formazione resta 3-5-2)
-      if (!added) {
-        const deficitRole = order
-          .map((r) => ({ r, m: missing(r) }))
-          .sort((a, b) => b.m - a.m)[0]?.r;
-
-        if (!deficitRole || missing(deficitRole) <= 0) break;
-
-        const any = ["MID", "DEF", "ATT", "GK"]
-          .flatMap((r) => poolByRole[r] || [])
-          .filter((p) => !chosenIds.has(p.id))
-          .sort(stableFallbackSort)[0];
-
-        if (!any) break;
-
-        chosen.push({
-          id: any.id,
-          name: any.name,
-          number: any.number,
-          photo: any.photo,
-          pos: deficitRole,
-        });
-        chosenIds.add(any.id);
-      }
-    }
-
-    // ordina finale: GK, DEF, MID, ATT
-    const roleRank = { GK: 1, DEF: 2, MID: 3, ATT: 4 };
-    chosen.sort((a, b) => (roleRank[a.pos] || 9) - (roleRank[b.pos] || 9));
-
-    return chosen.slice(0, 11);
+    return buildRoleAwareEstimatedXI(pool, bestForm, stableFallbackSort);
   }
 
   // ======= COSTRUZIONE OUTPUT =======
@@ -1793,7 +1830,7 @@ function wirePitchClicks() {
   });
 }
 
-async function openPlayerModal(playerId, playerName) {
+async function openPlayerModal(playerId, playerName, prefetchedRow = null) {
   const auth = document.getElementById("authModal");
   if (auth && !auth.classList.contains("hidden")) return;
   const modal = document.getElementById("playerModal");
@@ -1816,8 +1853,16 @@ async function openPlayerModal(playerId, playerName) {
     { once: true },
   );
 
-  const leagueId = selectedFixture?.leagueId || "39"; // Fallback Serie A
-  const season = selectedFixture?.season || new Date().getFullYear();
+  const leagueId =
+    selectedFixture?.leagueId ?? selectedFixture?.league?.id ?? null;
+  const fixtureLeagueName =
+    selectedFixture?.leagueName ||
+    selectedFixture?.league?.name ||
+    "Competizione";
+  const season =
+    selectedFixture?.season ??
+    selectedFixture?.league?.season ??
+    new Date().getFullYear();
   const key = `${playerId}|${leagueId}|${season}`;
 
   const cached = __PLAYER_STATS_CACHE__.get(key);
@@ -1826,39 +1871,109 @@ async function openPlayerModal(playerId, playerName) {
     return;
   }
 
-  const r = await apiGet(
-    `/players?id=${encodeURIComponent(playerId)}&season=${encodeURIComponent(season)}`,
-    { retries: 1 },
-  );
+  let playerRow = prefetchedRow;
+  if (!playerRow) {
+    const r = await apiGet(
+      `/players?id=${encodeURIComponent(playerId)}&season=${encodeURIComponent(season)}`,
+      { retries: 1 },
+    );
 
-  if (!r.ok || r.errors || !Array.isArray(r.arr) || r.arr.length === 0) {
-    body.innerHTML = `<p class="muted"><em>Nessuna statistica dettagliata trovata per questo giocatore.</em></p>`;
-    return;
+    if (!r.ok || r.errors || !Array.isArray(r.arr) || r.arr.length === 0) {
+      body.innerHTML = `<p class="muted"><em>Nessuna statistica dettagliata trovata per questo giocatore.</em></p>`;
+      return;
+    }
+    playerRow = r.arr[0];
   }
 
-  const p = r.arr[0]?.player || {};
-  // Cerchiamo le statistiche specifiche del campionato attuale (leagueId)
-  const allStats = r.arr[0]?.statistics || [];
+  const p = playerRow?.player || {};
+  const allStats = Array.isArray(playerRow?.statistics)
+    ? playerRow.statistics
+    : [];
+
+  const fixtureTeamIds = new Set(
+    [selectedFixture?.home?.id, selectedFixture?.away?.id]
+      .filter((id) => id != null)
+      .map(String),
+  );
+  const rowsWithTeamId = allStats.filter((row) => row?.team?.id != null);
+  const teamStats =
+    fixtureTeamIds.size && rowsWithTeamId.length
+      ? allStats.filter((row) =>
+          fixtureTeamIds.has(String(row?.team?.id)),
+        )
+      : allStats;
+
   const stats =
-    allStats.find((s) => String(s.league?.id) === String(leagueId)) ||
-    allStats[0] ||
-    {};
+    teamStats.find(
+      (row) => String(row?.league?.id) === String(leagueId),
+    ) || null;
+
+  const seenSeasonStats = new Set();
+  const seasonStats = teamStats.filter((row) => {
+    if (Number(row?.league?.season) !== Number(season)) return false;
+    const statKey = `${row?.team?.id ?? ""}|${row?.league?.id ?? ""}`;
+    if (seenSeasonStats.has(statKey)) return false;
+    seenSeasonStats.add(statKey);
+    return true;
+  });
+
   const games = stats?.games || {};
   const goals = stats?.goals || {};
   const cards = stats?.cards || {};
+  const role =
+    games?.position ||
+    seasonStats.find((row) => row?.games?.position)?.games?.position ||
+    "—";
+
+  const totals = seasonStats.reduce(
+    (sum, row) => {
+      sum.appearances +=
+        Number(
+          row?.games?.appearences ?? row?.games?.appearances ?? 0,
+        ) || 0;
+      sum.goals += Number(row?.goals?.total ?? 0) || 0;
+      sum.assists += Number(row?.goals?.assists ?? 0) || 0;
+      sum.yellow += Number(row?.cards?.yellow ?? 0) || 0;
+      sum.red += Number(row?.cards?.red ?? 0) || 0;
+      return sum;
+    },
+    { appearances: 0, goals: 0, assists: 0, yellow: 0, red: 0 },
+  );
+
+  const seasonStart = Number(season);
+  const seasonLabel = Number.isFinite(seasonStart)
+    ? `${seasonStart}/${String(seasonStart + 1).slice(-2)}`
+    : String(season || "—");
+  const currentAppearances =
+    games?.appearences ?? games?.appearances ?? "—";
+  const currentGoals = stats ? (goals?.total ?? "0") : "—";
+  const currentAssists = stats ? (goals?.assists ?? "0") : "—";
+  const currentYellow = stats ? (cards?.yellow ?? "0") : "—";
+  const currentRed = stats ? (cards?.red ?? "0") : "—";
+  const totalAppearances = seasonStats.length ? totals.appearances : "—";
+  const totalGoals = seasonStats.length ? totals.goals : "—";
+  const totalAssists = seasonStats.length ? totals.assists : "—";
+  const totalYellow = seasonStats.length ? totals.yellow : "—";
+  const totalRed = seasonStats.length ? totals.red : "—";
 
   const html = `
     <div class="kv">
       <div class="kv-row"><div class="k">Nome</div><div class="v"><strong>${safeHTML(p?.name || playerName)}</strong></div></div>
       <div class="kv-row"><div class="k">Età</div><div class="v">${safeHTML(p?.age ?? "—")}</div></div>
-      <div class="kv-row"><div class="k">Ruolo</div><div class="v">${safeHTML(games?.position ?? "—")}</div></div>
-      <div class="kv-row"><div class="k">Presenze</div><div class="v">${safeHTML(games?.appearences ?? games?.appearances ?? "—")}</div></div>
-      <div class="kv-row"><div class="k">Gol / Assist</div><div class="v">${safeHTML(goals?.total ?? "0")} / ${safeHTML(goals?.assists ?? "0")}</div></div>
-      <div class="kv-row"><div class="k">Cartellini (G/R)</div><div class="v">🟨 ${safeHTML(cards?.yellow ?? "0")} / 🟥 ${safeHTML(cards?.red ?? "0")}</div></div>
+      <div class="kv-row"><div class="k">Ruolo</div><div class="v">${safeHTML(role)}</div></div>
+      <div class="kv-row"><div class="k">Competizione</div><div class="v"><strong>${safeHTML(fixtureLeagueName)} · ${safeHTML(seasonLabel)}</strong></div></div>
+      <div class="kv-row"><div class="k">Presenze</div><div class="v">${safeHTML(currentAppearances)}</div></div>
+      <div class="kv-row"><div class="k">Gol / Assist</div><div class="v">${safeHTML(currentGoals)} / ${safeHTML(currentAssists)}</div></div>
+      <div class="kv-row"><div class="k">Cartellini (G/R)</div><div class="v">🟨 ${safeHTML(currentYellow)} / 🟥 ${safeHTML(currentRed)}</div></div>
+      <div class="kv-row"><div class="k">Totale stagione</div><div class="v"><strong>Tutte le competizioni · ${safeHTML(seasonLabel)}</strong></div></div>
+      <div class="kv-row"><div class="k">Presenze totali</div><div class="v">${safeHTML(totalAppearances)}</div></div>
+      <div class="kv-row"><div class="k">Gol / Assist totali</div><div class="v">${safeHTML(totalGoals)} / ${safeHTML(totalAssists)}</div></div>
+      <div class="kv-row"><div class="k">Cartellini totali (G/R)</div><div class="v">🟨 ${safeHTML(totalYellow)} / 🟥 ${safeHTML(totalRed)}</div></div>
     </div>
   `;
   __PLAYER_STATS_CACHE__.set(key, html);
   body.innerHTML = html;
 }
 
+window.openPlayerModal = openPlayerModal;
 window.showTeam = showTeam;
