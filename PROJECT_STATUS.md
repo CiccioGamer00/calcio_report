@@ -816,3 +816,11 @@ The first real development run used Serie A 2023/24 as prior and 2024/25 as targ
 The experiment was therefore revised without weakening the guard. Version 2 no longer applies the Elo difference directly to the current match. It records each opponent's pre-match Elo chronologically and uses it to normalize historical goals: goals scored against a strong opponent receive a limited upward weight, while goals conceded to that opponent receive a limited downward weight. Same-kickoff isolation, future-history rejection and coefficient-zero equivalence remain covered by automated tests.
 
 The tuning protocol is now `schedule_strength_tuning_v2`, so an old v1 report cannot be passed accidentally to the locked evaluator. Version 2 must be tuned again on 2024/25 before any decision to read 2025/26.
+
+### Opponent-strength v2 result and dynamic v3 — 2026-09-17
+
+The real v2 development run again selected the coefficient `0.00`. Every positive historical-goal normalization worsened full-season log loss, Brier and RPS; some stronger coefficients improved calibration in isolation but still degraded the primary probability metrics. The 2025/26 final season remained unread. Both direct Elo and manual Elo-based historical normalization are therefore rejected rather than promoted into production.
+
+The next isolated experiment replaces external Elo multipliers with a chronological latent attack/defence model. Each team owns separate log-scale attacking and defensive strengths. After a same-kickoff batch finishes, capped Poisson residuals update the four involved components, followed by shrinkage and league recentering. Previous-season states are regressed toward neutral before the target season.
+
+The dynamic expected goals are geometrically blended with the locked current model. Blend `0` reproduces the current probabilities exactly. Development tuning tests a small predefined grid of learning rates and blends, while requiring both full-season and first-50 log loss not to exceed the blend-zero baseline. A separate locked evaluator validates dataset identity before any possible final-season read. The new protocol is `dynamic_team_strength_tuning_v3`; production `main`, the public app and Worker remain unchanged.

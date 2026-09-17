@@ -175,7 +175,7 @@ Il risultato con il nuovo peso bloccato va generato una sola volta. Il 2025/26 e
 
 Il rating Elo aggiunge un'informazione che il conteggio grezzo dei gol non contiene: la qualità degli avversari già affrontati. La prima versione, che modificava direttamente le lambda della partita corrente, è stata respinta sul target di sviluppo 2024/25 perché peggiorava la log loss delle prime 50 partite.
 
-La seconda versione usa Elo per normalizzare i gol delle partite storiche: segnare contro un avversario forte vale leggermente di più, mentre subire gol dallo stesso avversario pesa leggermente meno. Questo affronta direttamente casi come due gol subiti da una squadra di vertice rispetto a due gol subiti da una squadra debole.
+La seconda versione usa Elo per normalizzare i gol delle partite storiche: segnare contro un avversario forte vale leggermente di più, mentre subire gol dallo stesso avversario pesa leggermente meno. Questo affronta direttamente casi come due gol subiti da una squadra di vertice rispetto a due gol subiti da una squadra debole. Anche questa variante è stata respinta sullo sviluppo 2024/25: il coefficiente selezionato è rimasto `0.00` e la stagione finale non è stata letta.
 
 Proprietà del protocollo:
 
@@ -206,6 +206,26 @@ node tests/prediction-lab-opponent-strength.test.mjs
 ```
 
 Il protocollo `schedule_strength_tuning_v2` impedisce di riutilizzare per errore un vecchio report della prima versione. Il codice resta sperimentale finché il confronto reale non mostra un miglioramento robusto di log loss, Brier e RPS. L'accuratezza 1X2 viene registrata, ma non decide da sola la promozione.
+
+## Esperimento forza dinamica attacco/difesa
+
+La terza iterazione non applica più un moltiplicatore Elo ai gol o alla singola partita. Mantiene per ogni squadra due valori latenti, attacco e difesa, aggiornati cronologicamente attraverso il residuo Poisson rispetto ai gol realmente osservati. Il valore dell'avversario entra quindi nel calcolo strutturalmente: segnare contro una difesa stimata forte aggiorna l'attacco in un contesto diverso rispetto a segnare contro una difesa debole.
+
+Le intensità prodotte dal modello dinamico vengono combinate in scala logaritmica con quelle del modello corrente. Il parametro `blend=0` riproduce esattamente la baseline e permette di respingere automaticamente l'esperimento. Il tuner prova tre learning-rate e blend da `0.0` a `1.0`, mantenendo lo stesso vincolo: né la log loss complessiva né quella delle prime 50 partite possono peggiorare rispetto alla baseline.
+
+Taratura sul solo sviluppo 2024/25:
+
+```bash
+node prediction-lab/tune-team-strength.mjs "prediction-lab/data/serie-a-2024-fixtures.csv" "prediction-lab/data/serie-a-2023-fixtures.csv" --previous-weight=1 --json="prediction-lab/reports/serie-a-2024-team-strength-tuning.json"
+```
+
+Test automatico offline:
+
+```bash
+node tests/prediction-lab-dynamic-team-strength.test.mjs
+```
+
+Il protocollo `dynamic_team_strength_tuning_v3` conserva il target finale fuori dalla selezione. `evaluate-locked-team-strength.mjs` potrà leggere il 2025/26 soltanto se lo sviluppo sceglierà un blend positivo.
 
 ## Indisponibili e valore relativo al sostituto
 
