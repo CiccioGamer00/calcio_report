@@ -170,3 +170,41 @@ node tests/prediction-lab-locked-weight.test.mjs
 ```
 
 Il risultato con il nuovo peso bloccato va generato una sola volta. Il 2025/26 era già stato osservato nel confronto preliminare con peso sperimentale `0.35`: non viene usato dalla procedura di selezione, ma non può essere definito un holdout mai visto. Se il risultato bloccato non è favorevole, non si modifica il peso sulla stessa stagione; si registra l'esito e si riserva una stagione futura alla conferma completamente indipendente.
+
+## Esperimento forza degli avversari
+
+Il correttivo Elo aggiunge un'informazione che il conteggio grezzo dei gol non contiene: la qualità degli avversari già affrontati. Un risultato contro una squadra forte aggiorna il rating in modo diverso dallo stesso risultato contro una squadra debole.
+
+Proprietà del protocollo:
+
+- rating separati per lega;
+- inizializzazione dalla stagione precedente e regressione prudente verso la media al cambio stagione;
+- aggiornamento solo dopo il risultato;
+- partite allo stesso orario elaborate in blocco;
+- il fattore campo è usato nell'aggiornamento Elo, ma non viene applicato due volte alle lambda Poisson;
+- il divario Elo modifica le lambda con un coefficiente da selezionare, non deciso a mano sul test finale;
+- coefficiente `0` riproduce esattamente il modello con memoria della stagione precedente.
+
+Scelta del coefficiente su 2024/25, usando 2023/24 come storico e il peso precedente già bloccato a `1.00`:
+
+```powershell
+node prediction-lab/tune-opponent-strength.mjs "prediction-lab\data\serie-a-2024-fixtures.csv" "prediction-lab\data\serie-a-2023-fixtures.csv" --previous-weight=1 --json="prediction-lab\reports\serie-a-2024-opponent-strength-tuning.json"
+```
+
+Valutazione una tantum su 2025/26 con coefficiente bloccato:
+
+```powershell
+node prediction-lab/evaluate-locked-opponent-strength.mjs "prediction-lab\reports\serie-a-2024-opponent-strength-tuning.json" "prediction-lab\data\serie-a-2025-fixtures.csv" "prediction-lab\data\serie-a-2024-fixtures.csv" --json="prediction-lab\reports\serie-a-2025-locked-opponent-strength.json"
+```
+
+Il controllo automatico, senza rete, verifica equivalenza a coefficiente zero, isolamento temporale, blocco degli incontri contemporanei, esclusione di uno storico futuro e protocollo finale bloccato:
+
+```powershell
+node tests/prediction-lab-opponent-strength.test.mjs
+```
+
+Il codice resta sperimentale finché il confronto reale non mostra un miglioramento robusto di log loss, Brier e RPS. L'accuratezza 1X2 viene registrata, ma non decide da sola la promozione.
+
+## Indisponibili e valore relativo al sostituto
+
+Il progetto del correttivo è descritto in `prediction-lab/PLAYER_AVAILABILITY.md`. Non è ancora collegato alla predizione: prima servono snapshot pre-partita utilizzabili in un backtest cronologico.

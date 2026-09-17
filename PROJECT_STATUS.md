@@ -782,3 +782,29 @@ Proposed product behavior:
 5. avoid extra live API calls by preparing/caching cross-competition schedule features on the VPS where possible.
 
 The current single-league CSV files are insufficient to test this feature because Champions League, domestic cups and other competitions are absent. A future collector/export must join each team's fixtures across competitions while preserving what was knowable before kickoff. Historical round labels require special care so later qualification information is not leaked backward.
+
+### Opponent-strength experiment — 2026-09-17
+
+A new isolated branch, `codex/prediction-v21-opponent-strength`, now contains the first schedule-strength experiment. Production `main`, the public app and the deployed Worker remain unchanged.
+
+Implemented offline:
+
+- chronological Elo ratings initialized from the previous season;
+- regression toward the league mean at the new-season boundary;
+- home advantage used only inside Elo result expectation;
+- a tunable, capped Elo-difference modifier on the Poisson goal intensities;
+- coefficient zero reproduces the locked previous-season-memory model;
+- same-kickoff fixtures are predicted before any result in that block updates ratings;
+- future prior rows are discarded;
+- a development tuner selects the coefficient without reading the final season;
+- a separate evaluator verifies dataset identity and applies the locked coefficient once to the final season;
+- all existing tests plus the new opponent-strength test pass locally.
+
+The private Serie A CSV files are not present in this fresh workspace because `prediction-lab/data/` is intentionally ignored. Therefore no real performance claim has been made for the Elo correction yet. The next real-data sequence is:
+
+1. tune on Serie A 2024/25 with 2023/24 as prior and previous-season weight fixed at `1.00`;
+2. record the selected coefficient;
+3. evaluate once on 2025/26 with 2024/25 as prior;
+4. compare log loss, Brier, RPS, calibration and 1X2 accuracy before considering production.
+
+Player availability is deliberately not mixed into this experiment. `prediction-lab/PLAYER_AVAILABILITY.md` defines a later model based on value lost relative to the best available replacement, with role-specific and team-level caps. Historical result CSVs do not contain pre-match injury state, so leakage-safe snapshots must be collected before any numeric absence adjustment can be validated.

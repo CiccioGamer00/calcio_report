@@ -45,66 +45,22 @@ function dixonColesTau(homeGoals, awayGoals, lambdaHome, lambdaAway, rho) {
   return 1;
 }
 
-export function predictPoissonDcV1(features, overrides = {}) {
+export function predictFromExpectedGoals(
+  expectedGoals,
+  overrides = {},
+) {
   const settings = { ...POISSON_DC_V1_DEFAULTS, ...overrides };
   const rho = clamp(numberOrZero(settings.rho), -0.3, 0.3);
-
-  const recentHomeGF = average(features.recentHomeGF);
-  const recentHomeGA = average(features.recentHomeGA);
-  const recentAwayGF = average(features.recentAwayGF);
-  const recentAwayGA = average(features.recentAwayGA);
-
-  const seasonHomeGF = numberOrZero(features.seasonHomeGF);
-  const seasonHomeGA = numberOrZero(features.seasonHomeGA);
-  const seasonAwayGF = numberOrZero(features.seasonAwayGF);
-  const seasonAwayGA = numberOrZero(features.seasonAwayGA);
-
-  const safeSeasonHomeGF =
-    seasonHomeGF > 0 ? seasonHomeGF : recentHomeGF;
-  const safeSeasonHomeGA =
-    seasonHomeGA > 0 ? seasonHomeGA : recentHomeGA;
-  const safeSeasonAwayGF =
-    seasonAwayGF > 0 ? seasonAwayGF : recentAwayGF;
-  const safeSeasonAwayGA =
-    seasonAwayGA > 0 ? seasonAwayGA : recentAwayGA;
-
-  const blendHomeGF =
-    settings.seasonWeight * safeSeasonHomeGF +
-    settings.recentWeight * recentHomeGF;
-  const blendHomeGA =
-    settings.seasonWeight * safeSeasonHomeGA +
-    settings.recentWeight * recentHomeGA;
-  const blendAwayGF =
-    settings.seasonWeight * safeSeasonAwayGF +
-    settings.recentWeight * recentAwayGF;
-  const blendAwayGA =
-    settings.seasonWeight * safeSeasonAwayGA +
-    settings.recentWeight * recentAwayGA;
-
-  const leagueHomeGoals =
-    Number(features.leagueHomeGoals) > 0
-      ? Number(features.leagueHomeGoals)
-      : settings.fallbackLeagueHomeGoals;
-  const leagueAwayGoals =
-    Number(features.leagueAwayGoals) > 0
-      ? Number(features.leagueAwayGoals)
-      : settings.fallbackLeagueAwayGoals;
-
-  const attackHome = blendHomeGF / leagueHomeGoals;
-  const defenceAway = blendAwayGA / leagueHomeGoals;
-  const attackAway = blendAwayGF / leagueAwayGoals;
-  const defenceHome = blendHomeGA / leagueAwayGoals;
-
-  let lambdaHome =
-    leagueHomeGoals *
-    attackHome *
-    defenceAway *
-    settings.homeAdvantage;
-  let lambdaAway =
-    leagueAwayGoals * attackAway * defenceHome;
-
-  lambdaHome = clamp(lambdaHome, settings.minLambda, settings.maxLambda);
-  lambdaAway = clamp(lambdaAway, settings.minLambda, settings.maxLambda);
+  const lambdaHome = clamp(
+    expectedGoals?.home,
+    settings.minLambda,
+    settings.maxLambda,
+  );
+  const lambdaAway = clamp(
+    expectedGoals?.away,
+    settings.minLambda,
+    settings.maxLambda,
+  );
 
   const homePmf = Array.from(
     { length: settings.maxGoals + 1 },
@@ -205,9 +161,76 @@ export function predictPoissonDcV1(features, overrides = {}) {
       independentMatrixMass,
       discardedIndependentTail: 1 - independentMatrixMass,
       negativeCellsBeforeClamp,
-      sparseInput:
-        !features.recentHomeGF?.length ||
-        !features.recentAwayGF?.length,
     },
   };
+}
+
+export function predictPoissonDcV1(features, overrides = {}) {
+  const settings = { ...POISSON_DC_V1_DEFAULTS, ...overrides };
+
+  const recentHomeGF = average(features.recentHomeGF);
+  const recentHomeGA = average(features.recentHomeGA);
+  const recentAwayGF = average(features.recentAwayGF);
+  const recentAwayGA = average(features.recentAwayGA);
+
+  const seasonHomeGF = numberOrZero(features.seasonHomeGF);
+  const seasonHomeGA = numberOrZero(features.seasonHomeGA);
+  const seasonAwayGF = numberOrZero(features.seasonAwayGF);
+  const seasonAwayGA = numberOrZero(features.seasonAwayGA);
+
+  const safeSeasonHomeGF =
+    seasonHomeGF > 0 ? seasonHomeGF : recentHomeGF;
+  const safeSeasonHomeGA =
+    seasonHomeGA > 0 ? seasonHomeGA : recentHomeGA;
+  const safeSeasonAwayGF =
+    seasonAwayGF > 0 ? seasonAwayGF : recentAwayGF;
+  const safeSeasonAwayGA =
+    seasonAwayGA > 0 ? seasonAwayGA : recentAwayGA;
+
+  const blendHomeGF =
+    settings.seasonWeight * safeSeasonHomeGF +
+    settings.recentWeight * recentHomeGF;
+  const blendHomeGA =
+    settings.seasonWeight * safeSeasonHomeGA +
+    settings.recentWeight * recentHomeGA;
+  const blendAwayGF =
+    settings.seasonWeight * safeSeasonAwayGF +
+    settings.recentWeight * recentAwayGF;
+  const blendAwayGA =
+    settings.seasonWeight * safeSeasonAwayGA +
+    settings.recentWeight * recentAwayGA;
+
+  const leagueHomeGoals =
+    Number(features.leagueHomeGoals) > 0
+      ? Number(features.leagueHomeGoals)
+      : settings.fallbackLeagueHomeGoals;
+  const leagueAwayGoals =
+    Number(features.leagueAwayGoals) > 0
+      ? Number(features.leagueAwayGoals)
+      : settings.fallbackLeagueAwayGoals;
+
+  const attackHome = blendHomeGF / leagueHomeGoals;
+  const defenceAway = blendAwayGA / leagueHomeGoals;
+  const attackAway = blendAwayGF / leagueAwayGoals;
+  const defenceHome = blendHomeGA / leagueAwayGoals;
+
+  let lambdaHome =
+    leagueHomeGoals *
+    attackHome *
+    defenceAway *
+    settings.homeAdvantage;
+  let lambdaAway =
+    leagueAwayGoals * attackAway * defenceHome;
+
+  lambdaHome = clamp(lambdaHome, settings.minLambda, settings.maxLambda);
+  lambdaAway = clamp(lambdaAway, settings.minLambda, settings.maxLambda);
+
+  const prediction = predictFromExpectedGoals(
+    { home: lambdaHome, away: lambdaAway },
+    settings,
+  );
+  prediction.diagnostics.sparseInput =
+    !features.recentHomeGF?.length ||
+    !features.recentAwayGF?.length;
+  return prediction;
 }
