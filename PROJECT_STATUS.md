@@ -808,3 +808,11 @@ The private Serie A CSV files are not present in this fresh workspace because `p
 4. compare log loss, Brier, RPS, calibration and 1X2 accuracy before considering production.
 
 Player availability is deliberately not mixed into this experiment. `prediction-lab/PLAYER_AVAILABILITY.md` defines a later model based on value lost relative to the best available replacement, with role-specific and team-level caps. Historical result CSVs do not contain pre-match injury state, so leakage-safe snapshots must be collected before any numeric absence adjustment can be validated.
+
+### Opponent-strength development result and v2 — 2026-09-17
+
+The first real development run used Serie A 2023/24 as prior and 2024/25 as target, with previous-season weight fixed at `1.00`. The direct current-match Elo modifier was rejected: the selection guard chose coefficient `0.00`. Small coefficients slightly improved full-season log loss but already worsened first-50 log loss; larger coefficients increased 1X2 accuracy while degrading the probability metrics. The 2025/26 file was not read.
+
+The experiment was therefore revised without weakening the guard. Version 2 no longer applies the Elo difference directly to the current match. It records each opponent's pre-match Elo chronologically and uses it to normalize historical goals: goals scored against a strong opponent receive a limited upward weight, while goals conceded to that opponent receive a limited downward weight. Same-kickoff isolation, future-history rejection and coefficient-zero equivalence remain covered by automated tests.
+
+The tuning protocol is now `schedule_strength_tuning_v2`, so an old v1 report cannot be passed accidentally to the locked evaluator. Version 2 must be tuned again on 2024/25 before any decision to read 2025/26.

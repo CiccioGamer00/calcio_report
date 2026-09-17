@@ -118,12 +118,29 @@ function goalsForAgainst(teamKey, fixture) {
   throw new Error(`La squadra ${teamKey} non appartiene alla partita.`);
 }
 
+function adjustedGoalsForAgainst(teamKey, fixture, adjustTeamMatch) {
+  const raw = goalsForAgainst(teamKey, fixture);
+  if (typeof adjustTeamMatch !== "function") return raw;
+  const adjusted = adjustTeamMatch({ teamKey, fixture, ...raw });
+  return {
+    gf:
+      Number.isFinite(adjusted?.gf) && adjusted.gf >= 0
+        ? adjusted.gf
+        : raw.gf,
+    ga:
+      Number.isFinite(adjusted?.ga) && adjusted.ga >= 0
+        ? adjusted.ga
+        : raw.ga,
+  };
+}
+
 function buildFeatures(
   history,
   fixture,
   recentMatches,
   previousSeasonHistory = [],
   previousSeasonWeight = 0,
+  adjustTeamMatch = null,
 ) {
   const leagueLast = history.slice(-50);
   const previousLeagueLast = previousSeasonHistory.slice(-50);
@@ -165,34 +182,45 @@ function buildFeatures(
   const previousAwayUse =
     previousAwayContext.length >= 3 ? previousAwayContext : previousAwayLast;
 
+  const adjusted = (teamKey, match) =>
+    adjustedGoalsForAgainst(teamKey, match, adjustTeamMatch);
+
   const recentHomeGF = weightedAverage(
-    homeUse.map((match) => goalsForAgainst(fixture.homeTeamKey, match).gf),
-    previousHomeUse.map((match) => goalsForAgainst(fixture.homeTeamKey, match).gf),
+    homeUse.map((match) => adjusted(fixture.homeTeamKey, match).gf),
+    previousHomeUse.map((match) => adjusted(fixture.homeTeamKey, match).gf),
     previousSeasonWeight,
   );
   const recentHomeGA = weightedAverage(
-    homeUse.map((match) => goalsForAgainst(fixture.homeTeamKey, match).ga),
-    previousHomeUse.map((match) => goalsForAgainst(fixture.homeTeamKey, match).ga),
+    homeUse.map((match) => adjusted(fixture.homeTeamKey, match).ga),
+    previousHomeUse.map((match) => adjusted(fixture.homeTeamKey, match).ga),
     previousSeasonWeight,
   );
   const recentAwayGF = weightedAverage(
-    awayUse.map((match) => goalsForAgainst(fixture.awayTeamKey, match).gf),
-    previousAwayUse.map((match) => goalsForAgainst(fixture.awayTeamKey, match).gf),
+    awayUse.map((match) => adjusted(fixture.awayTeamKey, match).gf),
+    previousAwayUse.map((match) => adjusted(fixture.awayTeamKey, match).gf),
     previousSeasonWeight,
   );
   const recentAwayGA = weightedAverage(
-    awayUse.map((match) => goalsForAgainst(fixture.awayTeamKey, match).ga),
-    previousAwayUse.map((match) => goalsForAgainst(fixture.awayTeamKey, match).ga),
+    awayUse.map((match) => adjusted(fixture.awayTeamKey, match).ga),
+    previousAwayUse.map((match) => adjusted(fixture.awayTeamKey, match).ga),
     previousSeasonWeight,
   );
 
   return {
     leagueHomeGoals,
     leagueAwayGoals,
-    seasonHomeGF: average(homeSeasonVenue.map((match) => match.homeGoals)),
-    seasonHomeGA: average(homeSeasonVenue.map((match) => match.awayGoals)),
-    seasonAwayGF: average(awaySeasonVenue.map((match) => match.awayGoals)),
-    seasonAwayGA: average(awaySeasonVenue.map((match) => match.homeGoals)),
+    seasonHomeGF: average(
+      homeSeasonVenue.map((match) => adjusted(fixture.homeTeamKey, match).gf),
+    ),
+    seasonHomeGA: average(
+      homeSeasonVenue.map((match) => adjusted(fixture.homeTeamKey, match).ga),
+    ),
+    seasonAwayGF: average(
+      awaySeasonVenue.map((match) => adjusted(fixture.awayTeamKey, match).gf),
+    ),
+    seasonAwayGA: average(
+      awaySeasonVenue.map((match) => adjusted(fixture.awayTeamKey, match).ga),
+    ),
     recentHomeGF: recentHomeGF == null ? [] : [recentHomeGF],
     recentHomeGA: recentHomeGA == null ? [] : [recentHomeGA],
     recentAwayGF: recentAwayGF == null ? [] : [recentAwayGF],
@@ -330,6 +358,7 @@ export function runBacktest(fixtures, options = {}) {
           recentMatches,
           previousSeasonHistory,
           previousSeasonWeight,
+          options.adjustTeamMatch,
         );
         const prediction = predictPoissonDcV1(features);
         const eligible =

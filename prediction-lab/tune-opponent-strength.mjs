@@ -154,7 +154,7 @@ export function tuneOpponentStrength(
 
   return {
     generatedAt: new Date().toISOString(),
-    protocol: "elo_opponent_strength_tuning_v1",
+    protocol: "schedule_strength_tuning_v2",
     datasets: {
       target: describeFixtures(targetFixtures),
       previous: describeFixtures(previousFixtures),
@@ -209,7 +209,7 @@ function signed(value) {
 }
 
 function printReport(report) {
-  console.log("Prediction Lab — forza avversari (Elo)");
+  console.log("Prediction Lab — gol normalizzati per forza avversari");
   console.log(
     `Target sviluppo: ${report.datasets.target.fixtures} | storico: ${report.datasets.previous.fixtures} | peso stagione precedente: ${report.fixedSettings.previousSeasonWeight}`,
   );
@@ -309,4 +309,3 @@ if (
     process.exitCode = 1;
   });
 }
-

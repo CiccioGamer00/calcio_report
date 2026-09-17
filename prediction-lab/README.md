@@ -173,7 +173,9 @@ Il risultato con il nuovo peso bloccato va generato una sola volta. Il 2025/26 e
 
 ## Esperimento forza degli avversari
 
-Il correttivo Elo aggiunge un'informazione che il conteggio grezzo dei gol non contiene: la qualità degli avversari già affrontati. Un risultato contro una squadra forte aggiorna il rating in modo diverso dallo stesso risultato contro una squadra debole.
+Il rating Elo aggiunge un'informazione che il conteggio grezzo dei gol non contiene: la qualità degli avversari già affrontati. La prima versione, che modificava direttamente le lambda della partita corrente, è stata respinta sul target di sviluppo 2024/25 perché peggiorava la log loss delle prime 50 partite.
+
+La seconda versione usa Elo per normalizzare i gol delle partite storiche: segnare contro un avversario forte vale leggermente di più, mentre subire gol dallo stesso avversario pesa leggermente meno. Questo affronta direttamente casi come due gol subiti da una squadra di vertice rispetto a due gol subiti da una squadra debole.
 
 Proprietà del protocollo:
 
@@ -182,7 +184,7 @@ Proprietà del protocollo:
 - aggiornamento solo dopo il risultato;
 - partite allo stesso orario elaborate in blocco;
 - il fattore campo è usato nell'aggiornamento Elo, ma non viene applicato due volte alle lambda Poisson;
-- il divario Elo modifica le lambda con un coefficiente da selezionare, non deciso a mano sul test finale;
+- il rating dell'avversario al momento della partita normalizza i gol fatti e subiti con un coefficiente da selezionare;
 - coefficiente `0` riproduce esattamente il modello con memoria della stagione precedente.
 
 Scelta del coefficiente su 2024/25, usando 2023/24 come storico e il peso precedente già bloccato a `1.00`:
@@ -203,7 +205,7 @@ Il controllo automatico, senza rete, verifica equivalenza a coefficiente zero, i
 node tests/prediction-lab-opponent-strength.test.mjs
 ```
 
-Il codice resta sperimentale finché il confronto reale non mostra un miglioramento robusto di log loss, Brier e RPS. L'accuratezza 1X2 viene registrata, ma non decide da sola la promozione.
+Il protocollo `schedule_strength_tuning_v2` impedisce di riutilizzare per errore un vecchio report della prima versione. Il codice resta sperimentale finché il confronto reale non mostra un miglioramento robusto di log loss, Brier e RPS. L'accuratezza 1X2 viene registrata, ma non decide da sola la promozione.
 
 ## Indisponibili e valore relativo al sostituto
 

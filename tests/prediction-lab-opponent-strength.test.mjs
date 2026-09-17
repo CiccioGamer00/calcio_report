@@ -4,7 +4,10 @@ import {
   parseFixturesCsv,
   runBacktest,
 } from "../prediction-lab/backtest.mjs";
-import { runOpponentStrengthBacktest } from "../prediction-lab/lib/elo-opponent-strength.mjs";
+import {
+  adjustGoalsByOpponentRating,
+  runOpponentStrengthBacktest,
+} from "../prediction-lab/lib/elo-opponent-strength.mjs";
 import {
   DEFAULT_STRENGTH_GRID,
   tuneOpponentStrength,
@@ -20,6 +23,19 @@ const previousCsv = targetCsv
   .replaceAll(",2026,", ",2025,");
 const target = parseFixturesCsv(targetCsv);
 const previous = parseFixturesCsv(previousCsv);
+
+const versusStrong = adjustGoalsByOpponentRating(
+  { gf: 1, ga: 2, opponentRating: 1700 },
+  { strengthCoefficient: 1 },
+);
+const versusWeak = adjustGoalsByOpponentRating(
+  { gf: 1, ga: 2, opponentRating: 1300 },
+  { strengthCoefficient: 1 },
+);
+assert.ok(versusStrong.gf > 1);
+assert.ok(versusStrong.ga < 2);
+assert.ok(versusWeak.gf < 1);
+assert.ok(versusWeak.ga > 2);
 
 const baseline = runBacktest(target, {
   priorFixtures: previous,
@@ -46,12 +62,20 @@ const adjusted = runOpponentStrengthBacktest(target, {
 });
 const aVsB = adjusted.predictions[0];
 assert.ok(aVsB.opponentStrength.ratingDifference > 0);
-assert.ok(
-  aVsB.prediction.diagnostics.eloMultiplier > 1,
+assert.equal(
+  adjusted.settings.adjustmentTarget,
+  "historical_goals_by_opponent_rating",
 );
+assert.equal(aVsB.prediction.model, "poisson_v1_5_dc_schedule_adjusted");
 assert.ok(
-  aVsB.prediction.expectedGoals.away <
-    coefficientZero.predictions[0].prediction.expectedGoals.away,
+  adjusted.predictions.some(
+    (item, index) =>
+      item.prediction.expectedGoals.home !==
+        coefficientZero.predictions[index].prediction.expectedGoals.home ||
+      item.prediction.expectedGoals.away !==
+        coefficientZero.predictions[index].prediction.expectedGoals.away,
+  ),
+  "Il coefficiente positivo deve normalizzare almeno una media gol storica.",
 );
 
 const changedTarget = parseFixturesCsv(
@@ -122,7 +146,7 @@ const evaluation = evaluateLockedOpponentStrength(
   target,
 );
 assert.equal(evaluation.lockedBeforeEvaluation, true);
-assert.equal(evaluation.protocol, "locked_elo_opponent_strength_v1");
+assert.equal(evaluation.protocol, "locked_schedule_strength_v2");
 assert.equal(evaluation.selectedCoefficient, tuning.selectedCoefficient);
 assert.equal(evaluation.comparison.targetFixtures, target.length);
 assert.throws(
@@ -144,6 +168,7 @@ console.log(
     {
       status: "PASS",
       sameKickoffEloBatching: true,
+      historicalGoalsAdjusted: true,
       futurePriorIgnored: true,
       candidates: tuning.candidates.length,
       selectedSyntheticCoefficient: tuning.selectedCoefficient,

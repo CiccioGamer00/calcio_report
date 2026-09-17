@@ -29,8 +29,8 @@ function describeFixtures(fixtures) {
 }
 
 function validateTuningReport(report) {
-  if (!report || report.protocol !== "elo_opponent_strength_tuning_v1")
-    throw new Error("Report di taratura Elo mancante o non valido.");
+  if (!report || report.protocol !== "schedule_strength_tuning_v2")
+    throw new Error("Report di taratura della forza avversari mancante o non valido.");
   const coefficient = Number(report.selectedCoefficient);
   if (!Number.isFinite(coefficient) || coefficient < 0 || coefficient > 2)
     throw new Error("Il coefficiente Elo selezionato non è valido.");
@@ -100,7 +100,7 @@ export function evaluateLockedOpponentStrength(
   );
   return {
     generatedAt: new Date().toISOString(),
-    protocol: "locked_elo_opponent_strength_v1",
+    protocol: "locked_schedule_strength_v2",
     lockedBeforeEvaluation: true,
     selectedCoefficient: coefficient,
     tuning: {
@@ -198,4 +198,3 @@ if (
     process.exitCode = 1;
   });
 }
-

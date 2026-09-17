@@ -1,5 +1,4 @@
 import { runBacktest } from "../backtest.mjs";
-import { predictFromExpectedGoals } from "./poisson-dc-v1.mjs";
 
 export const ELO_OPPONENT_DEFAULTS = Object.freeze({
   initialRating: 1500,
@@ -13,7 +12,6 @@ export const ELO_OPPONENT_DEFAULTS = Object.freeze({
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, Number(value) || 0));
 }
-
 function ratingFor(ratings, teamKey, initialRating) {
   return ratings.has(teamKey) ? ratings.get(teamKey) : initialRating;
 }
@@ -68,8 +66,12 @@ function updateRatings(ratings, fixtures, settings) {
   }
 }
 
-function replayFixtures(fixtures, settings) {
-  const ratingsByLeague = new Map();
+function replayFixtures(
+  fixtures,
+  settings,
+  ratingsByLeague = new Map(),
+  snapshots = new WeakMap(),
+) {
   const ordered = [...fixtures].sort(
     (left, right) =>
       left.timestamp - right.timestamp || left.sourceRow - right.sourceRow,
@@ -89,14 +91,33 @@ function replayFixtures(fixtures, settings) {
         byLeague.set(fixture.leagueKey, []);
       byLeague.get(fixture.leagueKey).push(fixture);
     }
+
     for (const [leagueKey, leagueBatch] of byLeague) {
       if (!ratingsByLeague.has(leagueKey))
         ratingsByLeague.set(leagueKey, new Map());
-      updateRatings(ratingsByLeague.get(leagueKey), leagueBatch, settings);
+      const ratings = ratingsByLeague.get(leagueKey);
+      for (const fixture of leagueBatch) {
+        const homeRating = ratingFor(
+          ratings,
+          fixture.homeTeamKey,
+          settings.initialRating,
+        );
+        const awayRating = ratingFor(
+          ratings,
+          fixture.awayTeamKey,
+          settings.initialRating,
+        );
+        snapshots.set(fixture, {
+          homeRating,
+          awayRating,
+          ratingDifference: homeRating - awayRating,
+        });
+      }
+      updateRatings(ratings, leagueBatch, settings);
     }
   }
 
-  return ratingsByLeague;
+  return { ratingsByLeague, snapshots };
 }
 
 function regressRatings(ratingsByLeague, settings) {
@@ -111,27 +132,44 @@ function regressRatings(ratingsByLeague, settings) {
   }
 }
 
-function adjustPrediction(basePrediction, ratingDifference, settings) {
-  const safeDifference = clamp(
-    ratingDifference,
-    -settings.maxRatingDifference,
-    settings.maxRatingDifference,
+export function adjustGoalsByOpponentRating(values, options = {}) {
+  const initialRating = Number.isFinite(options.initialRating)
+    ? options.initialRating
+    : ELO_OPPONENT_DEFAULTS.initialRating;
+  const maxRatingDifference = Number.isFinite(options.maxRatingDifference)
+    ? Math.max(0, options.maxRatingDifference)
+    : ELO_OPPONENT_DEFAULTS.maxRatingDifference;
+  const coefficient = Math.max(
+    0,
+    Number(options.strengthCoefficient) || 0,
   );
-  const multiplier = Math.exp(
-    settings.strengthCoefficient * safeDifference / 400,
+  const opponentDifference = clamp(
+    Number(values?.opponentRating) - initialRating,
+    -maxRatingDifference,
+    maxRatingDifference,
   );
-  const prediction = predictFromExpectedGoals({
-    home: basePrediction.expectedGoals.home * multiplier,
-    away: basePrediction.expectedGoals.away / multiplier,
-  });
-  prediction.model = "poisson_v1_4_dc_elo_opponent";
-  prediction.diagnostics = {
-    ...prediction.diagnostics,
-    baseExpectedGoals: { ...basePrediction.expectedGoals },
-    eloRatingDifference: ratingDifference,
-    eloMultiplier: multiplier,
+  const multiplier = Math.exp(coefficient * opponentDifference / 400);
+  return {
+    gf: Math.max(0, Number(values?.gf) || 0) * multiplier,
+    ga: Math.max(0, Number(values?.ga) || 0) / multiplier,
+    opponentDifference,
+    multiplier,
   };
-  return prediction;
+}
+
+function createHistoryAdjuster(snapshots, settings) {
+  return ({ teamKey, fixture, gf, ga }) => {
+    const snapshot = snapshots.get(fixture);
+    if (!snapshot) return { gf, ga };
+    const opponentRating =
+      fixture.homeTeamKey === teamKey
+        ? snapshot.awayRating
+        : snapshot.homeRating;
+    return adjustGoalsByOpponentRating(
+      { gf, ga, opponentRating },
+      settings,
+    );
+  };
 }
 
 export function runOpponentStrengthBacktest(fixtures, options = {}) {
@@ -158,82 +196,50 @@ export function runOpponentStrengthBacktest(fixtures, options = {}) {
   const safePriorFixtures = priorFixtures.filter(
     (fixture) => fixture.timestamp < firstTargetTimestamp,
   );
+
+  const snapshots = new WeakMap();
+  const replayedPrior = replayFixtures(
+    safePriorFixtures,
+    settings,
+    new Map(),
+    snapshots,
+  );
+  regressRatings(replayedPrior.ratingsByLeague, settings);
+  replayFixtures(
+    fixtures,
+    settings,
+    replayedPrior.ratingsByLeague,
+    snapshots,
+  );
+
   const baseReport = runBacktest(fixtures, {
     recentMatches: options.recentMatches,
     minLeagueMatches: options.minLeagueMatches,
     minTeamMatches: options.minTeamMatches,
     priorFixtures: safePriorFixtures,
     previousSeasonWeight: options.previousSeasonWeight,
+    adjustTeamMatch: createHistoryAdjuster(snapshots, settings),
   });
-  const ratingsByLeague = replayFixtures(safePriorFixtures, settings);
-  regressRatings(ratingsByLeague, settings);
 
-  const predictions = [];
-  const ordered = [...baseReport.predictions].sort(
-    (left, right) =>
-      left.fixture.timestamp - right.fixture.timestamp ||
-      left.fixture.sourceRow - right.fixture.sourceRow,
-  );
-
-  for (let index = 0; index < ordered.length;) {
-    const timestamp = ordered[index].fixture.timestamp;
-    const batch = [];
-    while (
-      index < ordered.length &&
-      ordered[index].fixture.timestamp === timestamp
-    ) {
-      batch.push(ordered[index]);
-      index += 1;
-    }
-
-    for (const item of batch) {
-      const { fixture } = item;
-      if (!ratingsByLeague.has(fixture.leagueKey))
-        ratingsByLeague.set(fixture.leagueKey, new Map());
-      const ratings = ratingsByLeague.get(fixture.leagueKey);
-      const homeRating = ratingFor(
-        ratings,
-        fixture.homeTeamKey,
-        settings.initialRating,
-      );
-      const awayRating = ratingFor(
-        ratings,
-        fixture.awayTeamKey,
-        settings.initialRating,
-      );
-      const ratingDifference = homeRating - awayRating;
-      predictions.push({
-        ...item,
-        prediction: adjustPrediction(
-          item.prediction,
-          ratingDifference,
-          settings,
-        ),
-        opponentStrength: {
-          homeRating,
-          awayRating,
-          ratingDifference,
+  const predictions = baseReport.predictions.map((item) => {
+    const snapshot = snapshots.get(item.fixture) || {
+      homeRating: settings.initialRating,
+      awayRating: settings.initialRating,
+      ratingDifference: 0,
+    };
+    return {
+      ...item,
+      prediction: {
+        ...item.prediction,
+        model: "poisson_v1_5_dc_schedule_adjusted",
+        diagnostics: {
+          ...item.prediction.diagnostics,
+          scheduleStrengthCoefficient: settings.strengthCoefficient,
         },
-      });
-    }
-
-    const byLeague = new Map();
-    for (const item of batch) {
-      const { fixture } = item;
-      if (!byLeague.has(fixture.leagueKey))
-        byLeague.set(fixture.leagueKey, []);
-      byLeague.get(fixture.leagueKey).push(fixture);
-    }
-    for (const [leagueKey, leagueBatch] of byLeague) {
-      updateRatings(ratingsByLeague.get(leagueKey), leagueBatch, settings);
-    }
-  }
-
-  predictions.sort(
-    (left, right) =>
-      left.fixture.timestamp - right.fixture.timestamp ||
-      left.fixture.sourceRow - right.fixture.sourceRow,
-  );
+      },
+      opponentStrength: snapshot,
+    };
+  });
 
   return {
     generatedAt: new Date().toISOString(),
@@ -247,6 +253,7 @@ export function runOpponentStrengthBacktest(fixtures, options = {}) {
       maxRatingDifference: settings.maxRatingDifference,
       priorFixturesUsed: safePriorFixtures.length,
       sameKickoffEloBatching: true,
+      adjustmentTarget: "historical_goals_by_opponent_rating",
     },
     coverage: baseReport.coverage,
     predictions,
