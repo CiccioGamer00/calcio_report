@@ -225,7 +225,15 @@ Test automatico offline:
 node tests/prediction-lab-dynamic-team-strength.test.mjs
 ```
 
-Il protocollo `dynamic_team_strength_tuning_v3` conserva il target finale fuori dalla selezione. `evaluate-locked-team-strength.mjs` potrà leggere il 2025/26 soltanto se lo sviluppo sceglierà un blend positivo.
+Il protocollo `dynamic_team_strength_tuning_v3` conserva il target finale fuori dalla selezione. Lo sviluppo 2024/25 ha selezionato learning-rate `0.075` e blend `1.00`; il successivo test bloccato sul 2025/26 ha confermato il miglioramento complessivo di LogLoss, Brier, RPS, calibrazione e accuracy. La variante è quindi accettata come candidata all'integrazione, ma non modifica ancora il Worker o l'app pubblica.
+
+Il test finale viene generato con:
+
+```bash
+node prediction-lab/evaluate-locked-team-strength.mjs "prediction-lab/reports/serie-a-2024-team-strength-tuning.json" "prediction-lab/data/serie-a-2025-fixtures.csv" "prediction-lab/data/serie-a-2024-fixtures.csv" --json="prediction-lab/reports/serie-a-2025-team-strength-locked.json"
+```
+
+I parametri non devono essere ricalcolati sulla stagione finale. L'integrazione di produzione deve partire dal `main` corrente su un ramo nuovo, portando solo il comportamento validato del modello dinamico.
 
 ## Indisponibili e valore relativo al sostituto
 
