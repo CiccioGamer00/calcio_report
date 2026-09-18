@@ -29,7 +29,7 @@ const algorithmStart = workerSource.indexOf(
   "const DYNAMIC_SERIE_A_LEAGUE_ID = 135;",
 );
 const algorithmEnd = workerSource.indexOf(
-  "/* =========================\n   /predict handler",
+  "/* =========================",
   algorithmStart,
 );
 assert.ok(algorithmStart >= 0 && algorithmEnd > algorithmStart);
