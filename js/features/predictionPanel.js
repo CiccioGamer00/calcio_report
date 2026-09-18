@@ -101,6 +101,10 @@ async function loadPrediction() {
     const edgePoints = signalEdgePoints(c, probabilities);
     if (!Number.isFinite(edgePoints)) return "—";
 
+    if (cov?.historyLimited === true) {
+      return `Distacco ${safeHTML(edgePoints)} punti · Segnale da confermare`;
+    }
+
     const strength =
       edgePoints >= 40
         ? "molto netto"
@@ -114,9 +118,8 @@ async function loadPrediction() {
   }
 
   const signalNote =
-    coverage?.sufficient === false && conf?.note
-      ? conf.note
-      : "Differenza tra primo e secondo esito 1X2; non è una probabilità di successo.";
+    conf?.note ||
+    "Differenza tra primo e secondo esito 1X2; non è una probabilità di successo.";
 
   setPrediction(`
     <div class="kv">
