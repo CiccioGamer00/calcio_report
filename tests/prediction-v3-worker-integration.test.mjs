@@ -38,6 +38,7 @@ const algorithm = new Function(
   `${workerSource.slice(algorithmStart, algorithmEnd)}
   return {
     calculateDynamicSerieAPrediction,
+    dynamicSignalAssessment,
     settings: DYNAMIC_STRENGTH_SETTINGS,
   };`,
 )();
@@ -121,10 +122,42 @@ assert.equal(result.coverage.leagueMatches, 4);
 assert.equal(result.coverage.previousHomeMatches, 2);
 assert.equal(result.coverage.previousAwayMatches, 2);
 assert.equal(result.coverage.trainingMatches, 8);
+assert.equal(result.coverage.historyLimited, true);
+assert.deepEqual(result.coverage.historyLimitedSides, {
+  home: true,
+  away: true,
+});
 assert.equal(
   result.coverage.sufficient,
   false,
   "Previous-season history must not create a false early-season signal",
+);
+
+assert.deepEqual(
+  algorithm.dynamicSignalAssessment(
+    { sufficient: true, historyLimited: true },
+    75,
+  ),
+  {
+    score: 45,
+    signalScore: 45,
+    rawSignalScore: 75,
+    level: "Da confermare",
+  },
+  "A promoted-team signal must be capped without changing its raw edge",
+);
+assert.deepEqual(
+  algorithm.dynamicSignalAssessment(
+    { sufficient: true, historyLimited: false },
+    75,
+  ),
+  {
+    score: 75,
+    signalScore: 75,
+    rawSignalScore: 75,
+    level: "Valutabile",
+  },
+  "Established teams must keep the original edge-derived score",
 );
 
 assert.deepEqual(
