@@ -711,3 +711,27 @@ Automated candidate checks pass:
 This candidate belongs on `codex/prediction-v3-integration`. It must remain
 experimental until the local real-data smoke test passes; no merge to `main`
 and no Worker deployment is authorized yet.
+
+### Reduced-history signal guard — 2026-09-18
+
+The preview smoke test with Frosinone–Como confirmed that expected goals and
+1X2 probabilities remain available for a promoted team, but also exposed an
+overstated signal label: Frosinone had four current-season matches and no
+previous Serie A history, while the raw 30-point 1X2 gap was shown as a net
+signal.
+
+The experimental candidate now keeps probabilities and expected goals
+unchanged while treating team-history depth separately from the mathematical
+edge:
+
+- if a team has fewer than ten previous-season league matches and fewer than
+  eight current-season matches, `coverage.historyLimited` is true;
+- an otherwise evaluable prediction is labelled `Segnale da confermare` and
+  its exposed signal score is capped at 45;
+- the raw edge remains available as `rawSignalScore` for diagnostics;
+- the explanation now distinguishes the full league training sample from each
+  team's actual current/previous-season coverage;
+- once the short-history team reaches eight current-season matches, the guard
+  is removed automatically;
+- the prediction formula, dynamic ratings, probabilities and expected goals
+  are not modified.
