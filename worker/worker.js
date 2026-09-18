@@ -569,6 +569,13 @@ const DYNAMIC_STRENGTH_SETTINGS = Object.freeze({
   fallbackHomeGoals: 1.25,
   fallbackAwayGoals: 1.05,
 });
+const DYNAMIC_SIGNAL_COVERAGE = Object.freeze({
+  minimumCurrentTeamMatches: 3,
+  minimumLeagueMatches: 8,
+  establishedPreviousTeamMatches: 10,
+  currentMatchesWithoutPreviousHistory: 8,
+  reducedHistoryScoreCap: 45,
+});
 
 function dynamicClamp(value, min, max) {
   return Math.max(min, Math.min(max, Number(value) || 0));
@@ -792,6 +799,16 @@ function calculateDynamicSerieAPrediction({
     target.awayTeamKey,
   );
   const leagueMatches = current.length;
+  const homeHistoryLimited =
+    previousHomeMatches <
+      DYNAMIC_SIGNAL_COVERAGE.establishedPreviousTeamMatches &&
+    homeMatches <
+      DYNAMIC_SIGNAL_COVERAGE.currentMatchesWithoutPreviousHistory;
+  const awayHistoryLimited =
+    previousAwayMatches <
+      DYNAMIC_SIGNAL_COVERAGE.establishedPreviousTeamMatches &&
+    awayMatches <
+      DYNAMIC_SIGNAL_COVERAGE.currentMatchesWithoutPreviousHistory;
 
   return {
     expectedGoals: { home: prediction.home, away: prediction.away },
@@ -806,11 +823,44 @@ function calculateDynamicSerieAPrediction({
       trainingMatches: previous.length + current.length,
       currentLeagueMatches: current.length,
       previousLeagueMatches: previous.length,
-      minimumTeamMatches: 3,
-      minimumLeagueMatches: 8,
+      minimumTeamMatches:
+        DYNAMIC_SIGNAL_COVERAGE.minimumCurrentTeamMatches,
+      minimumLeagueMatches: DYNAMIC_SIGNAL_COVERAGE.minimumLeagueMatches,
+      historyLimited: homeHistoryLimited || awayHistoryLimited,
+      historyLimitedSides: {
+        home: homeHistoryLimited,
+        away: awayHistoryLimited,
+      },
       sufficient:
-        homeMatches >= 3 && awayMatches >= 3 && leagueMatches >= 8,
+        homeMatches >=
+          DYNAMIC_SIGNAL_COVERAGE.minimumCurrentTeamMatches &&
+        awayMatches >=
+          DYNAMIC_SIGNAL_COVERAGE.minimumCurrentTeamMatches &&
+        leagueMatches >= DYNAMIC_SIGNAL_COVERAGE.minimumLeagueMatches,
     },
+  };
+}
+
+function dynamicSignalAssessment(coverage, rawSignalScore) {
+  const normalizedRawScore = Math.round(
+    dynamicClamp(rawSignalScore, 0, 100),
+  );
+  const signalScore = coverage?.historyLimited
+    ? Math.min(
+        normalizedRawScore,
+        DYNAMIC_SIGNAL_COVERAGE.reducedHistoryScoreCap,
+      )
+    : normalizedRawScore;
+
+  return {
+    score: coverage?.sufficient ? signalScore : null,
+    signalScore,
+    rawSignalScore: normalizedRawScore,
+    level: !coverage?.sufficient
+      ? "Non valutabile"
+      : coverage?.historyLimited
+        ? "Da confermare"
+        : "Valutabile",
   };
 }
 
@@ -948,14 +998,20 @@ async function handlePredict(request, env) {
     };
     const ordered = Object.values(probabilities).sort((a, b) => b - a);
     const edge = Math.max(0, (ordered[0] || 0) - (ordered[1] || 0));
-    const signalScore = Math.round(Math.max(0, Math.min(1, edge / 0.4)) * 100);
+    const rawSignalScore = Math.round(
+      Math.max(0, Math.min(1, edge / 0.4)) * 100,
+    );
     const edgePct = Math.round(edge * 100);
     const coverage = result.coverage;
+    const signal = dynamicSignalAssessment(coverage, rawSignalScore);
     const homeName = fx?.teams?.home?.name || "Casa";
     const awayName = fx?.teams?.away?.name || "Trasferta";
-    const note = coverage.sufficient
-      ? `Distacco tra primo e secondo esito: ${edgePct} punti. Non è una probabilità di successo.`
-      : `Storico insufficiente nella competizione: ${homeName} ${coverage.homeMatches}/3, ${awayName} ${coverage.awayMatches}/3, lega ${coverage.leagueMatches}/8. Le probabilità sono un fallback matematico.`;
+    const historySummary = `${homeName} ${coverage.homeMatches} correnti/${coverage.previousHomeMatches} precedenti, ${awayName} ${coverage.awayMatches} correnti/${coverage.previousAwayMatches} precedenti`;
+    const note = !coverage.sufficient
+      ? `Storico insufficiente nella competizione: ${homeName} ${coverage.homeMatches}/${coverage.minimumTeamMatches}, ${awayName} ${coverage.awayMatches}/${coverage.minimumTeamMatches}, lega ${coverage.leagueMatches}/${coverage.minimumLeagueMatches}. Le probabilità sono un fallback matematico.`
+      : coverage.historyLimited
+        ? `Segnale da confermare per storico squadra ridotto: ${historySummary}. Il distacco 1X2 va interpretato con cautela.`
+        : `Distacco tra primo e secondo esito: ${edgePct} punti. Non è una probabilità di successo.`;
 
     scorelines.sort((a, b) => b.p - a.p);
     const drivers = [];
@@ -976,8 +1032,15 @@ async function handlePredict(request, env) {
     drivers.push({
       factor: "Forza avversari",
       impact: "+",
-      note: `Attacco e difesa aggiornati cronologicamente su ${coverage.trainingMatches} partite di Serie A.`,
+      note: `Attacco e difesa stimati cronologicamente sul campione di lega (${coverage.trainingMatches} partite); copertura squadre: ${historySummary}.`,
     });
+    if (coverage.historyLimited) {
+      drivers.push({
+        factor: "Storico squadra ridotto",
+        impact: "!",
+        note: "Una squadra non ha ancora uno storico sufficiente tra stagione precedente e stagione corrente: segnale 1X2 ridotto.",
+      });
+    }
     drivers.push({
       factor: "Dixon–Coles",
       impact: "+",
@@ -995,10 +1058,11 @@ async function handlePredict(request, env) {
         currentSeason,
       },
       confidence: {
-        score: coverage.sufficient ? signalScore : null,
-        signalScore,
+        score: signal.score,
+        signalScore: signal.signalScore,
+        rawSignalScore: signal.rawSignalScore,
         edge: edgePct,
-        level: coverage.sufficient ? "Valutabile" : "Non valutabile",
+        level: signal.level,
         risk: null,
         note,
       },
