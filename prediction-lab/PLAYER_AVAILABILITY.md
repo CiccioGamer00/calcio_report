@@ -83,4 +83,3 @@ La formazione stimata dell'app non è una prova di assenza e non deve produrre d
 5. bloccare i parametri;
 6. confrontare sulla stagione successiva log loss, Brier, RPS e calibrazione;
 7. integrare nel Worker solo se il miglioramento è robusto e non limitato a poche partite.
-
