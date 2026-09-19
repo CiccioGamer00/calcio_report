@@ -29,6 +29,8 @@ const panelSource = readFileSync(
 
 [
   'return "Non valutabile · Storico insufficiente";',
+  "Segnale da confermare",
+  "cov?.historyLimited === true",
   '<div class="k">Segnale modello</div>',
   "Differenza tra primo e secondo esito 1X2; non è una probabilità di successo.",
 ].forEach((fragment) => {
@@ -55,6 +57,15 @@ const minimumCoverage = (homeMatches, awayMatches, leagueMatches) =>
 assert.equal(minimumCoverage(0, 0, 0), false);
 assert.equal(minimumCoverage(3, 3, 7), false);
 assert.equal(minimumCoverage(3, 3, 8), true);
+
+const promotedHistoryLimited = (
+  currentMatches,
+  previousMatches,
+) => previousMatches < 10 && currentMatches < 8;
+
+assert.equal(promotedHistoryLimited(4, 0), true);
+assert.equal(promotedHistoryLimited(4, 38), false);
+assert.equal(promotedHistoryLimited(8, 0), false);
 
 console.log(
   JSON.stringify(

@@ -1,6 +1,6 @@
 # Calcio Report — Project Status
 
-_Last updated: 2026-09-14_
+_Last updated: 2026-09-18_
 
 This file is the operational source of truth for the current Core V2 rebuild. Keep it updated when architecture, infrastructure, or implementation status changes.
 
@@ -663,3 +663,75 @@ Release-candidate checks completed:
 - localhost diagnostics are guarded by hostname and remain absent from the public site.
 
 Release candidate status: functionally ready for a deliberate merge/deployment after confirming a clean local worktree and receiving explicit final approval. The existing stable `main` commit remains the rollback point.
+
+## Prediction v3 production integration candidate — 2026-09-18
+
+The leakage-safe Prediction Lab selected a dynamic attack/defence model with
+locked parameters `learning-rate 0.075` and `blend 1.00`. Its one-time final
+evaluation on the untouched Serie A 2025/26 target improved the full-season
+metrics versus the current model:
+
+- accuracy: `47.37%` to `49.21%` (`+1.84` points);
+- log loss: `1.0770` to `1.0221`;
+- Brier score: `0.6418` to `0.6121`;
+- Ranked Probability Score: `0.2198` to `0.2098`;
+- calibration error: `0.0739` to `0.0134`.
+
+The first-30 subset did not improve every metric: accuracy fell by `3.33`
+points and RPS increased by `0.0003`, although log loss, Brier and calibration
+improved. For this reason the production candidate is deliberately limited:
+
+- activate the v3 model only for API-Football league `135` (Serie A), the only
+  competition validated so far;
+- retain `poisson_v1_3_dc_cached` unchanged for every other competition;
+- use only fixture details, the completed previous Serie A season and completed
+  current-season fixtures before the target kickoff;
+- cache the previous season for seven days and the current season for ten
+  minutes;
+- update matches sharing the same kickoff as one batch so their ordering cannot
+  leak results into one another;
+- use previous-season results in the estimate, but require three current-season
+  matches for both teams and eight current league matches before presenting a
+  model signal as evaluable;
+- do not add player/injury or schedule-pressure adjustments until each has a
+  separate historical validation.
+
+Automated candidate checks pass:
+
+- Worker syntax and the complete existing test suite;
+- locked parameters and Serie A-only routing contract;
+- same-kickoff order invariance;
+- exclusion of results at or after the target kickoff;
+- previous-season carry and expected-goal bounds;
+- normalized 1X2 probabilities and frontend-compatible payload;
+- end-to-end mocked Worker route with exactly three upstream calls and no
+  duplicate legacy calls for Serie A;
+- early-season signal guard and unchanged legacy route for other competitions.
+
+This candidate belongs on `codex/prediction-v3-integration`. It must remain
+experimental until the local real-data smoke test passes; no merge to `main`
+and no Worker deployment is authorized yet.
+
+### Reduced-history signal guard — 2026-09-18
+
+The preview smoke test with Frosinone–Como confirmed that expected goals and
+1X2 probabilities remain available for a promoted team, but also exposed an
+overstated signal label: Frosinone had four current-season matches and no
+previous Serie A history, while the raw 30-point 1X2 gap was shown as a net
+signal.
+
+The experimental candidate now keeps probabilities and expected goals
+unchanged while treating team-history depth separately from the mathematical
+edge:
+
+- if a team has fewer than ten previous-season league matches and fewer than
+  eight current-season matches, `coverage.historyLimited` is true;
+- an otherwise evaluable prediction is labelled `Segnale da confermare` and
+  its exposed signal score is capped at 45;
+- the raw edge remains available as `rawSignalScore` for diagnostics;
+- the explanation now distinguishes the full league training sample from each
+  team's actual current/previous-season coverage;
+- once the short-history team reaches eight current-season matches, the guard
+  is removed automatically;
+- the prediction formula, dynamic ratings, probabilities and expected goals
+  are not modified.

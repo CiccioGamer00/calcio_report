@@ -559,6 +559,311 @@ function isAdmin(request, env) {
   return k && env.ADMIN_KEY && k === env.ADMIN_KEY;
 }
 
+const DYNAMIC_SERIE_A_LEAGUE_ID = 135;
+const DYNAMIC_STRENGTH_SETTINGS = Object.freeze({
+  learningRate: 0.075,
+  seasonCarry: 0.65,
+  ratingShrinkage: 0.002,
+  residualCap: 2.5,
+  maxLogStrength: 0.8,
+  fallbackHomeGoals: 1.25,
+  fallbackAwayGoals: 1.05,
+});
+const DYNAMIC_SIGNAL_COVERAGE = Object.freeze({
+  minimumCurrentTeamMatches: 3,
+  minimumLeagueMatches: 8,
+  establishedPreviousTeamMatches: 10,
+  currentMatchesWithoutPreviousHistory: 8,
+  reducedHistoryScoreCap: 45,
+});
+
+function dynamicClamp(value, min, max) {
+  return Math.max(min, Math.min(max, Number(value) || 0));
+}
+
+function dynamicAverage(values, fallback) {
+  const finite = (values || []).filter(Number.isFinite);
+  if (!finite.length) return fallback;
+  return finite.reduce((sum, value) => sum + value, 0) / finite.length;
+}
+
+function normalizeCompletedFixtures(fixtures, beforeTimestamp = Infinity) {
+  return (Array.isArray(fixtures) ? fixtures : [])
+    .map((fixture, sourceIndex) => ({
+      id: fixture?.fixture?.id ?? null,
+      sourceIndex,
+      timestamp: Date.parse(fixture?.fixture?.date || ""),
+      homeTeamKey: String(fixture?.teams?.home?.id ?? ""),
+      awayTeamKey: String(fixture?.teams?.away?.id ?? ""),
+      homeGoals:
+        fixture?.goals?.home == null ? NaN : Number(fixture.goals.home),
+      awayGoals:
+        fixture?.goals?.away == null ? NaN : Number(fixture.goals.away),
+    }))
+    .filter(
+      (fixture) =>
+        Number.isFinite(fixture.timestamp) &&
+        fixture.timestamp < beforeTimestamp &&
+        fixture.homeTeamKey &&
+        fixture.awayTeamKey &&
+        fixture.homeTeamKey !== fixture.awayTeamKey &&
+        Number.isInteger(fixture.homeGoals) &&
+        fixture.homeGoals >= 0 &&
+        Number.isInteger(fixture.awayGoals) &&
+        fixture.awayGoals >= 0,
+    )
+    .sort(
+      (left, right) =>
+        left.timestamp - right.timestamp ||
+        Number(left.id || left.sourceIndex) - Number(right.id || right.sourceIndex),
+    );
+}
+
+function dynamicTeamFor(state, teamKey) {
+  if (!state.teams.has(teamKey)) {
+    state.teams.set(teamKey, { attack: 0, defence: 0 });
+  }
+  return state.teams.get(teamKey);
+}
+
+function dynamicLeagueBase(currentHistory, previousHistory, settings) {
+  const current = currentHistory.slice(-50);
+  const previous = previousHistory.slice(-50);
+  const combinedHome = [
+    ...current.map((fixture) => fixture.homeGoals),
+    ...previous.map((fixture) => fixture.homeGoals),
+  ];
+  const combinedAway = [
+    ...current.map((fixture) => fixture.awayGoals),
+    ...previous.map((fixture) => fixture.awayGoals),
+  ];
+  return {
+    home: dynamicAverage(combinedHome, settings.fallbackHomeGoals),
+    away: dynamicAverage(combinedAway, settings.fallbackAwayGoals),
+  };
+}
+
+function dynamicExpectedGoals(state, fixture, base, settings) {
+  const home = dynamicTeamFor(state, fixture.homeTeamKey);
+  const away = dynamicTeamFor(state, fixture.awayTeamKey);
+  return {
+    home: dynamicClamp(
+      base.home * Math.exp(home.attack + away.defence),
+      0.2,
+      3.2,
+    ),
+    away: dynamicClamp(
+      base.away * Math.exp(away.attack + home.defence),
+      0.2,
+      3.2,
+    ),
+    strengths: {
+      homeAttack: home.attack,
+      homeDefence: home.defence,
+      awayAttack: away.attack,
+      awayDefence: away.defence,
+    },
+  };
+}
+
+function dynamicRecenter(state, settings) {
+  const teams = [...state.teams.values()];
+  if (!teams.length) return;
+  const meanAttack = dynamicAverage(teams.map((team) => team.attack), 0);
+  const meanDefence = dynamicAverage(teams.map((team) => team.defence), 0);
+  for (const team of teams) {
+    team.attack = dynamicClamp(
+      team.attack - meanAttack,
+      -settings.maxLogStrength,
+      settings.maxLogStrength,
+    );
+    team.defence = dynamicClamp(
+      team.defence - meanDefence,
+      -settings.maxLogStrength,
+      settings.maxLogStrength,
+    );
+  }
+}
+
+function dynamicUpdateBatch(state, fixtures, base, settings) {
+  const changes = new Map();
+  const changeFor = (teamKey) => {
+    if (!changes.has(teamKey)) {
+      changes.set(teamKey, { attack: 0, defence: 0 });
+    }
+    return changes.get(teamKey);
+  };
+
+  for (const fixture of fixtures) {
+    const expected = dynamicExpectedGoals(state, fixture, base, settings);
+    const homeResidual = dynamicClamp(
+      fixture.homeGoals - expected.home,
+      -settings.residualCap,
+      settings.residualCap,
+    );
+    const awayResidual = dynamicClamp(
+      fixture.awayGoals - expected.away,
+      -settings.residualCap,
+      settings.residualCap,
+    );
+    changeFor(fixture.homeTeamKey).attack += homeResidual;
+    changeFor(fixture.awayTeamKey).defence += homeResidual;
+    changeFor(fixture.awayTeamKey).attack += awayResidual;
+    changeFor(fixture.homeTeamKey).defence += awayResidual;
+  }
+
+  for (const team of state.teams.values()) {
+    team.attack *= 1 - settings.ratingShrinkage;
+    team.defence *= 1 - settings.ratingShrinkage;
+  }
+  for (const [teamKey, change] of changes) {
+    const team = dynamicTeamFor(state, teamKey);
+    team.attack += settings.learningRate * change.attack;
+    team.defence += settings.learningRate * change.defence;
+  }
+  dynamicRecenter(state, settings);
+}
+
+function dynamicBatches(fixtures) {
+  const batches = [];
+  for (let index = 0; index < fixtures.length;) {
+    const timestamp = fixtures[index].timestamp;
+    const batch = [];
+    while (index < fixtures.length && fixtures[index].timestamp === timestamp) {
+      batch.push(fixtures[index]);
+      index += 1;
+    }
+    batches.push(batch);
+  }
+  return batches;
+}
+
+function countTeamMatches(fixtures, teamKey) {
+  return fixtures.filter(
+    (fixture) =>
+      fixture.homeTeamKey === teamKey || fixture.awayTeamKey === teamKey,
+  ).length;
+}
+
+function calculateDynamicSerieAPrediction({
+  previousFixtures,
+  currentFixtures,
+  targetTimestamp,
+  homeTeamId,
+  awayTeamId,
+}) {
+  const settings = DYNAMIC_STRENGTH_SETTINGS;
+  const previous = normalizeCompletedFixtures(
+    previousFixtures,
+    targetTimestamp,
+  );
+  const current = normalizeCompletedFixtures(
+    currentFixtures,
+    targetTimestamp,
+  );
+  const state = { teams: new Map() };
+  const priorHistory = [];
+
+  for (const batch of dynamicBatches(previous)) {
+    const base = dynamicLeagueBase(priorHistory, [], settings);
+    dynamicUpdateBatch(state, batch, base, settings);
+    priorHistory.push(...batch);
+  }
+
+  for (const team of state.teams.values()) {
+    team.attack *= settings.seasonCarry;
+    team.defence *= settings.seasonCarry;
+  }
+
+  const currentHistory = [];
+  for (const batch of dynamicBatches(current)) {
+    const base = dynamicLeagueBase(currentHistory, previous, settings);
+    dynamicUpdateBatch(state, batch, base, settings);
+    currentHistory.push(...batch);
+  }
+
+  const target = {
+    homeTeamKey: String(homeTeamId),
+    awayTeamKey: String(awayTeamId),
+  };
+  const base = dynamicLeagueBase(currentHistory, previous, settings);
+  const prediction = dynamicExpectedGoals(state, target, base, settings);
+  const homeMatches = countTeamMatches(current, target.homeTeamKey);
+  const awayMatches = countTeamMatches(current, target.awayTeamKey);
+  const previousHomeMatches = countTeamMatches(
+    previous,
+    target.homeTeamKey,
+  );
+  const previousAwayMatches = countTeamMatches(
+    previous,
+    target.awayTeamKey,
+  );
+  const leagueMatches = current.length;
+  const homeHistoryLimited =
+    previousHomeMatches <
+      DYNAMIC_SIGNAL_COVERAGE.establishedPreviousTeamMatches &&
+    homeMatches <
+      DYNAMIC_SIGNAL_COVERAGE.currentMatchesWithoutPreviousHistory;
+  const awayHistoryLimited =
+    previousAwayMatches <
+      DYNAMIC_SIGNAL_COVERAGE.establishedPreviousTeamMatches &&
+    awayMatches <
+      DYNAMIC_SIGNAL_COVERAGE.currentMatchesWithoutPreviousHistory;
+
+  return {
+    expectedGoals: { home: prediction.home, away: prediction.away },
+    strengths: prediction.strengths,
+    base,
+    coverage: {
+      homeMatches,
+      awayMatches,
+      leagueMatches,
+      previousHomeMatches,
+      previousAwayMatches,
+      trainingMatches: previous.length + current.length,
+      currentLeagueMatches: current.length,
+      previousLeagueMatches: previous.length,
+      minimumTeamMatches:
+        DYNAMIC_SIGNAL_COVERAGE.minimumCurrentTeamMatches,
+      minimumLeagueMatches: DYNAMIC_SIGNAL_COVERAGE.minimumLeagueMatches,
+      historyLimited: homeHistoryLimited || awayHistoryLimited,
+      historyLimitedSides: {
+        home: homeHistoryLimited,
+        away: awayHistoryLimited,
+      },
+      sufficient:
+        homeMatches >=
+          DYNAMIC_SIGNAL_COVERAGE.minimumCurrentTeamMatches &&
+        awayMatches >=
+          DYNAMIC_SIGNAL_COVERAGE.minimumCurrentTeamMatches &&
+        leagueMatches >= DYNAMIC_SIGNAL_COVERAGE.minimumLeagueMatches,
+    },
+  };
+}
+
+function dynamicSignalAssessment(coverage, rawSignalScore) {
+  const normalizedRawScore = Math.round(
+    dynamicClamp(rawSignalScore, 0, 100),
+  );
+  const signalScore = coverage?.historyLimited
+    ? Math.min(
+        normalizedRawScore,
+        DYNAMIC_SIGNAL_COVERAGE.reducedHistoryScoreCap,
+      )
+    : normalizedRawScore;
+
+  return {
+    score: coverage?.sufficient ? signalScore : null,
+    signalScore,
+    rawSignalScore: normalizedRawScore,
+    level: !coverage?.sufficient
+      ? "Non valutabile"
+      : coverage?.historyLimited
+        ? "Da confermare"
+        : "Valutabile",
+  };
+}
+
 /* =========================
    /predict handler (TUO, INVARIATO)
    ========================= */
@@ -646,6 +951,140 @@ async function handlePredict(request, env) {
     return 1;
   }
 
+  function dynamicPredictionPayload({
+    fx,
+    result,
+    rho,
+    previousSeason,
+    currentSeason,
+  }) {
+    const lambdaHome = result.expectedGoals.home;
+    const lambdaAway = result.expectedGoals.away;
+    const maxG = 5;
+    const ph = Array.from({ length: maxG + 1 }, (_, k) =>
+      poissonPmf(k, lambdaHome),
+    );
+    const pa = Array.from({ length: maxG + 1 }, (_, k) =>
+      poissonPmf(k, lambdaAway),
+    );
+    let homeWinRaw = 0;
+    let drawRaw = 0;
+    let awayWinRaw = 0;
+    let over25Raw = 0;
+    let bttsYesRaw = 0;
+    let sumMatrix = 0;
+    const scorelines = [];
+
+    for (let i = 0; i <= maxG; i += 1) {
+      for (let j = 0; j <= maxG; j += 1) {
+        const raw =
+          ph[i] * pa[j] * tauDC(i, j, lambdaHome, lambdaAway, rho);
+        const probability = Math.max(0, raw);
+        sumMatrix += probability;
+        if (i > j) homeWinRaw += probability;
+        else if (i === j) drawRaw += probability;
+        else awayWinRaw += probability;
+        if (i + j >= 3) over25Raw += probability;
+        if (i >= 1 && j >= 1) bttsYesRaw += probability;
+        scorelines.push({ score: `${i}-${j}`, p: probability });
+      }
+    }
+
+    const denominator = sumMatrix > 0 ? sumMatrix : 1;
+    const probabilities = {
+      homeWin: homeWinRaw / denominator,
+      draw: drawRaw / denominator,
+      awayWin: awayWinRaw / denominator,
+    };
+    const ordered = Object.values(probabilities).sort((a, b) => b - a);
+    const edge = Math.max(0, (ordered[0] || 0) - (ordered[1] || 0));
+    const rawSignalScore = Math.round(
+      Math.max(0, Math.min(1, edge / 0.4)) * 100,
+    );
+    const edgePct = Math.round(edge * 100);
+    const coverage = result.coverage;
+    const signal = dynamicSignalAssessment(coverage, rawSignalScore);
+    const homeName = fx?.teams?.home?.name || "Casa";
+    const awayName = fx?.teams?.away?.name || "Trasferta";
+    const historySummary = `${homeName} ${coverage.homeMatches} correnti/${coverage.previousHomeMatches} precedenti, ${awayName} ${coverage.awayMatches} correnti/${coverage.previousAwayMatches} precedenti`;
+    const note = !coverage.sufficient
+      ? `Storico insufficiente nella competizione: ${homeName} ${coverage.homeMatches}/${coverage.minimumTeamMatches}, ${awayName} ${coverage.awayMatches}/${coverage.minimumTeamMatches}, lega ${coverage.leagueMatches}/${coverage.minimumLeagueMatches}. Le probabilità sono un fallback matematico.`
+      : coverage.historyLimited
+        ? `Segnale da confermare per storico squadra ridotto: ${historySummary}. Il distacco 1X2 va interpretato con cautela.`
+        : `Distacco tra primo e secondo esito: ${edgePct} punti. Non è una probabilità di successo.`;
+
+    scorelines.sort((a, b) => b.p - a.p);
+    const drivers = [];
+    const sumLambda = lambdaHome + lambdaAway;
+    if (sumLambda >= 3) {
+      drivers.push({
+        factor: "Totale gol atteso alto",
+        impact: "+",
+        note: "Modello vede gara aperta (probabilità Over/BTTS cresce).",
+      });
+    } else if (sumLambda <= 2.1) {
+      drivers.push({
+        factor: "Totale gol atteso basso",
+        impact: "-",
+        note: "Modello vede gara chiusa (crescono 0-0 / 1-0 / 0-1).",
+      });
+    }
+    drivers.push({
+      factor: "Forza avversari",
+      impact: "+",
+      note: `Attacco e difesa stimati cronologicamente sul campione di lega (${coverage.trainingMatches} partite); copertura squadre: ${historySummary}.`,
+    });
+    if (coverage.historyLimited) {
+      drivers.push({
+        factor: "Storico squadra ridotto",
+        impact: "!",
+        note: "Una squadra non ha ancora uno storico sufficiente tra stagione precedente e stagione corrente: segnale 1X2 ridotto.",
+      });
+    }
+    drivers.push({
+      factor: "Dixon–Coles",
+      impact: "+",
+      note: `Correzione low-score attiva (rho=${rho}).`,
+    });
+
+    return {
+      model: {
+        name: "poisson_v1_6_dc_dynamic_team_strength",
+        maxGoals: maxG,
+        rho,
+        learningRate: DYNAMIC_STRENGTH_SETTINGS.learningRate,
+        blend: 1,
+        previousSeason,
+        currentSeason,
+      },
+      confidence: {
+        score: signal.score,
+        signalScore: signal.signalScore,
+        rawSignalScore: signal.rawSignalScore,
+        edge: edgePct,
+        level: signal.level,
+        risk: null,
+        note,
+      },
+      coverage,
+      expectedGoals: { home: lambdaHome, away: lambdaAway },
+      probabilities,
+      topScorelines: scorelines.slice(0, 3).map((item) => ({
+        score: item.score,
+        p: item.p / denominator,
+      })),
+      extras: {
+        over25: over25Raw / denominator,
+        bttsYes: bttsYesRaw / denominator,
+      },
+      drivers,
+      diagnostics: {
+        leagueBase: result.base,
+        strengths: result.strengths,
+      },
+    };
+  }
+
   try {
     // TTL consigliati (come avevamo detto)
     const TTL_STATS = 6 * 3600;
@@ -677,6 +1116,51 @@ async function handlePredict(request, env) {
       return json(
         { response: null, errors: { fixture: "missing_fields" } },
         422,
+        corsHeaders(),
+      );
+    }
+
+    if (Number(leagueId) === DYNAMIC_SERIE_A_LEAGUE_ID) {
+      const targetTimestamp = Date.parse(fx?.fixture?.date || "");
+      if (!Number.isFinite(targetTimestamp)) {
+        return json(
+          { response: null, errors: { fixture: "invalid_date" } },
+          422,
+          corsHeaders(),
+        );
+      }
+      const previousSeason = Number(season) - 1;
+      const TTL_PREVIOUS_SEASON = 7 * 24 * 3600;
+      const TTL_CURRENT_SEASON = 10 * 60;
+      const [previousFixtures, currentFixtures] = await Promise.all([
+        af(
+          `/fixtures?league=${leagueId}&season=${previousSeason}&status=FT&timezone=Europe/Rome`,
+          TTL_PREVIOUS_SEASON,
+        ),
+        af(
+          `/fixtures?league=${leagueId}&season=${season}&status=FT&timezone=Europe/Rome`,
+          TTL_CURRENT_SEASON,
+        ),
+      ]);
+      const result = calculateDynamicSerieAPrediction({
+        previousFixtures,
+        currentFixtures,
+        targetTimestamp,
+        homeTeamId: homeId,
+        awayTeamId: awayId,
+      });
+      return json(
+        {
+          response: dynamicPredictionPayload({
+            fx,
+            result,
+            rho,
+            previousSeason,
+            currentSeason: Number(season),
+          }),
+          errors: null,
+        },
+        200,
         corsHeaders(),
       );
     }
@@ -1470,4 +1954,3 @@ async function hmacSha256Hex(secret, message) {
   return hex;
 }
   
-
