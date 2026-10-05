@@ -154,16 +154,13 @@
     if (validPointer(cached)) return cached.round;
 
     const result = await window.apiGetV2(
-      `/fixtures?league=${encodeURIComponent(leagueId)}&season=${encodeURIComponent(season)}&next=20&timezone=Europe/Rome`,
+      `/fixtures/rounds?league=${encodeURIComponent(leagueId)}&season=${encodeURIComponent(season)}&current=true`,
       { retries: 0, cache: true },
     );
 
     if (result.kind !== "success") return { error: result };
 
-    const first = (result.arr || []).find(
-      (row) => row?.fixture?.id && row?.league?.round,
-    );
-    const round = first?.league?.round || "";
+    const round = String(result.arr?.[0] || "").trim();
     if (!round) return { error: { kind: "empty" } };
 
     writeJson(key, { round, ts: Date.now() });
