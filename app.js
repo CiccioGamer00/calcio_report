@@ -719,6 +719,14 @@ function setupTabs() {
   async function autoLoadFor(viewId) {
     // Match: niente fetch extra qui
     if (viewId === "matchView") return;
+
+    // Giornata è indipendente dalla fixture selezionata e si carica on-demand.
+    if (viewId === "matchdayPanel") {
+      if (typeof window.loadMatchdayPanel === "function") {
+        await window.loadMatchdayPanel();
+      }
+      return;
+    }
     if (viewId === "standingsPanel" && typeof loadStandings === "function") {
       // Se la tabella è già stata caricata per la selezione corrente,
       // tornando sulla scheda mostriamo subito il contenuto esistente.
@@ -847,7 +855,7 @@ function setupTabs() {
   window.addEventListener("cr:selection", () => {
     const activeTab = nav.querySelector(".tab.is-active");
     const view = activeTab?.getAttribute("data-view");
-    if (!view || view === "match") return;
+    if (!view || view === "match" || view === "matchdayPanel") return;
 
     // Il controller assegna nella stessa iterazione le richieste secondarie
     // condivise; partiamo subito dopo per poterle riusare senza duplicarle.

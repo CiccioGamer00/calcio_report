@@ -471,6 +471,7 @@
   }
 
   function appendSuccessDiagnostic(result, team, searchId) {
+    if (!result) return;
     const html = localDiagnostic({
       phase: "success",
       result,
@@ -535,11 +536,26 @@
 
     renderMainFixture(
       rawFixture,
-      nextTeamFixture,
+      window.CR_STATE.matchExtras.nextTeam || nextTeamFixture,
       team,
       window.CR_STATE.matchExtras.nextOpponent,
     );
     appendSuccessDiagnostic(mainResult, team, searchId);
+  }
+
+  function findNextFixtureAfterSelected(rows, fixture, rawFixture) {
+    const selectedTs = Date.parse(rawFixture?.fixture?.date || "");
+
+    return (rows || []).find((candidate) => {
+      if (!candidate?.fixture?.id) return false;
+      if (Number(candidate.fixture.id) === Number(fixture?.id)) return false;
+
+      const candidateTs = Date.parse(candidate?.fixture?.date || "");
+      if (Number.isFinite(selectedTs) && Number.isFinite(candidateTs)) {
+        return candidateTs > selectedTs;
+      }
+      return true;
+    });
   }
 
   async function loadOpponentNext({
@@ -550,6 +566,7 @@
     searchId,
     signal,
     mainResult,
+    afterSelected = false,
   }) {
     let opponentId = null;
     if (Number(team.id) === Number(fixture.home.id)) opponentId = fixture.away.id;
@@ -557,7 +574,7 @@
     if (!opponentId) return;
 
     const result = await window.apiGetV2(
-      `/fixtures?team=${encodeURIComponent(opponentId)}&next=2&timezone=Europe/Rome`,
+      `/fixtures?team=${encodeURIComponent(opponentId)}&next=${afterSelected ? 3 : 2}&timezone=Europe/Rome`,
       {
         retries: 0,
         signal,
@@ -580,17 +597,19 @@
     if (Number(window.CR_STATE.selection.fixture?.id) !== Number(fixture.id)) return;
     if (result.kind !== "success") return;
 
-    const nextOpponentFixture = (result.arr || []).find(
-      (candidate) =>
-        candidate?.fixture?.id &&
-        Number(candidate.fixture.id) !== Number(fixture.id),
-    );
+    const nextOpponentFixture = afterSelected
+      ? findNextFixtureAfterSelected(result.arr, fixture, rawFixture)
+      : (result.arr || []).find(
+          (candidate) =>
+            candidate?.fixture?.id &&
+            Number(candidate.fixture.id) !== Number(fixture.id),
+        );
     if (!nextOpponentFixture) return;
 
     window.CR_STATE.matchExtras.nextOpponent = nextOpponentFixture;
     renderMainFixture(
       rawFixture,
-      nextTeamFixture,
+      window.CR_STATE.matchExtras.nextTeam || nextTeamFixture,
       team,
       nextOpponentFixture,
     );
@@ -890,6 +909,124 @@
       }
     }
   }
+
+  async function selectFixtureDirect(rawFixture) {
+    const fixture = normalizeFixture(rawFixture);
+    if (!validFixture(fixture)) return false;
+
+    activeSearchAbort?.abort();
+    activeSearchAbort = new AbortController();
+    const signal = activeSearchAbort.signal;
+
+    clearTimeout(suggestTimer);
+    ++suggestSeq;
+    suggestAbort?.abort();
+    pendingSuggestion = null;
+    hideSuggestions(true);
+    hideLineups();
+    resetLegacyPanels();
+
+    const team = {
+      id: fixture.home.id,
+      name: fixture.home.name,
+      logo: fixture.home.logo || "",
+      country: "",
+    };
+    const searchId = window.crNextSearchId(
+      `${fixture.home.name} - ${fixture.away.name}`,
+    );
+
+    if (input) input.value = team.name;
+    if (typeof window.markWelcomeDone === "function") window.markWelcomeDone();
+
+    if (!window.crCommitSelection(searchId, team, fixture)) return false;
+
+    window.CR_STATE.matchExtras.nextTeam = null;
+    window.CR_STATE.matchExtras.nextOpponent = null;
+    renderMainFixture(rawFixture, null, team);
+
+    window.__CR_LAST_SEARCH_DEBUG__ = {
+      phase: "success",
+      searchId,
+      team,
+      fixture,
+      source: "matchday",
+    };
+
+    // Recupera l'eventuale gara successiva della squadra scelta solo per
+    // completare la card Match. La fixture cliccata resta sempre quella
+    // selezionata e non viene sostituita da una ricerca "next".
+    window.apiGetV2(
+      `/fixtures?team=${encodeURIComponent(team.id)}&next=3&timezone=Europe/Rome`,
+      {
+        retries: 0,
+        signal,
+        searchId,
+        cache: true,
+      },
+    ).then((result) => {
+      if (!window.crIsSearchActive(searchId) || result.kind !== "success") return;
+
+      const nextTeamFixture = findNextFixtureAfterSelected(
+        result.arr,
+        fixture,
+        rawFixture,
+      );
+
+      if (!nextTeamFixture) return;
+      window.CR_STATE.matchExtras.nextTeam = nextTeamFixture;
+      renderMainFixture(
+        rawFixture,
+        nextTeamFixture,
+        team,
+        window.CR_STATE.matchExtras.nextOpponent,
+      );
+    }).catch((err) => {
+      if (window.crIsSearchActive(searchId) && err?.name !== "AbortError") {
+        console.error("CR V2 matchday team next", err);
+      }
+    });
+
+    loadOpponentNext({
+      rawFixture,
+      fixture,
+      nextTeamFixture: null,
+      team,
+      searchId,
+      signal,
+      mainResult: null,
+      afterSelected: true,
+    }).catch((err) => {
+      if (window.crIsSearchActive(searchId) && err?.name !== "AbortError") {
+        console.error("CR V2 matchday opponent next", err);
+      }
+    });
+
+    window.__CR_MAIN_STANDINGS_PROMISE__ = loadMainStandingsMini({
+      rawFixture,
+      nextTeamFixture: null,
+      team,
+      searchId,
+      signal,
+      mainResult: null,
+    }).catch((err) => {
+      if (window.crIsSearchActive(searchId) && err?.name !== "AbortError") {
+        console.error("CR V2 matchday standings", err);
+      }
+    });
+
+    if (typeof window.loadLineupsPitch === "function") {
+      window.loadLineupsPitch({ searchId, signal }).catch((err) => {
+        if (window.crIsSearchActive(searchId) && err?.name !== "AbortError") {
+          console.error("CR V2 matchday official lineups", err);
+        }
+      });
+    }
+
+    return true;
+  }
+
+  window.selectFixtureDirect = selectFixtureDirect;
 
   input.addEventListener(
     "input",

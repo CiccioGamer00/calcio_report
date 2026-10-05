@@ -1468,6 +1468,7 @@ async function handlePredict(request, env) {
 // TTL in secondi in base alla rotta (conservativi ma efficaci)
 function cacheTtlFor(pathname, searchParams) {
   if (pathname === "/standings") return 60 * 10; // 10 min
+  if (pathname === "/fixtures/rounds") return 60 * 60 * 2; // 2 ore
   // NON cacheare mai rotte auth/admin (non passano qui, ma per sicurezza)
   if (pathname.startsWith("/auth/") || pathname.startsWith("/admin/")) return 0;
 
@@ -1477,6 +1478,12 @@ function cacheTtlFor(pathname, searchParams) {
 
   // Fixture details: cambia poco, ottimo per cache
   if (pathname === "/fixtures") {
+    // La composizione di una giornata (league + season + round) è stabile:
+    // la UI usa qui solo fixture id / squadre. Data, ora, stadio e arbitro
+    // vengono riletti dal fixture id quando l'utente apre la partita.
+    if (searchParams.has("round") && searchParams.has("league") && searchParams.has("season")) {
+      return 60 * 60 * 24 * 30; // 30 giorni
+    }
     // se è per id singolo, cache più lunga
     if (searchParams.has("id") || searchParams.has("fixture")) return 60 * 10; // 10 min
     // liste fixtures (team/last/next): più breve

@@ -735,3 +735,59 @@ edge:
   is removed automatically;
 - the prediction formula, dynamic ratings, probabilities and expected goals
   are not modified.
+
+## Matchday / Giornata — implementation candidate (2026-10-05)
+
+Branch: `feature/matchday` (created from current `main`, which is newer than the historical `core-v2` branch).
+
+Implemented, not yet merged/deployed:
+
+- new on-demand tab `📅 Giornata` inside the existing viewport, preserving the current UI identity;
+- curated first release: Serie A, Premier League, La Liga, Bundesliga, Ligue 1;
+- current round resolved through API-Football `/fixtures/rounds?league=...&season=...&current=true`;
+- current-round pointer cached for 2 hours;
+- fixed `league + season + round` fixture list cached for 30 days at Worker edge;
+- browser stores the stable matchday composition (fixture id + home/away teams/logos) in persistent `localStorage`;
+- dates/times are intentionally not rendered in the matchday list;
+- clicking a match reloads `/fixtures?id=...` and then commits that exact fixture directly into Core V2 selection;
+- direct fixture selection does not spoof/re-run the team search flow;
+- after direct selection, existing Match rendering, standings mini-load, official-lineup check and on-demand panels continue to use the shared selected fixture;
+- stale-response protection added when the user changes league quickly;
+- release asset version bumped to `20261005r1`;
+- added `tests/matchday-feature.test.mjs` and updated the release-assets expected version.
+
+Validation performed from Chat:
+
+- static integration checks passed;
+- JavaScript syntax parsing passed for `app.js`, `js/features/matchdayPanel.js`, `js/features/searchController.js` and versioned `worker/worker.js`;
+- runtime clone/test execution was not possible from the Chat container because direct outbound GitHub network access is blocked.
+
+Local verification completed on 2026-10-05:
+
+- local branch updated successfully;
+- automated checks verified: the six pre-existing tests remained green and the dedicated `matchday-feature.test.mjs` now passes after fixing a test-only assertion;
+- Serie A matchday list loaded correctly;
+- direct click Inter–Parma opened the exact selected fixture;
+- Premier League matchday list loaded correctly;
+- direct click Sunderland–Brighton opened the exact selected fixture;
+- next-fixture rendering was aligned with existing `main` behavior (next absolute commitment across competitions): Sunderland → Torrense and Brighton → Kauno Žalgiris verified manually;
+- a race condition that could erase one side's already-resolved "Prossima" fixture was fixed;
+- local diagnostic noise for direct fixture selection was removed.
+
+Worker production deployment completed on 2026-10-05:
+
+- Cloudflare Worker `calcio-report-proxy` manually deployed from the dashboard;
+- deployed version shown by Cloudflare: `3ddffc3f`, promoted to 100% traffic;
+- deployment changes limited to cache policy:
+  - `/fixtures/rounds` -> 2 hours;
+  - `/fixtures?league=...&season=...&round=...` -> 30 days;
+- auth, relay transport, prediction logic and other routes were not intentionally changed.
+
+Production Worker smoke test completed on 2026-10-05:
+
+- local frontend reloaded after Worker deployment;
+- Giornata → Serie A loaded normally through the deployed Worker path;
+- no regression observed in the tested path.
+
+Release status: PR #4 is ready to merge. The only remaining post-merge step is a short verification on `https://app.calcioreport.com/`, then mark the feature released.
+
