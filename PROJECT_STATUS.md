@@ -736,11 +736,11 @@ edge:
 - the prediction formula, dynamic ratings, probabilities and expected goals
   are not modified.
 
-## Matchday / Giornata — implementation candidate (2026-10-05)
+## Matchday / Giornata — RELEASED (2026-10-05)
 
 Branch: `feature/matchday` (created from current `main`, which is newer than the historical `core-v2` branch).
 
-Implemented, not yet merged/deployed:
+Implemented and released:
 
 - new on-demand tab `📅 Giornata` inside the existing viewport, preserving the current UI identity;
 - curated first release: Serie A, Premier League, La Liga, Bundesliga, Ligue 1;
@@ -789,5 +789,13 @@ Production Worker smoke test completed on 2026-10-05:
 - Giornata → Serie A loaded normally through the deployed Worker path;
 - no regression observed in the tested path.
 
-Release status: PR #4 is ready to merge. The only remaining post-merge step is a short verification on `https://app.calcioreport.com/`, then mark the feature released.
+Release completed on 2026-10-05:
+
+- PR #4 merged into `main` at commit `ee71d8e7367aac9c5392bdbaff55ddc8c8250775`;
+- GitHub Pages production at `https://app.calcioreport.com/` verified manually after merge;
+- the `📅 Giornata` tab is visible and functional in production;
+- Serie A and multiple other leagues reopen immediately after reload / Ctrl+F5 thanks to the intended cache reuse;
+- production behavior confirmed stable after repeated matchday navigation.
+
+Status: **RELEASED / VERIFIED IN PRODUCTION**.
 
