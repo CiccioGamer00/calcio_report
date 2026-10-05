@@ -774,10 +774,18 @@ Local verification completed on 2026-10-05:
 - a race condition that could erase one side's already-resolved "Prossima" fixture was fixed;
 - local diagnostic noise for direct fixture selection was removed.
 
+Worker production deployment completed on 2026-10-05:
+
+- Cloudflare Worker `calcio-report-proxy` manually deployed from the dashboard;
+- deployed version shown by Cloudflare: `3ddffc3f`, promoted to 100% traffic;
+- deployment changes limited to cache policy:
+  - `/fixtures/rounds` -> 2 hours;
+  - `/fixtures?league=...&season=...&round=...` -> 30 days;
+- auth, relay transport, prediction logic and other routes were not intentionally changed.
+
 Still required before release:
 
-1. deploy the updated Worker cache policy (2h current-round pointer, 30d fixed-round composition);
-2. smoke-test the deployed Worker path;
-3. merge PR #4 to `main`;
-4. verify GitHub Pages production and then mark the feature released.
+1. smoke-test the deployed Worker path;
+2. merge PR #4 to `main`;
+3. verify GitHub Pages production and then mark the feature released.
 
