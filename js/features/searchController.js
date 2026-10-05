@@ -543,6 +543,20 @@
     appendSuccessDiagnostic(mainResult, team, searchId);
   }
 
+  function isNextFixtureInCompetition(candidate, fixture, rawFixture) {
+    if (!candidate?.fixture?.id) return false;
+    if (Number(candidate.fixture.id) === Number(fixture?.id)) return false;
+    if (Number(candidate?.league?.id) !== Number(fixture?.leagueId)) return false;
+    if (Number(candidate?.league?.season) !== Number(fixture?.season)) return false;
+
+    const selectedTs = Date.parse(rawFixture?.fixture?.date || "");
+    const candidateTs = Date.parse(candidate?.fixture?.date || "");
+    if (Number.isFinite(selectedTs) && Number.isFinite(candidateTs)) {
+      return candidateTs > selectedTs;
+    }
+    return true;
+  }
+
   async function loadOpponentNext({
     rawFixture,
     fixture,
@@ -558,13 +572,8 @@
     if (Number(team.id) === Number(fixture.away.id)) opponentId = fixture.home.id;
     if (!opponentId) return;
 
-    const competitionQuery =
-      sameCompetition && fixture?.leagueId && fixture?.season
-        ? `&league=${encodeURIComponent(fixture.leagueId)}&season=${encodeURIComponent(fixture.season)}`
-        : "";
-
     const result = await window.apiGetV2(
-      `/fixtures?team=${encodeURIComponent(opponentId)}${competitionQuery}&next=5&timezone=Europe/Rome`,
+      `/fixtures?team=${encodeURIComponent(opponentId)}&next=${sameCompetition ? 20 : 2}&timezone=Europe/Rome`,
       {
         retries: 0,
         signal,
@@ -587,10 +596,11 @@
     if (Number(window.CR_STATE.selection.fixture?.id) !== Number(fixture.id)) return;
     if (result.kind !== "success") return;
 
-    const nextOpponentFixture = (result.arr || []).find(
-      (candidate) =>
-        candidate?.fixture?.id &&
-        Number(candidate.fixture.id) !== Number(fixture.id),
+    const nextOpponentFixture = (result.arr || []).find((candidate) =>
+      sameCompetition
+        ? isNextFixtureInCompetition(candidate, fixture, rawFixture)
+        : candidate?.fixture?.id &&
+          Number(candidate.fixture.id) !== Number(fixture.id),
     );
     if (!nextOpponentFixture) return;
 
@@ -945,7 +955,7 @@
     // completare la card Match. La fixture cliccata resta sempre quella
     // selezionata e non viene sostituita da una ricerca "next".
     window.apiGetV2(
-      `/fixtures?team=${encodeURIComponent(team.id)}&league=${encodeURIComponent(fixture.leagueId)}&season=${encodeURIComponent(fixture.season)}&next=5&timezone=Europe/Rome`,
+      `/fixtures?team=${encodeURIComponent(team.id)}&next=20&timezone=Europe/Rome`,
       {
         retries: 0,
         signal,
@@ -955,13 +965,9 @@
     ).then((result) => {
       if (!window.crIsSearchActive(searchId) || result.kind !== "success") return;
 
-      const selectedTs = Date.parse(rawFixture?.fixture?.date || "");
-      const nextTeamFixture = (result.arr || []).find((candidate) => {
-        if (!candidate?.fixture?.id) return false;
-        if (Number(candidate.fixture.id) === Number(fixture.id)) return false;
-        const ts = Date.parse(candidate?.fixture?.date || "");
-        return !Number.isFinite(selectedTs) || !Number.isFinite(ts) || ts > selectedTs;
-      });
+      const nextTeamFixture = (result.arr || []).find((candidate) =>
+        isNextFixtureInCompetition(candidate, fixture, rawFixture),
+      );
 
       if (!nextTeamFixture) return;
       window.CR_STATE.matchExtras.nextTeam = nextTeamFixture;
