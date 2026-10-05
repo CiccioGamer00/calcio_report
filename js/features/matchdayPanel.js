@@ -13,7 +13,7 @@
 
   const POINTER_TTL_MS = 2 * 60 * 60 * 1000;
   const FIXED_CACHE_PREFIX = "CR_MATCHDAY_V1";
-  let loadingPromise = null;
+  let loadSeq = 0;
 
   function safe(value) {
     if (typeof window.safeHTML === "function") return window.safeHTML(value);
@@ -195,7 +195,7 @@
     return fixtures;
   }
 
-  async function loadSelectedLeague() {
+  async function loadSelectedLeague(seq) {
     renderLeagueOptions();
 
     const select = document.getElementById("matchdayLeague");
@@ -206,12 +206,14 @@
     setBody('<p class="muted"><em>Carico la giornata…</em></p>');
 
     const resolved = await resolveRound(league.id, season);
+    if (seq !== loadSeq) return;
     if (typeof resolved !== "string") {
       setBody(`<p class="bad"><em>${safe(explainError(resolved?.error))}</em></p>`);
       return;
     }
 
     const fixtures = await loadFixedRound(league, season, resolved);
+    if (seq !== loadSeq) return;
     if (!Array.isArray(fixtures)) {
       setBody(`<p class="bad"><em>${safe(explainError(fixtures?.error))}</em></p>`);
       return;
@@ -226,11 +228,8 @@
   }
 
   async function loadMatchdayPanel() {
-    if (loadingPromise) return loadingPromise;
-    loadingPromise = loadSelectedLeague().finally(() => {
-      loadingPromise = null;
-    });
-    return loadingPromise;
+    const seq = ++loadSeq;
+    return loadSelectedLeague(seq);
   }
 
   async function openFixture(fixtureId, button) {
