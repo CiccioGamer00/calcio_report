@@ -471,6 +471,7 @@
   }
 
   function appendSuccessDiagnostic(result, team, searchId) {
+    if (!result) return;
     const html = localDiagnostic({
       phase: "success",
       result,
