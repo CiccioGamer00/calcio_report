@@ -54,6 +54,17 @@ assert.match(
 );
 assert.match(
   search,
+  /team=\\\$\\\{encodeURIComponent\\\(team\\\.id\\\)\\\}.*league=\\\$\\\{encodeURIComponent\\\(fixture\\\.leagueId\\\)\\\}.*season=\\\$\\\{encodeURIComponent\\\(fixture\\\.season\\\)\\\}/s,
+  "Le prossime gare del team selezionato da Giornata non sono vincolate a campionato e stagione.",
+);
+assert.match(
+  search,
+  /sameCompetition: true/,
+  "La prossima gara dell'avversaria non è vincolata alla competizione per il flusso Giornata.",
+);
+
+assert.match(
+  search,
   /source: "matchday"/,
   "La selezione diretta non è marcata come proveniente dalla Giornata.",
 );
