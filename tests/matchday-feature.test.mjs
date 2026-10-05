@@ -54,8 +54,13 @@ assert.match(
 );
 assert.match(
   search,
-  /team=\\\$\\\{encodeURIComponent\\\(team\\\.id\\\)\\\}.*league=\\\$\\\{encodeURIComponent\\\(fixture\\\.leagueId\\\)\\\}.*season=\\\$\\\{encodeURIComponent\\\(fixture\\\.season\\\)\\\}/s,
-  "Le prossime gare del team selezionato da Giornata non sono vincolate a campionato e stagione.",
+  /isNextFixtureInCompetition/,
+  "Il flusso Giornata non filtra localmente le prossime gare per competizione e stagione.",
+);
+assert.match(
+  search,
+  /team=\\\$\\\{encodeURIComponent\\\(team\\\.id\\\)\\\}&next=20/,
+  "Il flusso Giornata non recupera abbastanza prossime gare prima del filtro locale.",
 );
 assert.match(
   search,
