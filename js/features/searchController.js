@@ -536,25 +536,26 @@
 
     renderMainFixture(
       rawFixture,
-      nextTeamFixture,
+      window.CR_STATE.matchExtras.nextTeam || nextTeamFixture,
       team,
       window.CR_STATE.matchExtras.nextOpponent,
     );
     appendSuccessDiagnostic(mainResult, team, searchId);
   }
 
-  function isNextFixtureInCompetition(candidate, fixture, rawFixture) {
-    if (!candidate?.fixture?.id) return false;
-    if (Number(candidate.fixture.id) === Number(fixture?.id)) return false;
-    if (Number(candidate?.league?.id) !== Number(fixture?.leagueId)) return false;
-    if (Number(candidate?.league?.season) !== Number(fixture?.season)) return false;
-
+  function findNextFixtureAfterSelected(rows, fixture, rawFixture) {
     const selectedTs = Date.parse(rawFixture?.fixture?.date || "");
-    const candidateTs = Date.parse(candidate?.fixture?.date || "");
-    if (Number.isFinite(selectedTs) && Number.isFinite(candidateTs)) {
-      return candidateTs > selectedTs;
-    }
-    return true;
+
+    return (rows || []).find((candidate) => {
+      if (!candidate?.fixture?.id) return false;
+      if (Number(candidate.fixture.id) === Number(fixture?.id)) return false;
+
+      const candidateTs = Date.parse(candidate?.fixture?.date || "");
+      if (Number.isFinite(selectedTs) && Number.isFinite(candidateTs)) {
+        return candidateTs > selectedTs;
+      }
+      return true;
+    });
   }
 
   async function loadOpponentNext({
@@ -565,7 +566,7 @@
     searchId,
     signal,
     mainResult,
-    sameCompetition = false,
+    afterSelected = false,
   }) {
     let opponentId = null;
     if (Number(team.id) === Number(fixture.home.id)) opponentId = fixture.away.id;
@@ -573,7 +574,7 @@
     if (!opponentId) return;
 
     const result = await window.apiGetV2(
-      `/fixtures?team=${encodeURIComponent(opponentId)}&next=${sameCompetition ? 20 : 2}&timezone=Europe/Rome`,
+      `/fixtures?team=${encodeURIComponent(opponentId)}&next=${afterSelected ? 3 : 2}&timezone=Europe/Rome`,
       {
         retries: 0,
         signal,
@@ -596,18 +597,19 @@
     if (Number(window.CR_STATE.selection.fixture?.id) !== Number(fixture.id)) return;
     if (result.kind !== "success") return;
 
-    const nextOpponentFixture = (result.arr || []).find((candidate) =>
-      sameCompetition
-        ? isNextFixtureInCompetition(candidate, fixture, rawFixture)
-        : candidate?.fixture?.id &&
-          Number(candidate.fixture.id) !== Number(fixture.id),
-    );
+    const nextOpponentFixture = afterSelected
+      ? findNextFixtureAfterSelected(result.arr, fixture, rawFixture)
+      : (result.arr || []).find(
+          (candidate) =>
+            candidate?.fixture?.id &&
+            Number(candidate.fixture.id) !== Number(fixture.id),
+        );
     if (!nextOpponentFixture) return;
 
     window.CR_STATE.matchExtras.nextOpponent = nextOpponentFixture;
     renderMainFixture(
       rawFixture,
-      nextTeamFixture,
+      window.CR_STATE.matchExtras.nextTeam || nextTeamFixture,
       team,
       nextOpponentFixture,
     );
@@ -955,7 +957,7 @@
     // completare la card Match. La fixture cliccata resta sempre quella
     // selezionata e non viene sostituita da una ricerca "next".
     window.apiGetV2(
-      `/fixtures?team=${encodeURIComponent(team.id)}&next=20&timezone=Europe/Rome`,
+      `/fixtures?team=${encodeURIComponent(team.id)}&next=3&timezone=Europe/Rome`,
       {
         retries: 0,
         signal,
@@ -965,8 +967,10 @@
     ).then((result) => {
       if (!window.crIsSearchActive(searchId) || result.kind !== "success") return;
 
-      const nextTeamFixture = (result.arr || []).find((candidate) =>
-        isNextFixtureInCompetition(candidate, fixture, rawFixture),
+      const nextTeamFixture = findNextFixtureAfterSelected(
+        result.arr,
+        fixture,
+        rawFixture,
       );
 
       if (!nextTeamFixture) return;
@@ -991,7 +995,7 @@
       searchId,
       signal,
       mainResult: null,
-      sameCompetition: true,
+      afterSelected: true,
     }).catch((err) => {
       if (window.crIsSearchActive(searchId) && err?.name !== "AbortError") {
         console.error("CR V2 matchday opponent next", err);
