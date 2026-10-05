@@ -783,9 +783,11 @@ Worker production deployment completed on 2026-10-05:
   - `/fixtures?league=...&season=...&round=...` -> 30 days;
 - auth, relay transport, prediction logic and other routes were not intentionally changed.
 
-Still required before release:
+Production Worker smoke test completed on 2026-10-05:
 
-1. smoke-test the deployed Worker path;
-2. merge PR #4 to `main`;
-3. verify GitHub Pages production and then mark the feature released.
+- local frontend reloaded after Worker deployment;
+- Giornata → Serie A loaded normally through the deployed Worker path;
+- no regression observed in the tested path.
+
+Release status: PR #4 is ready to merge. The only remaining post-merge step is a short verification on `https://app.calcioreport.com/`, then mark the feature released.
 
