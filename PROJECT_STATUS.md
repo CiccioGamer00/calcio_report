@@ -762,11 +762,22 @@ Validation performed from Chat:
 - JavaScript syntax parsing passed for `app.js`, `js/features/matchdayPanel.js`, `js/features/searchController.js` and versioned `worker/worker.js`;
 - runtime clone/test execution was not possible from the Chat container because direct outbound GitHub network access is blocked.
 
-Still required before merge/deploy:
+Local verification completed on 2026-10-05:
 
-1. local pull/switch to `feature/matchday`;
-2. run the Node tests;
-3. local browser test of league switch + fixture click -> Match;
-4. deploy the branch Worker to a non-production/test target or explicitly promote after local verification;
-5. only after successful verification, merge to `main` and update this status as released.
+- local branch updated successfully;
+- automated checks verified: the six pre-existing tests remained green and the dedicated `matchday-feature.test.mjs` now passes after fixing a test-only assertion;
+- Serie A matchday list loaded correctly;
+- direct click Inter–Parma opened the exact selected fixture;
+- Premier League matchday list loaded correctly;
+- direct click Sunderland–Brighton opened the exact selected fixture;
+- next-fixture rendering was aligned with existing `main` behavior (next absolute commitment across competitions): Sunderland → Torrense and Brighton → Kauno Žalgiris verified manually;
+- a race condition that could erase one side's already-resolved "Prossima" fixture was fixed;
+- local diagnostic noise for direct fixture selection was removed.
+
+Still required before release:
+
+1. deploy the updated Worker cache policy (2h current-round pointer, 30d fixed-round composition);
+2. smoke-test the deployed Worker path;
+3. merge PR #4 to `main`;
+4. verify GitHub Pages production and then mark the feature released.
 
