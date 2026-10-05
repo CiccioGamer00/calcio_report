@@ -54,18 +54,23 @@ assert.match(
 );
 assert.match(
   search,
-  /isNextFixtureInCompetition/,
-  "Il flusso Giornata non filtra localmente le prossime gare per competizione e stagione.",
+  /findNextFixtureAfterSelected/,
+  "Il flusso Giornata non cerca la prima gara successiva alla fixture selezionata.",
 );
 assert.match(
   search,
-  /team=\\\$\\\{encodeURIComponent\\\(team\\\.id\\\)\\\}&next=20/,
-  "Il flusso Giornata non recupera abbastanza prossime gare prima del filtro locale.",
+  /team=\\\$\\\{encodeURIComponent\\\(team\\\.id\\\)\\\}&next=3/,
+  "Il flusso Giornata non replica la ricerca multi-competizione del main per la squadra di casa.",
 );
 assert.match(
   search,
-  /sameCompetition: true/,
-  "La prossima gara dell'avversaria non è vincolata alla competizione per il flusso Giornata.",
+  /afterSelected: true/,
+  "La prossima gara dell'avversaria non usa il criterio successivo alla fixture selezionata.",
+);
+assert.match(
+  search,
+  /window\.CR_STATE\.matchExtras\.nextTeam \|\| nextTeamFixture/,
+  "Un caricamento secondario può cancellare la prossima gara già risolta.",
 );
 
 assert.match(
