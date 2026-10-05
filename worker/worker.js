@@ -1468,6 +1468,7 @@ async function handlePredict(request, env) {
 // TTL in secondi in base alla rotta (conservativi ma efficaci)
 function cacheTtlFor(pathname, searchParams) {
   if (pathname === "/standings") return 60 * 10; // 10 min
+  if (pathname === "/fixtures/rounds") return 60 * 60 * 2; // 2 ore
   // NON cacheare mai rotte auth/admin (non passano qui, ma per sicurezza)
   if (pathname.startsWith("/auth/") || pathname.startsWith("/admin/")) return 0;
 
