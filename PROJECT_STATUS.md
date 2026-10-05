@@ -735,3 +735,38 @@ edge:
   is removed automatically;
 - the prediction formula, dynamic ratings, probabilities and expected goals
   are not modified.
+
+## Matchday / Giornata — implementation candidate (2026-10-05)
+
+Branch: `feature/matchday` (created from current `main`, which is newer than the historical `core-v2` branch).
+
+Implemented, not yet merged/deployed:
+
+- new on-demand tab `📅 Giornata` inside the existing viewport, preserving the current UI identity;
+- curated first release: Serie A, Premier League, La Liga, Bundesliga, Ligue 1;
+- current round resolved through API-Football `/fixtures/rounds?league=...&season=...&current=true`;
+- current-round pointer cached for 2 hours;
+- fixed `league + season + round` fixture list cached for 30 days at Worker edge;
+- browser stores the stable matchday composition (fixture id + home/away teams/logos) in persistent `localStorage`;
+- dates/times are intentionally not rendered in the matchday list;
+- clicking a match reloads `/fixtures?id=...` and then commits that exact fixture directly into Core V2 selection;
+- direct fixture selection does not spoof/re-run the team search flow;
+- after direct selection, existing Match rendering, standings mini-load, official-lineup check and on-demand panels continue to use the shared selected fixture;
+- stale-response protection added when the user changes league quickly;
+- release asset version bumped to `20261005r1`;
+- added `tests/matchday-feature.test.mjs` and updated the release-assets expected version.
+
+Validation performed from Chat:
+
+- static integration checks passed;
+- JavaScript syntax parsing passed for `app.js`, `js/features/matchdayPanel.js`, `js/features/searchController.js` and versioned `worker/worker.js`;
+- runtime clone/test execution was not possible from the Chat container because direct outbound GitHub network access is blocked.
+
+Still required before merge/deploy:
+
+1. local pull/switch to `feature/matchday`;
+2. run the Node tests;
+3. local browser test of league switch + fixture click -> Match;
+4. deploy the branch Worker to a non-production/test target or explicitly promote after local verification;
+5. only after successful verification, merge to `main` and update this status as released.
+
