@@ -57,9 +57,10 @@ assert.match(
   /findNextFixtureAfterSelected/,
   "Il flusso Giornata non cerca la prima gara successiva alla fixture selezionata.",
 );
-assert.match(
-  search,
-  /team=\\\$\\\{encodeURIComponent\\\(team\\\.id\\\)\\\}&next=3/,
+assert.ok(
+  search.includes(
+    '`/fixtures?team=${encodeURIComponent(team.id)}&next=3&timezone=Europe/Rome`',
+  ),
   "Il flusso Giornata non replica la ricerca multi-competizione del main per la squadra di casa.",
 );
 assert.match(
