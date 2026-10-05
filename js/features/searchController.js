@@ -551,14 +551,20 @@
     searchId,
     signal,
     mainResult,
+    sameCompetition = false,
   }) {
     let opponentId = null;
     if (Number(team.id) === Number(fixture.home.id)) opponentId = fixture.away.id;
     if (Number(team.id) === Number(fixture.away.id)) opponentId = fixture.home.id;
     if (!opponentId) return;
 
+    const competitionQuery =
+      sameCompetition && fixture?.leagueId && fixture?.season
+        ? `&league=${encodeURIComponent(fixture.leagueId)}&season=${encodeURIComponent(fixture.season)}`
+        : "";
+
     const result = await window.apiGetV2(
-      `/fixtures?team=${encodeURIComponent(opponentId)}&next=2&timezone=Europe/Rome`,
+      `/fixtures?team=${encodeURIComponent(opponentId)}${competitionQuery}&next=5&timezone=Europe/Rome`,
       {
         retries: 0,
         signal,
@@ -939,7 +945,7 @@
     // completare la card Match. La fixture cliccata resta sempre quella
     // selezionata e non viene sostituita da una ricerca "next".
     window.apiGetV2(
-      `/fixtures?team=${encodeURIComponent(team.id)}&next=5&timezone=Europe/Rome`,
+      `/fixtures?team=${encodeURIComponent(team.id)}&league=${encodeURIComponent(fixture.leagueId)}&season=${encodeURIComponent(fixture.season)}&next=5&timezone=Europe/Rome`,
       {
         retries: 0,
         signal,
@@ -979,6 +985,7 @@
       searchId,
       signal,
       mainResult: null,
+      sameCompetition: true,
     }).catch((err) => {
       if (window.crIsSearchActive(searchId) && err?.name !== "AbortError") {
         console.error("CR V2 matchday opponent next", err);
