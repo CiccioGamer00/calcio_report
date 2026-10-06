@@ -24,10 +24,10 @@ async function getFoulsForFixtureTeams(fixtureId, homeId, awayId) {
   out.set(homeId, { fouls: 0 });
   out.set(awayId, { fouls: 0 });
 
-  const r = await apiGet(`/fixtures/statistics?fixture=${fixtureId}`);
-  if (!r.ok || r.errors || !Array.isArray(r.arr) || r.arr.length === 0) return out;
+  const rows = await getFixtureStatisticsRowsCached(fixtureId);
+  if (rows.length === 0) return out;
 
-  for (const row of r.arr) {
+  for (const row of rows) {
     const teamId = row?.team?.id ?? null;
     if (!teamId) continue;
     if (teamId !== homeId && teamId !== awayId) continue;
