@@ -26,8 +26,6 @@ window.__IND_ACTIVE__ = window.__IND_ACTIVE__ || false;
    - click su altre schede NON attiva gli indicatori
 */
 
-const __FX_STATS_CACHE__ = new Map(); // fixtureId -> Map(teamId -> {corners, shots, shotsOn, fouls})
-
 function _num(v) {
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
@@ -60,22 +58,15 @@ function normalizeFixtureStats(statArray) {
 
 async function getFixtureStatsTeamsCached(fixtureId) {
   if (!fixtureId) return new Map();
-  if (__FX_STATS_CACHE__.has(fixtureId)) return __FX_STATS_CACHE__.get(fixtureId);
 
-  const r = await apiGet(`/fixtures/statistics?fixture=${fixtureId}`, {
-    retries: 2,
-    delays: [500, 1000],
-  });
-
+  const rows = await getFixtureStatisticsRowsCached(fixtureId);
   const out = new Map();
-  const rows = r.ok && !r.errors && Array.isArray(r.arr) ? r.arr : [];
   for (const row of rows) {
     const teamId = row?.team?.id ?? null;
     if (!teamId) continue;
     out.set(teamId, normalizeFixtureStats(row?.statistics || []));
   }
 
-  __FX_STATS_CACHE__.set(fixtureId, out);
   return out;
 }
 
