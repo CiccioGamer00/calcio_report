@@ -87,6 +87,46 @@ async function getFixtureEventsCached(fixtureId) {
 }
 
 /* =========================
+   CACHE: STATISTICHE per fixture
+   ========================= */
+// Corner, Tiri, Falli e Indicatori consumano tutti lo stesso endpoint.
+// La cache è condivisa per l'intera sessione e gli errori NON vengono salvati.
+const __FIXTURE_STATS_ROWS_CACHE__ = new Map(); // fixtureId -> raw rows[]
+const __FIXTURE_STATS_ROWS_INFLIGHT__ = new Map(); // fixtureId -> Promise<rows[]>
+
+async function getFixtureStatisticsRowsCached(fixtureId) {
+  if (!fixtureId) return [];
+
+  if (__FIXTURE_STATS_ROWS_CACHE__.has(fixtureId)) {
+    return __FIXTURE_STATS_ROWS_CACHE__.get(fixtureId);
+  }
+
+  if (__FIXTURE_STATS_ROWS_INFLIGHT__.has(fixtureId)) {
+    return __FIXTURE_STATS_ROWS_INFLIGHT__.get(fixtureId);
+  }
+
+  const pending = (async () => {
+    const r = await apiGet(`/fixtures/statistics?fixture=${fixtureId}`, {
+      retries: 2,
+      delays: [500, 1000],
+    });
+
+    if (!r.ok || r.errors || !Array.isArray(r.arr)) return [];
+
+    __FIXTURE_STATS_ROWS_CACHE__.set(fixtureId, r.arr);
+    return r.arr;
+  })();
+
+  __FIXTURE_STATS_ROWS_INFLIGHT__.set(fixtureId, pending);
+
+  try {
+    return await pending;
+  } finally {
+    __FIXTURE_STATS_ROWS_INFLIGHT__.delete(fixtureId);
+  }
+}
+
+/* =========================
    CORNERS per fixture teams
    ========================= */
 function normalizeCornersStats(statArray) {
@@ -115,13 +155,10 @@ async function getCornersForFixtureTeams(fixtureId, homeId, awayId) {
   out.set(homeId, 0);
   out.set(awayId, 0);
 
-  const r = await apiGet(`/fixtures/statistics?fixture=${fixtureId}`, {
-    retries: 2,
-    delays: [500, 1000],
-  });
-  if (!r.ok || r.errors || !Array.isArray(r.arr) || r.arr.length === 0) return out;
+  const rows = await getFixtureStatisticsRowsCached(fixtureId);
+  if (rows.length === 0) return out;
 
-  for (const row of r.arr) {
+  for (const row of rows) {
     const teamId = row?.team?.id ?? null;
     if (!teamId) continue;
     if (teamId !== homeId && teamId !== awayId) continue;
