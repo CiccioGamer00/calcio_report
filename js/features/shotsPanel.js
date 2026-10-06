@@ -61,12 +61,11 @@ async function getShotsForFixtureTeams(fixtureId, homeId, awayId) {
   out.set(homeId, { total: 0, onTarget: 0 });
   out.set(awayId, { total: 0, onTarget: 0 });
 
-  const r = await apiGet(`/fixtures/statistics?fixture=${fixtureId}`);
-  if (!r.ok || r.errors || !Array.isArray(r.arr) || r.arr.length === 0) return out;
+  const rows = await getFixtureStatisticsRowsCached(fixtureId);
+  if (rows.length === 0) return out;
 
-  // r.arr è una lista di 2 elementi (team home/away), con struttura:
-  // { team: { id, name }, statistics: [{type,value}, ...] }
-  for (const row of r.arr) {
+  // rows contiene i 2 team della fixture, riusati dalla cache condivisa.
+  for (const row of rows) {
     const teamId = row?.team?.id ?? null;
     if (!teamId) continue;
     if (teamId !== homeId && teamId !== awayId) continue;
