@@ -68,6 +68,30 @@ async function fetchTeamLastFixtures(teamId, limit) {
 }
 
 /* =========================
+   FIXTURES statistiche: solo gare ufficiali
+   ========================= */
+function isFriendlyFixture(fixtureRow) {
+  const leagueName = String(fixtureRow?.league?.name || "").trim();
+  return /friendl/i.test(leagueName);
+}
+
+async function fetchTeamStatCandidates(teamId, limit) {
+  if (!teamId) return [];
+
+  const n = Math.max(1, Number(limit) || 5);
+  // Cerchiamo più indietro per mantenere un campione di N gare valide
+  // anche quando ci sono amichevoli o fixture senza statistiche dettagliate.
+  const lookback = Math.min(30, n + 10);
+  const r = await apiGet(
+    `/fixtures?team=${teamId}&last=${lookback}&status=FT&timezone=Europe/Rome`,
+    { retries: 2, delays: [400, 900] },
+  );
+
+  if (!r.ok || r.errors || !Array.isArray(r.arr)) return [];
+  return r.arr.filter((fixtureRow) => !isFriendlyFixture(fixtureRow));
+}
+
+/* =========================
    CACHE: EVENTS per fixture
    ========================= */
 const __EVENTS_CACHE__ = new Map(); // fixtureId -> events[]
@@ -87,6 +111,46 @@ async function getFixtureEventsCached(fixtureId) {
 }
 
 /* =========================
+   CACHE: STATISTICHE per fixture
+   ========================= */
+// Corner, Tiri, Falli e Indicatori consumano tutti lo stesso endpoint.
+// La cache è condivisa per l'intera sessione e gli errori NON vengono salvati.
+const __FIXTURE_STATS_ROWS_CACHE__ = new Map(); // fixtureId -> raw rows[]
+const __FIXTURE_STATS_ROWS_INFLIGHT__ = new Map(); // fixtureId -> Promise<rows[]>
+
+async function getFixtureStatisticsRowsCached(fixtureId) {
+  if (!fixtureId) return [];
+
+  if (__FIXTURE_STATS_ROWS_CACHE__.has(fixtureId)) {
+    return __FIXTURE_STATS_ROWS_CACHE__.get(fixtureId);
+  }
+
+  if (__FIXTURE_STATS_ROWS_INFLIGHT__.has(fixtureId)) {
+    return __FIXTURE_STATS_ROWS_INFLIGHT__.get(fixtureId);
+  }
+
+  const pending = (async () => {
+    const r = await apiGet(`/fixtures/statistics?fixture=${fixtureId}`, {
+      retries: 2,
+      delays: [500, 1000],
+    });
+
+    if (!r.ok || r.errors || !Array.isArray(r.arr)) return [];
+
+    __FIXTURE_STATS_ROWS_CACHE__.set(fixtureId, r.arr);
+    return r.arr;
+  })();
+
+  __FIXTURE_STATS_ROWS_INFLIGHT__.set(fixtureId, pending);
+
+  try {
+    return await pending;
+  } finally {
+    __FIXTURE_STATS_ROWS_INFLIGHT__.delete(fixtureId);
+  }
+}
+
+/* =========================
    CORNERS per fixture teams
    ========================= */
 function normalizeCornersStats(statArray) {
@@ -101,7 +165,7 @@ function normalizeCornersStats(statArray) {
       const n = Number(v);
       if (Number.isFinite(n)) return n;
     }
-    return 0;
+    return null;
   };
 
   return {
@@ -110,25 +174,21 @@ function normalizeCornersStats(statArray) {
 }
 
 async function getCornersForFixtureTeams(fixtureId, homeId, awayId) {
-  // ritorna Map(teamId -> corners)
+  const rows = await getFixtureStatisticsRowsCached(fixtureId);
+  if (rows.length === 0) return null;
+
   const out = new Map();
-  out.set(homeId, 0);
-  out.set(awayId, 0);
 
-  const r = await apiGet(`/fixtures/statistics?fixture=${fixtureId}`, {
-    retries: 2,
-    delays: [500, 1000],
-  });
-  if (!r.ok || r.errors || !Array.isArray(r.arr) || r.arr.length === 0) return out;
-
-  for (const row of r.arr) {
+  for (const row of rows) {
     const teamId = row?.team?.id ?? null;
     if (!teamId) continue;
     if (teamId !== homeId && teamId !== awayId) continue;
 
     const stats = normalizeCornersStats(row?.statistics || []);
-    out.set(teamId, stats.corners || 0);
+    if (stats.corners == null) continue;
+    out.set(teamId, stats.corners);
   }
 
+  if (!out.has(homeId) || !out.has(awayId)) return null;
   return out;
 }

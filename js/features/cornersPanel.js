@@ -4,7 +4,7 @@
    CORNER (ultime X)
    ========================= */
 async function buildTeamCorners(team, limit) {
-  const fixtures = await fetchTeamLastFixtures(team.id, limit);
+  const fixtures = await fetchTeamStatCandidates(team.id, limit);
   if (fixtures.length === 0) {
     return {
       team,
@@ -29,6 +29,7 @@ async function buildTeamCorners(team, limit) {
 
   let minAgainst = null;
   let maxAgainst = null;
+  let missingStats = 0;
 
   for (const f of fixtures) {
     const fixtureId = f.fixture?.id ?? null;
@@ -39,17 +40,17 @@ async function buildTeamCorners(team, limit) {
     const away = f.teams?.away?.name ?? "—";
     const comp = f.league?.name ?? "—";
 
-    let cornersFor = 0;
-    let cornersAgainst = 0;
+    if (!fixtureId || !homeId || !awayId) continue;
 
-    if (fixtureId && homeId && awayId) {
-      const map = await getCornersForFixtureTeams(fixtureId, homeId, awayId);
-
-      cornersFor = map.get(team.id) ?? 0;
-
-      const oppId = team.id === homeId ? awayId : homeId;
-      cornersAgainst = map.get(oppId) ?? 0;
+    const map = await getCornersForFixtureTeams(fixtureId, homeId, awayId);
+    if (!map) {
+      missingStats++;
+      continue;
     }
+
+    const cornersFor = map.get(team.id);
+    const oppId = team.id === homeId ? awayId : homeId;
+    const cornersAgainst = map.get(oppId);
 
     sum += cornersFor;
     sumAgainst += cornersAgainst;
@@ -72,23 +73,30 @@ async function buildTeamCorners(team, limit) {
   cornersAgainst,
   isHome: Number(team.id) === Number(homeId) ? true : Number(team.id) === Number(awayId) ? false : null,
 });
+
+    if (perFixture.length >= limit) break;
   }
 
   const n = perFixture.length;
+  const note =
+    n < limit
+      ? `Campione: ${n}/${limit} gare ufficiali con statistiche disponibili (amichevoli escluse).`
+      : `Campione: ultime ${limit} gare ufficiali con statistiche disponibili (amichevoli escluse).`;
+
   return {
     team,
     limit: n,
     fixtures: perFixture,
 
-    avgCorners: (sum / n).toFixed(2),
-    minCorners: min ?? 0,
-    maxCorners: max ?? 0,
+    avgCorners: n > 0 ? (sum / n).toFixed(2) : "—",
+    minCorners: n > 0 ? min ?? 0 : "—",
+    maxCorners: n > 0 ? max ?? 0 : "—",
 
-    avgCornersAgainst: (sumAgainst / n).toFixed(2),
-    minCornersAgainst: minAgainst ?? 0,
-    maxCornersAgainst: maxAgainst ?? 0,
+    avgCornersAgainst: n > 0 ? (sumAgainst / n).toFixed(2) : "—",
+    minCornersAgainst: n > 0 ? minAgainst ?? 0 : "—",
+    maxCornersAgainst: n > 0 ? maxAgainst ?? 0 : "—",
 
-    note: limit > n ? "Copertura parziale (meno partite disponibili)." : "",
+    note,
   };
 }
 
@@ -100,7 +108,7 @@ function renderTeamCornersSummary(form) {
       <div class="v">
         <span class="teamline">
           ${t.logo ? `<img class="logo" src="${safeHTML(t.logo)}" alt="logo" />` : ""}
-          <span class="pill">ultime ${safeHTML(form.limit)}</span>
+          <span class="pill">ultime ${safeHTML(form.limit)} ufficiali</span>
 
           <span class="pill">Fatti media ${safeHTML(form.avgCorners)}</span>
           <span class="pill">Fatti min ${safeHTML(form.minCorners)}</span>
@@ -197,7 +205,7 @@ const oppNameHtml = (isHome === false)
           ${t.logo ? `<img class="teamLogo" src="${safeHTML(t.logo)}" alt="logo">` : ``}
           <div class="teamName">${safeHTML(t.name)}</div>
         </div>
-        <div class="teamLastN">Ultime ${safeHTML(lastN)}</div>
+        <div class="teamLastN">Ultime ${safeHTML(lastN)} ufficiali</div>
       </div>
 
       <div class="teamChips">${chips}</div>

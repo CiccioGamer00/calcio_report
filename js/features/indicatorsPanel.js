@@ -26,8 +26,6 @@ window.__IND_ACTIVE__ = window.__IND_ACTIVE__ || false;
    - click su altre schede NON attiva gli indicatori
 */
 
-const __FX_STATS_CACHE__ = new Map(); // fixtureId -> Map(teamId -> {corners, shots, shotsOn, fouls})
-
 function _num(v) {
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
@@ -47,7 +45,7 @@ function normalizeFixtureStats(statArray) {
       const n = _num(v);
       if (n != null) return n;
     }
-    return 0;
+    return null;
   };
 
   return {
@@ -60,22 +58,15 @@ function normalizeFixtureStats(statArray) {
 
 async function getFixtureStatsTeamsCached(fixtureId) {
   if (!fixtureId) return new Map();
-  if (__FX_STATS_CACHE__.has(fixtureId)) return __FX_STATS_CACHE__.get(fixtureId);
 
-  const r = await apiGet(`/fixtures/statistics?fixture=${fixtureId}`, {
-    retries: 2,
-    delays: [500, 1000],
-  });
-
+  const rows = await getFixtureStatisticsRowsCached(fixtureId);
   const out = new Map();
-  const rows = r.ok && !r.errors && Array.isArray(r.arr) ? r.arr : [];
   for (const row of rows) {
     const teamId = row?.team?.id ?? null;
     if (!teamId) continue;
     out.set(teamId, normalizeFixtureStats(row?.statistics || []));
   }
 
-  __FX_STATS_CACHE__.set(fixtureId, out);
   return out;
 }
 
@@ -139,6 +130,12 @@ function avg(arr) {
   return a.reduce((s, v) => s + v, 0) / a.length;
 }
 
+function avgOrNull(arr) {
+  const a = (arr || []).map(Number).filter((x) => Number.isFinite(x));
+  if (!a.length) return null;
+  return a.reduce((s, v) => s + v, 0) / a.length;
+}
+
 async function buildTeamPack(team, limit) {
   const teamId = team?.id;
   if (!teamId) {
@@ -150,19 +147,19 @@ async function buildTeamPack(team, limit) {
       ga1Pct: 0,
       ga2Pct: 0,
       avgCards: 0,
-      avgCorners: 0,
-      avgCornersAgainst: 0,
-      avgShotsFor: 0,
-      avgShotsAgainst: 0,
-      avgOnTargetFor: 0,
-      avgOnTargetAgainst: 0,
-      avgFoulsFor: 0,
-      avgFoulsAgainst: 0,
+      avgCorners: null,
+      avgCornersAgainst: null,
+      avgShotsFor: null,
+      avgShotsAgainst: null,
+      avgOnTargetFor: null,
+      avgOnTargetAgainst: null,
+      avgFoulsFor: null,
+      avgFoulsAgainst: null,
     };
   }
 
   const n = Math.max(5, Number(limit) || 10);
-  const last = await fetchTeamLastFixtures(teamId, n);
+  const last = await fetchTeamStatCandidates(teamId, n);
 
   const gf = [];
   const ga = [];
@@ -187,37 +184,83 @@ async function buildTeamPack(team, limit) {
     const aId = fx?.teams?.away?.id;
     if (!fid || !hId || !aId) continue;
 
-    const g = goalsForAgainstWithHalves(teamId, fx);
-    gf.push(g.gf);
-    ga.push(g.ga);
-    gf1.push(g.gf1 > 0 ? 1 : 0);
-    ga1.push(g.ga1 > 0 ? 1 : 0);
-    gf2.push(g.gf2 > 0 ? 1 : 0);
-    ga2.push(g.ga2 > 0 ? 1 : 0);
+    // Gol e cartellini: ultime N gare ufficiali.
+    if (gf.length < n) {
+      const g = goalsForAgainstWithHalves(teamId, fx);
+      gf.push(g.gf);
+      ga.push(g.ga);
+      gf1.push(g.gf1 > 0 ? 1 : 0);
+      ga1.push(g.ga1 > 0 ? 1 : 0);
+      gf2.push(g.gf2 > 0 ? 1 : 0);
+      ga2.push(g.ga2 > 0 ? 1 : 0);
 
-    // cards via events
-    try {
-      const c = await countTeamCardsForFixture(fid, teamId);
-      if (Number.isFinite(c)) teamCards.push(c);
-    } catch {}
+      try {
+        const cards = await countTeamCardsForFixture(fid, teamId);
+        if (Number.isFinite(cards)) teamCards.push(cards);
+      } catch {}
+    }
 
-    // stats via fixtures/statistics
-    const oppId = Number(teamId) === Number(hId) ? aId : hId;
-    const statsMap = await getFixtureStatsTeamsCached(fid);
-    const me = statsMap.get(teamId) || { corners: 0, shots: 0, shotsOn: 0, fouls: 0 };
-    const opp = statsMap.get(oppId) || { corners: 0, shots: 0, shotsOn: 0, fouls: 0 };
+    // Corner, tiri e falli: ultime N gare ufficiali CON statistica disponibile.
+    const needsStats =
+      cornersFor.length < n ||
+      shotsFor.length < n ||
+      otFor.length < n ||
+      foulsFor.length < n;
 
-    cornersFor.push(Number(me.corners) || 0);
-    cornersAg.push(Number(opp.corners) || 0);
+    if (needsStats) {
+      const oppId = Number(teamId) === Number(hId) ? aId : hId;
+      const statsMap = await getFixtureStatsTeamsCached(fid);
+      const me = statsMap.get(teamId);
+      const opp = statsMap.get(oppId);
 
-    shotsFor.push(Number(me.shots) || 0);
-    shotsAg.push(Number(opp.shots) || 0);
+      if (me && opp) {
+        if (
+          cornersFor.length < n &&
+          me.corners != null &&
+          opp.corners != null
+        ) {
+          cornersFor.push(Number(me.corners));
+          cornersAg.push(Number(opp.corners));
+        }
 
-    otFor.push(Number(me.shotsOn) || 0);
-    otAg.push(Number(opp.shotsOn) || 0);
+        if (
+          shotsFor.length < n &&
+          me.shots != null &&
+          opp.shots != null
+        ) {
+          shotsFor.push(Number(me.shots));
+          shotsAg.push(Number(opp.shots));
+        }
 
-    foulsFor.push(Number(me.fouls) || 0);
-    foulsAg.push(Number(opp.fouls) || 0);
+        if (
+          otFor.length < n &&
+          me.shotsOn != null &&
+          opp.shotsOn != null
+        ) {
+          otFor.push(Number(me.shotsOn));
+          otAg.push(Number(opp.shotsOn));
+        }
+
+        if (
+          foulsFor.length < n &&
+          me.fouls != null &&
+          opp.fouls != null
+        ) {
+          foulsFor.push(Number(me.fouls));
+          foulsAg.push(Number(opp.fouls));
+        }
+      }
+    }
+
+    if (
+      gf.length >= n &&
+      cornersFor.length >= n &&
+      shotsFor.length >= n &&
+      otFor.length >= n &&
+      foulsFor.length >= n
+    ) {
+      break;
+    }
   }
 
   const matches = Math.max(1, gf.length);
@@ -232,16 +275,16 @@ async function buildTeamPack(team, limit) {
     ga2Pct: pct(ga2),
     avgCards: avg(teamCards),
 
-    avgCorners: avg(cornersFor),
-    avgCornersAgainst: avg(cornersAg),
+    avgCorners: avgOrNull(cornersFor),
+    avgCornersAgainst: avgOrNull(cornersAg),
 
-    avgShotsFor: avg(shotsFor),
-    avgShotsAgainst: avg(shotsAg),
-    avgOnTargetFor: avg(otFor),
-    avgOnTargetAgainst: avg(otAg),
+    avgShotsFor: avgOrNull(shotsFor),
+    avgShotsAgainst: avgOrNull(shotsAg),
+    avgOnTargetFor: avgOrNull(otFor),
+    avgOnTargetAgainst: avgOrNull(otAg),
 
-    avgFoulsFor: avg(foulsFor),
-    avgFoulsAgainst: avg(foulsAg),
+    avgFoulsFor: avgOrNull(foulsFor),
+    avgFoulsAgainst: avgOrNull(foulsAg),
   };
 }
 
@@ -412,8 +455,10 @@ async function countTeamCardsForFixture(fixtureId, teamId) {
 }
 
 async function computeBettingForTeam(teamId, n, lines) {
-  const last = await fetchTeamLastFixtures(teamId, n);
+  const last = await fetchTeamStatCandidates(teamId, n);
   const sample = [];
+  let baseCount = 0;
+  let cornerCount = 0;
 
   for (const fx of last) {
     const fid = fx?.fixture?.id;
@@ -421,35 +466,50 @@ async function computeBettingForTeam(teamId, n, lines) {
     const aId = fx?.teams?.away?.id;
     if (!fid || !hId || !aId) continue;
 
-    const gTot = goalsTotalFromFixtureRow(fx);
-    const btts = bttsFromFixtureRow(fx);
+    let goalsTotal = null;
+    let btts = null;
+    let cardsTotal = null;
+    let teamCards = null;
 
-    // corners e cards richiedono chiamate per fixture
-    const cornersMap = await getCornersForFixtureTeams(fid, hId, aId);
-    const cHome = Number(cornersMap.get(hId) || 0);
-    const cAway = Number(cornersMap.get(aId) || 0);
-    const cTot = cHome + cAway;
+    if (baseCount < n) {
+      goalsTotal = goalsTotalFromFixtureRow(fx);
+      btts = bttsFromFixtureRow(fx);
+      cardsTotal = await countCardsForFixture(fid);
+      teamCards = await countTeamCardsForFixture(fid, teamId);
+      baseCount++;
+    }
 
-    const cardsTot = await countCardsForFixture(fid);
+    let cornersTotal = null;
+    let teamCorners = null;
 
-    // per-squadra (della squadra "teamId" in analisi)
-    const isHome = Number(teamId) === Number(hId);
-    const teamCorners = isHome ? cHome : cAway;
-    const teamCards = await countTeamCardsForFixture(fid, teamId);
+    if (cornerCount < n) {
+      const cornersMap = await getCornersForFixtureTeams(fid, hId, aId);
+
+      if (cornersMap) {
+        const cHome = cornersMap.get(hId);
+        const cAway = cornersMap.get(aId);
+
+        if (cHome != null && cAway != null) {
+          cornersTotal = Number(cHome) + Number(cAway);
+          const isHome = Number(teamId) === Number(hId);
+          teamCorners = isHome ? Number(cHome) : Number(cAway);
+          cornerCount++;
+        }
+      }
+    }
 
     sample.push({
-      goalsTotal: gTot,
-      btts: btts,
-
-      cornersTotal: Number.isFinite(cTot) ? cTot : null,
-      cardsTotal: Number.isFinite(cardsTot) ? cardsTot : null,
-
-      teamCorners: Number.isFinite(teamCorners) ? teamCorners : null,
-      teamCards: Number.isFinite(teamCards) ? teamCards : null,
+      goalsTotal,
+      btts,
+      cornersTotal,
+      cardsTotal: Number.isFinite(Number(cardsTotal)) ? Number(cardsTotal) : null,
+      teamCorners: Number.isFinite(Number(teamCorners)) ? Number(teamCorners) : null,
+      teamCards: Number.isFinite(Number(teamCards)) ? Number(teamCards) : null,
     });
+
+    if (baseCount >= n && cornerCount >= n) break;
   }
 
-  // calcoli hit-rate
   const validGoals = sample.filter((x) => x.goalsTotal != null);
   const validBTTS = sample.filter((x) => x.btts != null);
   const validCorners = sample.filter((x) => x.cornersTotal != null);
@@ -477,17 +537,32 @@ async function computeBettingForTeam(teamId, n, lines) {
 
   return {
     nRequested: n,
-    goalsTotals: validGoals.map(x => x.goalsTotal),
+    goalsTotals: validGoals.map((x) => x.goalsTotal),
 
     over25: { hit: over25Hit, total: validGoals.length },
     bttsYes: { hit: bttsYesHit, total: validBTTS.length },
-    
 
-    overCorners: { hit: overCornersHit, total: validCorners.length, line: lines.corners },
-    overCards: { hit: overCardsHit, total: validCards.length, line: lines.cards },
+    overCorners: {
+      hit: overCornersHit,
+      total: validCorners.length,
+      line: lines.corners,
+    },
+    overCards: {
+      hit: overCardsHit,
+      total: validCards.length,
+      line: lines.cards,
+    },
 
-    teamOverCorners: { hit: overTeamCornersHit, total: validTeamCorners.length, line: lines.teamCorners },
-    teamOverCards: { hit: overTeamCardsHit, total: validTeamCards.length, line: lines.teamCards },
+    teamOverCorners: {
+      hit: overTeamCornersHit,
+      total: validTeamCorners.length,
+      line: lines.teamCorners,
+    },
+    teamOverCards: {
+      hit: overTeamCardsHit,
+      total: validTeamCards.length,
+      line: lines.teamCards,
+    },
   };
 }
 
@@ -761,7 +836,7 @@ function renderBettingHTML(B, homeMeta, awayMeta, goalsLine) {
     <div class="bet-box">
       <div class="bet-head2">
         <strong>Bookmaker</strong>
-        <span class="muted">Hit rate ultime ${safeHTML(B.n)}</span>
+        <span class="muted">Hit rate ultime ${safeHTML(B.n)} ufficiali</span>
       </div>
 
       ${renderBetRow(overGoalsTitle, homeMeta, awayMeta, overGoalsHome, overGoalsAway)}
@@ -870,6 +945,7 @@ function publishIndicatorData(key, payload) {
    ========================= */
 function renderIndicators() {
   const I = window.__IND__ || {};
+  const sampleN = typeof getLimitForTeams === "function" ? getLimitForTeams() : 5;
   const teams = I.teams;
   const corners = I.corners;
   const shots = I.shots;
@@ -941,7 +1017,7 @@ function renderIndicators() {
 
   // --- CORNER attesi
   let cornersExpected = null, cornersScore = null, cornersHome = null, cornersAway = null;
-  if (corners?.home && corners?.away) {
+  if (corners?.home && corners?.away && [corners.home.avgCorners, corners.home.avgCornersAgainst, corners.away.avgCorners, corners.away.avgCornersAgainst].every((v) => v != null && Number.isFinite(Number(v)))) {
     cornersHome = mean(corners.home.avgCorners, corners.away.avgCornersAgainst);
     cornersAway = mean(corners.away.avgCorners, corners.home.avgCornersAgainst);
     cornersExpected = cornersHome + cornersAway;
@@ -949,7 +1025,7 @@ function renderIndicators() {
 
   // --- TIRI attesi
   let shotsExpected = null, shotsScore = null, shotsHome = null, shotsAway = null, otExpected = null, otHome = null, otAway = null;
-  if (shots?.home && shots?.away) {
+  if (shots?.home && shots?.away && [shots.home.avgShotsFor, shots.home.avgShotsAgainst, shots.home.avgOnTargetFor, shots.home.avgOnTargetAgainst, shots.away.avgShotsFor, shots.away.avgShotsAgainst, shots.away.avgOnTargetFor, shots.away.avgOnTargetAgainst].every((v) => v != null && Number.isFinite(Number(v)))) {
     shotsHome = mean(shots.home.avgShotsFor, shots.away.avgShotsAgainst);
     shotsAway = mean(shots.away.avgShotsFor, shots.home.avgShotsAgainst);
     shotsExpected = shotsHome + shotsAway;
@@ -968,7 +1044,7 @@ function renderIndicators() {
 
   // --- FALLI attesi
   let foulsExpected = null, foulsScore = null, foulsHome = null, foulsAway = null;
-  if (fouls?.home && fouls?.away) {
+  if (fouls?.home && fouls?.away && [fouls.home.avgFoulsFor, fouls.home.avgFoulsAgainst, fouls.away.avgFoulsFor, fouls.away.avgFoulsAgainst].every((v) => v != null && Number.isFinite(Number(v)))) {
     foulsHome = mean(fouls.home.avgFoulsFor, fouls.away.avgFoulsAgainst);
     foulsAway = mean(fouls.away.avgFoulsFor, fouls.home.avgFoulsAgainst);
     foulsExpected = foulsHome + foulsAway;
@@ -1021,6 +1097,7 @@ if (el) el.innerHTML = html;
       <button class="btn" onclick="window.__IND_ACTIVE__=false; renderIndicators();">Chiudi</button>
     </div>
     ${summary}
+    <p class="muted" style="margin:6px 0 12px;"><em>Campione: ultime ${safeHTML(sampleN)} gare ufficiali. Corner, tiri e falli usano solo gare con statistiche disponibili.</em></p>
     <div class="ind-grid">
       ${tile({
         icon: "⚽",

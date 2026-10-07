@@ -46,7 +46,7 @@ function normalizeStats(statArray) {
       const n = Number(v);
       if (Number.isFinite(n)) return n;
     }
-    return 0;
+    return null;
   };
 
   return {
@@ -56,30 +56,26 @@ function normalizeStats(statArray) {
 }
 
 async function getShotsForFixtureTeams(fixtureId, homeId, awayId) {
-  // ritorna una Map(teamId -> { total, onTarget })
+  const rows = await getFixtureStatisticsRowsCached(fixtureId);
+  if (rows.length === 0) return null;
+
   const out = new Map();
-  out.set(homeId, { total: 0, onTarget: 0 });
-  out.set(awayId, { total: 0, onTarget: 0 });
-
-  const r = await apiGet(`/fixtures/statistics?fixture=${fixtureId}`);
-  if (!r.ok || r.errors || !Array.isArray(r.arr) || r.arr.length === 0) return out;
-
-  // r.arr è una lista di 2 elementi (team home/away), con struttura:
-  // { team: { id, name }, statistics: [{type,value}, ...] }
-  for (const row of r.arr) {
+  for (const row of rows) {
     const teamId = row?.team?.id ?? null;
     if (!teamId) continue;
     if (teamId !== homeId && teamId !== awayId) continue;
 
     const stats = normalizeStats(row?.statistics || []);
+    if (stats.total == null || stats.onTarget == null) continue;
     out.set(teamId, stats);
   }
 
+  if (!out.has(homeId) || !out.has(awayId)) return null;
   return out;
 }
 
 async function buildTeamShots(team, limit) {
-  const fixtures = await fetchTeamLastFixtures(team.id, limit);
+  const fixtures = await fetchTeamStatCandidates(team.id, limit);
   if (fixtures.length === 0) {
     return {
       team,
@@ -99,6 +95,7 @@ async function buildTeamShots(team, limit) {
   let sumForOT = 0;
   let sumAg = 0;
   let sumAgOT = 0;
+  let missingStats = 0;
 
   for (const f of fixtures) {
     const fixtureId = f.fixture?.id ?? null;
@@ -111,23 +108,22 @@ async function buildTeamShots(team, limit) {
     const away = f.teams?.away?.name ?? "—";
     const comp = f.league?.name ?? "—";
 
-    let shotsFor = 0;
-    let shotsForOT = 0;
-    let shotsAgainst = 0;
-    let shotsAgainstOT = 0;
+    if (!fixtureId || !homeId || !awayId) continue;
 
-    if (fixtureId && homeId && awayId) {
-      const map = await getShotsForFixtureTeams(fixtureId, homeId, awayId);
-
-      const mine = map.get(team.id) || { total: 0, onTarget: 0 };
-      shotsFor = mine.total;
-      shotsForOT = mine.onTarget;
-
-      const oppId = team.id === homeId ? awayId : homeId;
-      const opp = map.get(oppId) || { total: 0, onTarget: 0 };
-      shotsAgainst = opp.total;
-      shotsAgainstOT = opp.onTarget;
+    const map = await getShotsForFixtureTeams(fixtureId, homeId, awayId);
+    if (!map) {
+      missingStats++;
+      continue;
     }
+
+    const mine = map.get(team.id);
+    const shotsFor = mine.total;
+    const shotsForOT = mine.onTarget;
+
+    const oppId = team.id === homeId ? awayId : homeId;
+    const opp = map.get(oppId);
+    const shotsAgainst = opp.total;
+    const shotsAgainstOT = opp.onTarget;
 
     sumFor += shotsFor;
     sumForOT += shotsForOT;
@@ -154,19 +150,25 @@ async function buildTeamShots(team, limit) {
        : Number(team.id) === Number(awayId) ? false
        : null,
 });
+
+    if (perFixture.length >= limit) break;
   }
 
   const n = perFixture.length;
+  const note =
+    n < limit
+      ? `Campione: ${n}/${limit} gare ufficiali con statistiche disponibili (amichevoli escluse).`
+      : `Campione: ultime ${limit} gare ufficiali con statistiche disponibili (amichevoli escluse).`;
 
   return {
     team,
     limit: n,
     fixtures: perFixture,
-    avgShotsFor: (sumFor / n).toFixed(2),
-    avgOnTargetFor: (sumForOT / n).toFixed(2),
-    avgShotsAgainst: (sumAg / n).toFixed(2),
-    avgOnTargetAgainst: (sumAgOT / n).toFixed(2),
-    note: limit > n ? "Copertura parziale (meno partite disponibili)." : "",
+    avgShotsFor: n > 0 ? (sumFor / n).toFixed(2) : "—",
+    avgOnTargetFor: n > 0 ? (sumForOT / n).toFixed(2) : "—",
+    avgShotsAgainst: n > 0 ? (sumAg / n).toFixed(2) : "—",
+    avgOnTargetAgainst: n > 0 ? (sumAgOT / n).toFixed(2) : "—",
+    note,
   };
 }
 
@@ -178,7 +180,7 @@ function renderTeamShotsSummary(form) {
       <div class="v">
         <span class="teamline">
           ${t.logo ? `<img class="logo" src="${safeHTML(t.logo)}" alt="logo" />` : ""}
-          <span class="pill">ultime ${safeHTML(form.limit)}</span>
+          <span class="pill">ultime ${safeHTML(form.limit)} ufficiali</span>
 
           <span class="pill">Tiri fatti ${safeHTML(form.avgShotsFor)}</span>
           <span class="pill">In porta ${safeHTML(form.avgOnTargetFor)}</span>
@@ -285,7 +287,7 @@ const oppNameHtml = (isHome === false)
           ${t.logo ? `<img class="teamLogo" src="${safeHTML(t.logo)}" alt="logo">` : ``}
           <div class="teamName">${safeHTML(t.name)}</div>
         </div>
-        <div class="teamLastN">Ultime ${safeHTML(lastN)}</div>
+        <div class="teamLastN">Ultime ${safeHTML(lastN)} ufficiali</div>
       </div>
 
       <div class="teamChips">${chips}</div>
