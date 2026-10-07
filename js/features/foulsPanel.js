@@ -38,9 +38,6 @@ async function getFoulsForFixtureTeams(fixtureId, homeId, awayId) {
   return out;
 }
 
-  return out;
-}
-
 async function buildTeamFouls(team, limit) {
   const fixtures = await fetchTeamLastFixtures(team.id, limit);
   if (fixtures.length === 0) {
