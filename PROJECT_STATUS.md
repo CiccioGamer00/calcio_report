@@ -489,7 +489,7 @@ Implemented behavior:
 
 Focused automated tests passed for Under/Over direction, decision boundaries, the medium-shots band, missing values, the new `Forza N/100` rendering and unchanged goal percentages. The real UI test was completed successfully after a hard refresh and one `Carica dati` action. The Indicators score-semantics bug is closed.
 
-### Shared statistics cache and official sample — VERIFIED 2026-10-07
+### Shared statistics cache and official sample — RELEASED / VERIFIED IN PRODUCTION 2026-10-07
 
 - Corner, Tiri, Falli and Indicatori now reuse one session-wide fixture-statistics cache.
 - Concurrent requests for the same fixture are deduplicated; failed responses are not cached.
@@ -499,6 +499,8 @@ Focused automated tests passed for Under/Over direction, decision boundaries, th
 - The UI now states that the sample uses the latest official matches; Indicatori also explains that Corner, Tiri and Falli require available statistics.
 - Local regression test on Napoli-Frosinone confirmed that the Frosinone-Benevento friendly no longer distorts the sample and Indicatori loads correctly.
 - Automated coverage added for shared cache behavior, missing statistics, official-sample filtering and frontend JavaScript syntax.
+- PR #6 merged into `main` at commit `ecf9d0268bfdc8a542e06a1dbbad018103a76aa3`.
+- Production smoke test on `https://app.calcioreport.com/` passed after Ctrl+F5: Corner/Tiri show the official-sample label, the Frosinone-Benevento friendly is excluded, and Indicatori loads without error.
 Open bugs / required work, in priority order:
 
 1. **Panel parity and call audit.** Continue testing each unchanged panel against `main`. Preserve its content and presentation; change code only for a reproduced bug, duplicated request or measurable efficiency improvement. `Arbitro`, `Squadre`, `Predizione`, `Corner`, `Tiri`, `Indisponibili`, `Classifica` and the corrected Indicatori score presentation are verified; continue with the remaining panels.
