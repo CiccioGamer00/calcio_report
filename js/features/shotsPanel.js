@@ -75,7 +75,7 @@ async function getShotsForFixtureTeams(fixtureId, homeId, awayId) {
 }
 
 async function buildTeamShots(team, limit) {
-  const fixtures = await fetchTeamLastFixtures(team.id, limit);
+  const fixtures = await fetchTeamStatCandidates(team.id, limit);
   if (fixtures.length === 0) {
     return {
       team,
@@ -150,15 +150,15 @@ async function buildTeamShots(team, limit) {
        : Number(team.id) === Number(awayId) ? false
        : null,
 });
+
+    if (perFixture.length >= limit) break;
   }
 
   const n = perFixture.length;
   const note =
-    missingStats > 0
-      ? `${missingStats} partita${missingStats === 1 ? "" : "e"} esclusa${missingStats === 1 ? "" : "e"}: statistiche tiri non disponibili.`
-      : limit > n
-        ? "Copertura parziale (meno partite disponibili)."
-        : "";
+    n < limit
+      ? `Campione: ${n}/${limit} gare ufficiali con statistiche disponibili (amichevoli escluse).`
+      : `Campione: ultime ${limit} gare ufficiali con statistiche disponibili (amichevoli escluse).`;
 
   return {
     team,
