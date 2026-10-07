@@ -29,6 +29,7 @@ async function buildTeamCorners(team, limit) {
 
   let minAgainst = null;
   let maxAgainst = null;
+  let missingStats = 0;
 
   for (const f of fixtures) {
     const fixtureId = f.fixture?.id ?? null;
@@ -39,17 +40,17 @@ async function buildTeamCorners(team, limit) {
     const away = f.teams?.away?.name ?? "—";
     const comp = f.league?.name ?? "—";
 
-    let cornersFor = 0;
-    let cornersAgainst = 0;
+    if (!fixtureId || !homeId || !awayId) continue;
 
-    if (fixtureId && homeId && awayId) {
-      const map = await getCornersForFixtureTeams(fixtureId, homeId, awayId);
-
-      cornersFor = map.get(team.id) ?? 0;
-
-      const oppId = team.id === homeId ? awayId : homeId;
-      cornersAgainst = map.get(oppId) ?? 0;
+    const map = await getCornersForFixtureTeams(fixtureId, homeId, awayId);
+    if (!map) {
+      missingStats++;
+      continue;
     }
+
+    const cornersFor = map.get(team.id);
+    const oppId = team.id === homeId ? awayId : homeId;
+    const cornersAgainst = map.get(oppId);
 
     sum += cornersFor;
     sumAgainst += cornersAgainst;
@@ -75,20 +76,27 @@ async function buildTeamCorners(team, limit) {
   }
 
   const n = perFixture.length;
+  const note =
+    missingStats > 0
+      ? `${missingStats} partita${missingStats === 1 ? "" : "e"} esclusa${missingStats === 1 ? "" : "e"}: statistiche corner non disponibili.`
+      : limit > n
+        ? "Copertura parziale (meno partite disponibili)."
+        : "";
+
   return {
     team,
     limit: n,
     fixtures: perFixture,
 
-    avgCorners: (sum / n).toFixed(2),
-    minCorners: min ?? 0,
-    maxCorners: max ?? 0,
+    avgCorners: n > 0 ? (sum / n).toFixed(2) : "—",
+    minCorners: n > 0 ? min ?? 0 : "—",
+    maxCorners: n > 0 ? max ?? 0 : "—",
 
-    avgCornersAgainst: (sumAgainst / n).toFixed(2),
-    minCornersAgainst: minAgainst ?? 0,
-    maxCornersAgainst: maxAgainst ?? 0,
+    avgCornersAgainst: n > 0 ? (sumAgainst / n).toFixed(2) : "—",
+    minCornersAgainst: n > 0 ? minAgainst ?? 0 : "—",
+    maxCornersAgainst: n > 0 ? maxAgainst ?? 0 : "—",
 
-    note: limit > n ? "Copertura parziale (meno partite disponibili)." : "",
+    note,
   };
 }
 
