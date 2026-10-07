@@ -150,13 +150,10 @@ function normalizeCornersStats(statArray) {
 }
 
 async function getCornersForFixtureTeams(fixtureId, homeId, awayId) {
-  // ritorna Map(teamId -> corners)
-  const out = new Map();
-  out.set(homeId, 0);
-  out.set(awayId, 0);
-
   const rows = await getFixtureStatisticsRowsCached(fixtureId);
-  if (rows.length === 0) return out;
+  if (rows.length === 0) return null;
+
+  const out = new Map();
 
   for (const row of rows) {
     const teamId = row?.team?.id ?? null;
@@ -164,8 +161,10 @@ async function getCornersForFixtureTeams(fixtureId, homeId, awayId) {
     if (teamId !== homeId && teamId !== awayId) continue;
 
     const stats = normalizeCornersStats(row?.statistics || []);
-    out.set(teamId, stats.corners || 0);
+    if (stats.corners == null) continue;
+    out.set(teamId, stats.corners);
   }
 
+  if (!out.has(homeId) || !out.has(awayId)) return null;
   return out;
 }
