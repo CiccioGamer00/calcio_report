@@ -159,7 +159,7 @@ async function buildTeamPack(team, limit) {
   }
 
   const n = Math.max(5, Number(limit) || 10);
-  const last = await fetchTeamLastFixtures(teamId, n);
+  const last = await fetchTeamStatCandidates(teamId, n);
 
   const gf = [];
   const ga = [];
@@ -184,46 +184,82 @@ async function buildTeamPack(team, limit) {
     const aId = fx?.teams?.away?.id;
     if (!fid || !hId || !aId) continue;
 
-    const g = goalsForAgainstWithHalves(teamId, fx);
-    gf.push(g.gf);
-    ga.push(g.ga);
-    gf1.push(g.gf1 > 0 ? 1 : 0);
-    ga1.push(g.ga1 > 0 ? 1 : 0);
-    gf2.push(g.gf2 > 0 ? 1 : 0);
-    ga2.push(g.ga2 > 0 ? 1 : 0);
+    // Gol e cartellini: ultime N gare ufficiali.
+    if (gf.length < n) {
+      const g = goalsForAgainstWithHalves(teamId, fx);
+      gf.push(g.gf);
+      ga.push(g.ga);
+      gf1.push(g.gf1 > 0 ? 1 : 0);
+      ga1.push(g.ga1 > 0 ? 1 : 0);
+      gf2.push(g.gf2 > 0 ? 1 : 0);
+      ga2.push(g.ga2 > 0 ? 1 : 0);
 
-    // cards via events
-    try {
-      const c = await countTeamCardsForFixture(fid, teamId);
-      if (Number.isFinite(c)) teamCards.push(c);
-    } catch {}
+      try {
+        const cards = await countTeamCardsForFixture(fid, teamId);
+        if (Number.isFinite(cards)) teamCards.push(cards);
+      } catch {}
+    }
 
-    // stats via fixtures/statistics
-    const oppId = Number(teamId) === Number(hId) ? aId : hId;
-    const statsMap = await getFixtureStatsTeamsCached(fid);
-    const me = statsMap.get(teamId);
-    const opp = statsMap.get(oppId);
+    // Corner, tiri e falli: ultime N gare ufficiali CON statistica disponibile.
+    const needsStats =
+      cornersFor.length < n ||
+      shotsFor.length < n ||
+      otFor.length < n ||
+      foulsFor.length < n;
 
-    if (me && opp) {
-      if (me.corners != null && opp.corners != null) {
-        cornersFor.push(Number(me.corners));
-        cornersAg.push(Number(opp.corners));
+    if (needsStats) {
+      const oppId = Number(teamId) === Number(hId) ? aId : hId;
+      const statsMap = await getFixtureStatsTeamsCached(fid);
+      const me = statsMap.get(teamId);
+      const opp = statsMap.get(oppId);
+
+      if (me && opp) {
+        if (
+          cornersFor.length < n &&
+          me.corners != null &&
+          opp.corners != null
+        ) {
+          cornersFor.push(Number(me.corners));
+          cornersAg.push(Number(opp.corners));
+        }
+
+        if (
+          shotsFor.length < n &&
+          me.shots != null &&
+          opp.shots != null
+        ) {
+          shotsFor.push(Number(me.shots));
+          shotsAg.push(Number(opp.shots));
+        }
+
+        if (
+          otFor.length < n &&
+          me.shotsOn != null &&
+          opp.shotsOn != null
+        ) {
+          otFor.push(Number(me.shotsOn));
+          otAg.push(Number(opp.shotsOn));
+        }
+
+        if (
+          foulsFor.length < n &&
+          me.fouls != null &&
+          opp.fouls != null
+        ) {
+          foulsFor.push(Number(me.fouls));
+          foulsAg.push(Number(opp.fouls));
+        }
       }
+    }
 
-      if (me.shots != null && opp.shots != null) {
-        shotsFor.push(Number(me.shots));
-        shotsAg.push(Number(opp.shots));
-      }
-
-      if (me.shotsOn != null && opp.shotsOn != null) {
-        otFor.push(Number(me.shotsOn));
-        otAg.push(Number(opp.shotsOn));
-      }
-
-      if (me.fouls != null && opp.fouls != null) {
-        foulsFor.push(Number(me.fouls));
-        foulsAg.push(Number(opp.fouls));
-      }
+    if (
+      gf.length >= n &&
+      cornersFor.length >= n &&
+      shotsFor.length >= n &&
+      otFor.length >= n &&
+      foulsFor.length >= n
+    ) {
+      break;
     }
   }
 
