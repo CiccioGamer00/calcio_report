@@ -60,6 +60,14 @@ if (url.pathname === "/stripe/webhook" && request.method === "POST") {
 /* =========================
    AUTH: register/login/me
    ========================= */
+const AUTH_SESSION_MS = 6 * 60 * 60 * 1000;
+
+// Work factor volutamente compatibile con Workers Free.
+// Il formato versionato permette di alzarlo in futuro senza cambiare schema.
+const PASSWORD_HASH_PREFIX = "pbkdf2_sha256";
+const PASSWORD_PBKDF2_ITERATIONS = 20000;
+const PASSWORD_SALT_BYTES = 16;
+const PASSWORD_HASH_BYTES = 32;
 async function handleRegister(request, env) {
   const body = await request.json().catch(() => ({}));
   const email = normEmail(body.email);
@@ -92,7 +100,9 @@ async function handleRegister(request, env) {
 
   const now = Date.now();
   const trialEndsAt = now + 7 * 24 * 60 * 60 * 1000; // 7 giorni
-  const passHash = await sha256(password);
+  const passHash = passwordV2Enabled(env)
+    ? await hashPassword(password)
+    : await sha256(password);
 
   await env.DB.prepare(
     "INSERT INTO users (id, email, pass_hash, trial_ends_at, paid_until, created_at) VALUES (?, ?, ?, ?, ?, ?)",
@@ -100,7 +110,7 @@ async function handleRegister(request, env) {
     .bind(crypto.randomUUID(), email, passHash, trialEndsAt, 0, now)
     .run();
 
-  const token = await signToken(env, { email, iat: now });
+  const token = await makeSessionToken(env, email, now);
 
   return json(
     {
@@ -128,7 +138,7 @@ async function handleLogin(request, env) {
   }
 
   const u = await env.DB.prepare(
-    "SELECT email, pass_hash, trial_ends_at, paid_until FROM users WHERE email = ?",
+    "SELECT email, pass_hash, trial_ends_at, paid_until, COALESCE(disabled,0) as disabled FROM users WHERE email = ?",
   )
     .bind(email)
     .first();
@@ -141,15 +151,15 @@ async function handleLogin(request, env) {
     );
   }
   if (Number(u.disabled || 0) === 1) {
-  return json(
-    { error: "ACCOUNT_DISABLED", message: "Account disabilitato." },
-    403,
-    corsHeaders(),
-  );
-}
+    return json(
+      { error: "ACCOUNT_DISABLED", message: "Account disabilitato." },
+      403,
+      corsHeaders(),
+    );
+  }
 
-  const passHash = await sha256(password);
-  if (passHash !== u.pass_hash) {
+  const passwordCheck = await verifyPasswordHash(password, u.pass_hash);
+  if (!passwordCheck.ok) {
     return json(
       { error: "LOGIN_FAILED", message: "Credenziali errate." },
       401,
@@ -157,7 +167,8 @@ async function handleLogin(request, env) {
     );
   }
 
-  const token = await signToken(env, { email, iat: Date.now() });
+  const now = Date.now();
+  const token = await makeSessionToken(env, email, now);
 
   return json(
     {
@@ -179,12 +190,15 @@ async function handleMe(request, env) {
   if (!sess?.email) return json({ ok: false }, 200, corsHeaders());
 
   const u = await env.DB.prepare(
-    "SELECT email, trial_ends_at, paid_until FROM users WHERE email = ?",
+    "SELECT email, trial_ends_at, paid_until, COALESCE(disabled,0) as disabled FROM users WHERE email = ?",
   )
     .bind(sess.email)
     .first();
 
   if (!u) return json({ ok: false }, 200, corsHeaders());
+  if (Number(u.disabled || 0) === 1) {
+    return json({ ok: false, error: "ACCOUNT_DISABLED" }, 200, corsHeaders());
+  }
 
   return json(
     {
@@ -1679,6 +1693,26 @@ async function signToken(env, payload) {
   return `${body}.${sig}`;
 }
 
+async function makeSessionToken(env, email, now = Date.now()) {
+  return signToken(env, {
+    email: normEmail(email),
+    iat: now,
+    exp: now + AUTH_SESSION_MS,
+  });
+}
+
+function isSessionPayloadCurrent(payload, now = Date.now()) {
+  if (!payload?.email) return false;
+
+  const exp = Number(payload.exp || 0);
+  if (Number.isFinite(exp) && exp > 0) return now < exp;
+
+  // Compatibilità con token già emessi prima dell'introduzione di "exp".
+  const iat = Number(payload.iat || 0);
+  if (!Number.isFinite(iat) || iat <= 0) return false;
+  return now < iat + AUTH_SESSION_MS;
+}
+
 async function verifySignedToken(env, token) {
   const parts = String(token || "").split(".");
   if (parts.length !== 2) return null;
@@ -1686,7 +1720,8 @@ async function verifySignedToken(env, token) {
   const expected = await hmacSha256(env.LICENSE_SECRET, body);
   if (!timingSafeEq(sig, expected)) return null;
   try {
-    return JSON.parse(base64urlDecode(body));
+    const payload = JSON.parse(base64urlDecode(body));
+    return isSessionPayloadCurrent(payload) ? payload : null;
   } catch {
     return null;
   }
@@ -1736,6 +1771,89 @@ async function sha256(str) {
   return bufToHex(hash);
 }
 
+function passwordV2Enabled(env) {
+  return String(env?.AUTH_PASSWORD_V2 || "") === "1";
+}
+
+async function derivePasswordHash(password, saltBytes, iterations) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(String(password || "")),
+    "PBKDF2",
+    false,
+    ["deriveBits"],
+  );
+
+  const bits = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      hash: "SHA-256",
+      salt: saltBytes,
+      iterations,
+    },
+    key,
+    PASSWORD_HASH_BYTES * 8,
+  );
+
+  return new Uint8Array(bits);
+}
+
+async function hashPassword(password) {
+  const salt = crypto.getRandomValues(new Uint8Array(PASSWORD_SALT_BYTES));
+  const digest = await derivePasswordHash(
+    password,
+    salt,
+    PASSWORD_PBKDF2_ITERATIONS,
+  );
+
+  return [
+    PASSWORD_HASH_PREFIX,
+    String(PASSWORD_PBKDF2_ITERATIONS),
+    base64urlFromBytes(salt),
+    base64urlFromBytes(digest),
+  ].join("$");
+}
+
+async function verifyPasswordHash(password, storedHash) {
+  const stored = String(storedHash || "");
+
+  if (stored.startsWith(`${PASSWORD_HASH_PREFIX}$`)) {
+    const parts = stored.split("$");
+    if (parts.length !== 4) return { ok: false, needsUpgrade: false };
+
+    const iterations = Number(parts[1]);
+    if (!Number.isInteger(iterations) || iterations < 1 || iterations > 10000000) {
+      return { ok: false, needsUpgrade: false };
+    }
+
+    try {
+      const salt = base64urlToBytes(parts[2]);
+      const expected = base64urlToBytes(parts[3]);
+      if (salt.length < PASSWORD_SALT_BYTES || expected.length !== PASSWORD_HASH_BYTES) {
+        return { ok: false, needsUpgrade: false };
+      }
+
+      const actual = await derivePasswordHash(password, salt, iterations);
+      const ok = timingSafeBytesEq(actual, expected);
+      return {
+        ok,
+        needsUpgrade: ok && iterations < PASSWORD_PBKDF2_ITERATIONS,
+      };
+    } catch {
+      return { ok: false, needsUpgrade: false };
+    }
+  }
+
+  // Compatibilità con gli account creati col vecchio SHA-256 singolo.
+  if (/^[a-f0-9]{64}$/i.test(stored)) {
+    const legacyHash = await sha256(password);
+    const ok = timingSafeEq(legacyHash.toLowerCase(), stored.toLowerCase());
+    return { ok, needsUpgrade: ok };
+  }
+
+  return { ok: false, needsUpgrade: false };
+}
+
 async function hmacSha256(secret, message) {
   const key = await crypto.subtle.importKey(
     "raw",
@@ -1779,6 +1897,25 @@ function base64urlFromBytes(bytes) {
   for (const b of bytes) bin += String.fromCharCode(b);
   const b64 = btoa(bin);
   return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function base64urlToBytes(value) {
+  const s = String(value || "");
+  const b64 =
+    s.replace(/-/g, "+").replace(/_/g, "/") +
+    "===".slice((s.length + 3) % 4);
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+function timingSafeBytesEq(a, b) {
+  if (!(a instanceof Uint8Array) || !(b instanceof Uint8Array)) return false;
+  if (a.length !== b.length) return false;
+  let out = 0;
+  for (let i = 0; i < a.length; i++) out |= a[i] ^ b[i];
+  return out === 0;
 }
 
 function timingSafeEq(a, b) {
