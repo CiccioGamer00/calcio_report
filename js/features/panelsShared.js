@@ -68,6 +68,30 @@ async function fetchTeamLastFixtures(teamId, limit) {
 }
 
 /* =========================
+   FIXTURES statistiche: solo gare ufficiali
+   ========================= */
+function isFriendlyFixture(fixtureRow) {
+  const leagueName = String(fixtureRow?.league?.name || "").trim();
+  return /friendl/i.test(leagueName);
+}
+
+async function fetchTeamStatCandidates(teamId, limit) {
+  if (!teamId) return [];
+
+  const n = Math.max(1, Number(limit) || 5);
+  // Cerchiamo più indietro per mantenere un campione di N gare valide
+  // anche quando ci sono amichevoli o fixture senza statistiche dettagliate.
+  const lookback = Math.min(30, n + 10);
+  const r = await apiGet(
+    `/fixtures?team=${teamId}&last=${lookback}&status=FT&timezone=Europe/Rome`,
+    { retries: 2, delays: [400, 900] },
+  );
+
+  if (!r.ok || r.errors || !Array.isArray(r.arr)) return [];
+  return r.arr.filter((fixtureRow) => !isFriendlyFixture(fixtureRow));
+}
+
+/* =========================
    CACHE: EVENTS per fixture
    ========================= */
 const __EVENTS_CACHE__ = new Map(); // fixtureId -> events[]
