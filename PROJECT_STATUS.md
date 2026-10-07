@@ -521,11 +521,13 @@ Focused automated tests passed for Under/Over direction, decision boundaries, th
 - Worker auth now verifies session age server-side with a six-hour lifetime; legacy tokens without `exp` remain valid only within six hours of their original `iat`.
 - Login and `/auth/me` now respect disabled accounts consistently.
 - The Worker can validate both legacy single-SHA-256 password hashes and the staged PBKDF2-SHA256 format with random salt.
-- PBKDF2 creation is gated behind `AUTH_PASSWORD_V2=1`; the flag is currently **not enabled**, so existing passwords and new registrations remain rollback-compatible with the previous Worker during this rollout stage.
+- PBKDF2 creation is gated behind `AUTH_PASSWORD_V2=1`; the flag is now **enabled in production**.
+- Existing legacy SHA-256 accounts remain compatible; the rollout does not rewrite existing password records.
 - Automated suite passed 12/12 locally after staging the rollout flag, including Worker syntax, PBKDF2 behavior, legacy compatibility and session expiry.
 - Worker version `e714fba0` was deployed manually to 100% traffic.
-- Production smoke test passed: logout/login with an existing account, Giornata fixture selection and protected Predizione access all worked normally after deployment.
-- Next auth step: test a controlled new-registration flow before enabling `AUTH_PASSWORD_V2`, then proceed with login/register rate limiting, password recovery and account deletion.
+- Production smoke test passed for an existing account: logout/login, Giornata fixture selection and protected Predizione access all worked normally after deployment.
+- Controlled production registration with a new account succeeded with `AUTH_PASSWORD_V2=1`, followed by logout/login with the same credentials; PBKDF2 write/read behavior is therefore verified end-to-end.
+- Next auth step: add login/register rate limiting, then password recovery and account deletion.
 
 ## Current follow-up / next work
 
