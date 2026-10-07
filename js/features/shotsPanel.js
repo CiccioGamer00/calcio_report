@@ -180,7 +180,7 @@ function renderTeamShotsSummary(form) {
       <div class="v">
         <span class="teamline">
           ${t.logo ? `<img class="logo" src="${safeHTML(t.logo)}" alt="logo" />` : ""}
-          <span class="pill">ultime ${safeHTML(form.limit)}</span>
+          <span class="pill">ultime ${safeHTML(form.limit)} ufficiali</span>
 
           <span class="pill">Tiri fatti ${safeHTML(form.avgShotsFor)}</span>
           <span class="pill">In porta ${safeHTML(form.avgOnTargetFor)}</span>
@@ -287,7 +287,7 @@ const oppNameHtml = (isHome === false)
           ${t.logo ? `<img class="teamLogo" src="${safeHTML(t.logo)}" alt="logo">` : ``}
           <div class="teamName">${safeHTML(t.name)}</div>
         </div>
-        <div class="teamLastN">Ultime ${safeHTML(lastN)}</div>
+        <div class="teamLastN">Ultime ${safeHTML(lastN)} ufficiali</div>
       </div>
 
       <div class="teamChips">${chips}</div>
