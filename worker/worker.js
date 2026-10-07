@@ -149,12 +149,12 @@ async function handleLogin(request, env) {
     );
   }
   if (Number(u.disabled || 0) === 1) {
-  return json(
-    { error: "ACCOUNT_DISABLED", message: "Account disabilitato." },
-    403,
-    corsHeaders(),
-  );
-}
+    return json(
+      { error: "ACCOUNT_DISABLED", message: "Account disabilitato." },
+      403,
+      corsHeaders(),
+    );
+  }
 
   const passwordCheck = await verifyPasswordHash(password, u.pass_hash);
   if (!passwordCheck.ok) {
