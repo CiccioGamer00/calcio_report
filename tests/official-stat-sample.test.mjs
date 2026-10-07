@@ -84,6 +84,23 @@ assert.match(
   "Il bookmaker Indicatori non gestisce correttamente statistiche corner mancanti.",
 );
 
+
+assert.match(
+  corners,
+  /Ultime \$\{safeHTML\(lastN\)\} ufficiali/,
+  "Corner deve mostrare esplicitamente che il campione è ufficiale.",
+);
+assert.match(
+  shots,
+  /Ultime \$\{safeHTML\(lastN\)\} ufficiali/,
+  "Tiri deve mostrare esplicitamente che il campione è ufficiale.",
+);
+assert.match(
+  indicators,
+  /Campione: ultime \$\{safeHTML\(sampleN\)\} gare ufficiali/,
+  "Indicatori deve spiegare il campione ufficiale usato.",
+);
+
 console.log(
   JSON.stringify(
     {
