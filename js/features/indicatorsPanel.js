@@ -455,8 +455,10 @@ async function countTeamCardsForFixture(fixtureId, teamId) {
 }
 
 async function computeBettingForTeam(teamId, n, lines) {
-  const last = await fetchTeamLastFixtures(teamId, n);
+  const last = await fetchTeamStatCandidates(teamId, n);
   const sample = [];
+  let baseCount = 0;
+  let cornerCount = 0;
 
   for (const fx of last) {
     const fid = fx?.fixture?.id;
@@ -464,35 +466,50 @@ async function computeBettingForTeam(teamId, n, lines) {
     const aId = fx?.teams?.away?.id;
     if (!fid || !hId || !aId) continue;
 
-    const gTot = goalsTotalFromFixtureRow(fx);
-    const btts = bttsFromFixtureRow(fx);
+    let goalsTotal = null;
+    let btts = null;
+    let cardsTotal = null;
+    let teamCards = null;
 
-    // corners e cards richiedono chiamate per fixture
-    const cornersMap = await getCornersForFixtureTeams(fid, hId, aId);
-    const cHome = Number(cornersMap.get(hId) || 0);
-    const cAway = Number(cornersMap.get(aId) || 0);
-    const cTot = cHome + cAway;
+    if (baseCount < n) {
+      goalsTotal = goalsTotalFromFixtureRow(fx);
+      btts = bttsFromFixtureRow(fx);
+      cardsTotal = await countCardsForFixture(fid);
+      teamCards = await countTeamCardsForFixture(fid, teamId);
+      baseCount++;
+    }
 
-    const cardsTot = await countCardsForFixture(fid);
+    let cornersTotal = null;
+    let teamCorners = null;
 
-    // per-squadra (della squadra "teamId" in analisi)
-    const isHome = Number(teamId) === Number(hId);
-    const teamCorners = isHome ? cHome : cAway;
-    const teamCards = await countTeamCardsForFixture(fid, teamId);
+    if (cornerCount < n) {
+      const cornersMap = await getCornersForFixtureTeams(fid, hId, aId);
+
+      if (cornersMap) {
+        const cHome = cornersMap.get(hId);
+        const cAway = cornersMap.get(aId);
+
+        if (cHome != null && cAway != null) {
+          cornersTotal = Number(cHome) + Number(cAway);
+          const isHome = Number(teamId) === Number(hId);
+          teamCorners = isHome ? Number(cHome) : Number(cAway);
+          cornerCount++;
+        }
+      }
+    }
 
     sample.push({
-      goalsTotal: gTot,
-      btts: btts,
-
-      cornersTotal: Number.isFinite(cTot) ? cTot : null,
-      cardsTotal: Number.isFinite(cardsTot) ? cardsTot : null,
-
-      teamCorners: Number.isFinite(teamCorners) ? teamCorners : null,
-      teamCards: Number.isFinite(teamCards) ? teamCards : null,
+      goalsTotal,
+      btts,
+      cornersTotal,
+      cardsTotal: Number.isFinite(Number(cardsTotal)) ? Number(cardsTotal) : null,
+      teamCorners: Number.isFinite(Number(teamCorners)) ? Number(teamCorners) : null,
+      teamCards: Number.isFinite(Number(teamCards)) ? Number(teamCards) : null,
     });
+
+    if (baseCount >= n && cornerCount >= n) break;
   }
 
-  // calcoli hit-rate
   const validGoals = sample.filter((x) => x.goalsTotal != null);
   const validBTTS = sample.filter((x) => x.btts != null);
   const validCorners = sample.filter((x) => x.cornersTotal != null);
@@ -520,17 +537,32 @@ async function computeBettingForTeam(teamId, n, lines) {
 
   return {
     nRequested: n,
-    goalsTotals: validGoals.map(x => x.goalsTotal),
+    goalsTotals: validGoals.map((x) => x.goalsTotal),
 
     over25: { hit: over25Hit, total: validGoals.length },
     bttsYes: { hit: bttsYesHit, total: validBTTS.length },
-    
 
-    overCorners: { hit: overCornersHit, total: validCorners.length, line: lines.corners },
-    overCards: { hit: overCardsHit, total: validCards.length, line: lines.cards },
+    overCorners: {
+      hit: overCornersHit,
+      total: validCorners.length,
+      line: lines.corners,
+    },
+    overCards: {
+      hit: overCardsHit,
+      total: validCards.length,
+      line: lines.cards,
+    },
 
-    teamOverCorners: { hit: overTeamCornersHit, total: validTeamCorners.length, line: lines.teamCorners },
-    teamOverCards: { hit: overTeamCardsHit, total: validTeamCards.length, line: lines.teamCards },
+    teamOverCorners: {
+      hit: overTeamCornersHit,
+      total: validTeamCorners.length,
+      line: lines.teamCorners,
+    },
+    teamOverCards: {
+      hit: overTeamCardsHit,
+      total: validTeamCards.length,
+      line: lines.teamCards,
+    },
   };
 }
 
