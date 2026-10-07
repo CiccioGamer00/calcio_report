@@ -45,7 +45,7 @@ function normalizeFixtureStats(statArray) {
       const n = _num(v);
       if (n != null) return n;
     }
-    return 0;
+    return null;
   };
 
   return {
@@ -130,6 +130,12 @@ function avg(arr) {
   return a.reduce((s, v) => s + v, 0) / a.length;
 }
 
+function avgOrNull(arr) {
+  const a = (arr || []).map(Number).filter((x) => Number.isFinite(x));
+  if (!a.length) return null;
+  return a.reduce((s, v) => s + v, 0) / a.length;
+}
+
 async function buildTeamPack(team, limit) {
   const teamId = team?.id;
   if (!teamId) {
@@ -141,14 +147,14 @@ async function buildTeamPack(team, limit) {
       ga1Pct: 0,
       ga2Pct: 0,
       avgCards: 0,
-      avgCorners: 0,
-      avgCornersAgainst: 0,
-      avgShotsFor: 0,
-      avgShotsAgainst: 0,
-      avgOnTargetFor: 0,
-      avgOnTargetAgainst: 0,
-      avgFoulsFor: 0,
-      avgFoulsAgainst: 0,
+      avgCorners: null,
+      avgCornersAgainst: null,
+      avgShotsFor: null,
+      avgShotsAgainst: null,
+      avgOnTargetFor: null,
+      avgOnTargetAgainst: null,
+      avgFoulsFor: null,
+      avgFoulsAgainst: null,
     };
   }
 
@@ -195,20 +201,30 @@ async function buildTeamPack(team, limit) {
     // stats via fixtures/statistics
     const oppId = Number(teamId) === Number(hId) ? aId : hId;
     const statsMap = await getFixtureStatsTeamsCached(fid);
-    const me = statsMap.get(teamId) || { corners: 0, shots: 0, shotsOn: 0, fouls: 0 };
-    const opp = statsMap.get(oppId) || { corners: 0, shots: 0, shotsOn: 0, fouls: 0 };
+    const me = statsMap.get(teamId);
+    const opp = statsMap.get(oppId);
 
-    cornersFor.push(Number(me.corners) || 0);
-    cornersAg.push(Number(opp.corners) || 0);
+    if (me && opp) {
+      if (me.corners != null && opp.corners != null) {
+        cornersFor.push(Number(me.corners));
+        cornersAg.push(Number(opp.corners));
+      }
 
-    shotsFor.push(Number(me.shots) || 0);
-    shotsAg.push(Number(opp.shots) || 0);
+      if (me.shots != null && opp.shots != null) {
+        shotsFor.push(Number(me.shots));
+        shotsAg.push(Number(opp.shots));
+      }
 
-    otFor.push(Number(me.shotsOn) || 0);
-    otAg.push(Number(opp.shotsOn) || 0);
+      if (me.shotsOn != null && opp.shotsOn != null) {
+        otFor.push(Number(me.shotsOn));
+        otAg.push(Number(opp.shotsOn));
+      }
 
-    foulsFor.push(Number(me.fouls) || 0);
-    foulsAg.push(Number(opp.fouls) || 0);
+      if (me.fouls != null && opp.fouls != null) {
+        foulsFor.push(Number(me.fouls));
+        foulsAg.push(Number(opp.fouls));
+      }
+    }
   }
 
   const matches = Math.max(1, gf.length);
@@ -223,16 +239,16 @@ async function buildTeamPack(team, limit) {
     ga2Pct: pct(ga2),
     avgCards: avg(teamCards),
 
-    avgCorners: avg(cornersFor),
-    avgCornersAgainst: avg(cornersAg),
+    avgCorners: avgOrNull(cornersFor),
+    avgCornersAgainst: avgOrNull(cornersAg),
 
-    avgShotsFor: avg(shotsFor),
-    avgShotsAgainst: avg(shotsAg),
-    avgOnTargetFor: avg(otFor),
-    avgOnTargetAgainst: avg(otAg),
+    avgShotsFor: avgOrNull(shotsFor),
+    avgShotsAgainst: avgOrNull(shotsAg),
+    avgOnTargetFor: avgOrNull(otFor),
+    avgOnTargetAgainst: avgOrNull(otAg),
 
-    avgFoulsFor: avg(foulsFor),
-    avgFoulsAgainst: avg(foulsAg),
+    avgFoulsFor: avgOrNull(foulsFor),
+    avgFoulsAgainst: avgOrNull(foulsAg),
   };
 }
 
@@ -932,7 +948,7 @@ function renderIndicators() {
 
   // --- CORNER attesi
   let cornersExpected = null, cornersScore = null, cornersHome = null, cornersAway = null;
-  if (corners?.home && corners?.away) {
+  if (corners?.home && corners?.away && [corners.home.avgCorners, corners.home.avgCornersAgainst, corners.away.avgCorners, corners.away.avgCornersAgainst].every((v) => v != null && Number.isFinite(Number(v)))) {
     cornersHome = mean(corners.home.avgCorners, corners.away.avgCornersAgainst);
     cornersAway = mean(corners.away.avgCorners, corners.home.avgCornersAgainst);
     cornersExpected = cornersHome + cornersAway;
@@ -940,7 +956,7 @@ function renderIndicators() {
 
   // --- TIRI attesi
   let shotsExpected = null, shotsScore = null, shotsHome = null, shotsAway = null, otExpected = null, otHome = null, otAway = null;
-  if (shots?.home && shots?.away) {
+  if (shots?.home && shots?.away && [shots.home.avgShotsFor, shots.home.avgShotsAgainst, shots.home.avgOnTargetFor, shots.home.avgOnTargetAgainst, shots.away.avgShotsFor, shots.away.avgShotsAgainst, shots.away.avgOnTargetFor, shots.away.avgOnTargetAgainst].every((v) => v != null && Number.isFinite(Number(v)))) {
     shotsHome = mean(shots.home.avgShotsFor, shots.away.avgShotsAgainst);
     shotsAway = mean(shots.away.avgShotsFor, shots.home.avgShotsAgainst);
     shotsExpected = shotsHome + shotsAway;
@@ -959,7 +975,7 @@ function renderIndicators() {
 
   // --- FALLI attesi
   let foulsExpected = null, foulsScore = null, foulsHome = null, foulsAway = null;
-  if (fouls?.home && fouls?.away) {
+  if (fouls?.home && fouls?.away && [fouls.home.avgFoulsFor, fouls.home.avgFoulsAgainst, fouls.away.avgFoulsFor, fouls.away.avgFoulsAgainst].every((v) => v != null && Number.isFinite(Number(v)))) {
     foulsHome = mean(fouls.home.avgFoulsFor, fouls.away.avgFoulsAgainst);
     foulsAway = mean(fouls.away.avgFoulsFor, fouls.home.avgFoulsAgainst);
     foulsExpected = foulsHome + foulsAway;
