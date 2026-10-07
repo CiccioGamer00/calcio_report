@@ -46,7 +46,7 @@ function normalizeStats(statArray) {
       const n = Number(v);
       if (Number.isFinite(n)) return n;
     }
-    return 0;
+    return null;
   };
 
   return {
@@ -56,23 +56,23 @@ function normalizeStats(statArray) {
 }
 
 async function getShotsForFixtureTeams(fixtureId, homeId, awayId) {
-  // ritorna una Map(teamId -> { total, onTarget })
-  const out = new Map();
-  out.set(homeId, { total: 0, onTarget: 0 });
-  out.set(awayId, { total: 0, onTarget: 0 });
-
   const rows = await getFixtureStatisticsRowsCached(fixtureId);
-  if (rows.length === 0) return out;
+  if (rows.length === 0) return null;
 
-  // rows contiene i 2 team della fixture, riusati dalla cache condivisa.
+  const out = new Map();
   for (const row of rows) {
     const teamId = row?.team?.id ?? null;
     if (!teamId) continue;
     if (teamId !== homeId && teamId !== awayId) continue;
 
     const stats = normalizeStats(row?.statistics || []);
+    if (stats.total == null || stats.onTarget == null) continue;
     out.set(teamId, stats);
   }
+
+  if (!out.has(homeId) || !out.has(awayId)) return null;
+  return out;
+}
 
   return out;
 }
@@ -98,6 +98,7 @@ async function buildTeamShots(team, limit) {
   let sumForOT = 0;
   let sumAg = 0;
   let sumAgOT = 0;
+  let missingStats = 0;
 
   for (const f of fixtures) {
     const fixtureId = f.fixture?.id ?? null;
@@ -110,23 +111,22 @@ async function buildTeamShots(team, limit) {
     const away = f.teams?.away?.name ?? "—";
     const comp = f.league?.name ?? "—";
 
-    let shotsFor = 0;
-    let shotsForOT = 0;
-    let shotsAgainst = 0;
-    let shotsAgainstOT = 0;
+    if (!fixtureId || !homeId || !awayId) continue;
 
-    if (fixtureId && homeId && awayId) {
-      const map = await getShotsForFixtureTeams(fixtureId, homeId, awayId);
-
-      const mine = map.get(team.id) || { total: 0, onTarget: 0 };
-      shotsFor = mine.total;
-      shotsForOT = mine.onTarget;
-
-      const oppId = team.id === homeId ? awayId : homeId;
-      const opp = map.get(oppId) || { total: 0, onTarget: 0 };
-      shotsAgainst = opp.total;
-      shotsAgainstOT = opp.onTarget;
+    const map = await getShotsForFixtureTeams(fixtureId, homeId, awayId);
+    if (!map) {
+      missingStats++;
+      continue;
     }
+
+    const mine = map.get(team.id);
+    const shotsFor = mine.total;
+    const shotsForOT = mine.onTarget;
+
+    const oppId = team.id === homeId ? awayId : homeId;
+    const opp = map.get(oppId);
+    const shotsAgainst = opp.total;
+    const shotsAgainstOT = opp.onTarget;
 
     sumFor += shotsFor;
     sumForOT += shotsForOT;
@@ -156,16 +156,22 @@ async function buildTeamShots(team, limit) {
   }
 
   const n = perFixture.length;
+  const note =
+    missingStats > 0
+      ? `${missingStats} partita${missingStats === 1 ? "" : "e"} esclusa${missingStats === 1 ? "" : "e"}: statistiche tiri non disponibili.`
+      : limit > n
+        ? "Copertura parziale (meno partite disponibili)."
+        : "";
 
   return {
     team,
     limit: n,
     fixtures: perFixture,
-    avgShotsFor: (sumFor / n).toFixed(2),
-    avgOnTargetFor: (sumForOT / n).toFixed(2),
-    avgShotsAgainst: (sumAg / n).toFixed(2),
-    avgOnTargetAgainst: (sumAgOT / n).toFixed(2),
-    note: limit > n ? "Copertura parziale (meno partite disponibili)." : "",
+    avgShotsFor: n > 0 ? (sumFor / n).toFixed(2) : "—",
+    avgOnTargetFor: n > 0 ? (sumForOT / n).toFixed(2) : "—",
+    avgShotsAgainst: n > 0 ? (sumAg / n).toFixed(2) : "—",
+    avgOnTargetAgainst: n > 0 ? (sumAgOT / n).toFixed(2) : "—",
+    note,
   };
 }
 
