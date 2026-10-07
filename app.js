@@ -140,20 +140,37 @@ async function refreshTopAuthUI() {
 
 async function authPost(path, body) {
   const baseUrl = window.API_CONFIG?.baseUrl;
-  const res = await fetch(baseUrl + path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const j = await res.json().catch(() => ({}));
 
-  return { ok: res.ok, status: res.status, json: j };
+  try {
+    const res = await fetch(baseUrl + path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const j = await res.json().catch(() => ({}));
+
+    return { ok: res.ok, status: res.status, json: j, fetchBlocked: false };
+  } catch {
+    return {
+      ok: false,
+      status: 0,
+      json: {},
+      fetchBlocked: true,
+      offline: typeof navigator !== "undefined" && navigator.onLine === false,
+    };
+  }
 }
 
 function authErrorMessage(res, fallback) {
   if (Number(res?.status) === 429) {
     return "Troppi tentativi. Riprova tra qualche secondo.";
   }
+
+  if (res?.fetchBlocked) {
+    if (res?.offline) return "Connessione assente. Controlla la rete e riprova.";
+    return "Richiesta temporaneamente bloccata. Riprova tra qualche secondo.";
+  }
+
   return res?.json?.message || fallback;
 }
 
