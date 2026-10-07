@@ -74,9 +74,6 @@ async function getShotsForFixtureTeams(fixtureId, homeId, awayId) {
   return out;
 }
 
-  return out;
-}
-
 async function buildTeamShots(team, limit) {
   const fixtures = await fetchTeamLastFixtures(team.id, limit);
   if (fixtures.length === 0) {
