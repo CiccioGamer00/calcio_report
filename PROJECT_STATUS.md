@@ -527,7 +527,11 @@ Focused automated tests passed for Under/Over direction, decision boundaries, th
 - Worker version `e714fba0` was deployed manually to 100% traffic.
 - Production smoke test passed for an existing account: logout/login, Giornata fixture selection and protected Predizione access all worked normally after deployment.
 - Controlled production registration with a new account succeeded with `AUTH_PASSWORD_V2=1`, followed by logout/login with the same credentials; PBKDF2 write/read behavior is therefore verified end-to-end.
-- Next auth step: add login/register rate limiting, then password recovery and account deletion.
+- Cloudflare rate limiting is active for `/auth/login` and `/auth/register`, grouped by IP at 5 requests / 10 seconds with a 10-second block.
+- Production verification confirmed the sixth rapid request is blocked with HTTP 429.
+- Because the Cloudflare Free WAF block response may not be readable by browser JavaScript through CORS, the frontend now also handles blocked `fetch()` calls and shows a clear temporary-block message instead of leaving the stale credential error visible.
+- Local UI verification confirmed the temporary-block message appears after the rate limit triggers.
+- Next auth step: password recovery and account deletion.
 
 ## Current follow-up / next work
 
