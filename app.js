@@ -150,6 +150,13 @@ async function authPost(path, body) {
   return { ok: res.ok, status: res.status, json: j };
 }
 
+function authErrorMessage(res, fallback) {
+  if (Number(res?.status) === 429) {
+    return "Troppi tentativi. Riprova tra qualche secondo.";
+  }
+  return res?.json?.message || fallback;
+}
+
 async function showRemainingInPopup() {
   const me = await fetchMe();
   const json = me?.json;
@@ -247,7 +254,7 @@ function setupAuthActions() {
 
       closeAuthModal();
     } else {
-      setAuthMsg(res.json?.message || "Errore login.");
+      setAuthMsg(authErrorMessage(res, "Errore login."));
     }
   });
 
@@ -281,7 +288,7 @@ function setupAuthActions() {
 
       closeAuthModal();
     } else {
-      setAuthMsg(res.json?.message || "Errore registrazione.");
+      setAuthMsg(authErrorMessage(res, "Errore registrazione."));
     }
   });
 
