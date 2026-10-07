@@ -100,7 +100,9 @@ async function handleRegister(request, env) {
 
   const now = Date.now();
   const trialEndsAt = now + 7 * 24 * 60 * 60 * 1000; // 7 giorni
-  const passHash = await hashPassword(password);
+  const passHash = passwordV2Enabled(env)
+    ? await hashPassword(password)
+    : await sha256(password);
 
   await env.DB.prepare(
     "INSERT INTO users (id, email, pass_hash, trial_ends_at, paid_until, created_at) VALUES (?, ?, ?, ?, ?, ?)",
@@ -163,21 +165,6 @@ async function handleLogin(request, env) {
       401,
       corsHeaders(),
     );
-  }
-
-  // Migrazione trasparente: gli SHA-256 legacy vengono sostituiti
-  // al primo login corretto senza chiedere un cambio password all'utente.
-  if (passwordCheck.needsUpgrade) {
-    try {
-      const upgradedHash = await hashPassword(password);
-      await env.DB.prepare(
-        "UPDATE users SET pass_hash = ? WHERE email = ? AND pass_hash = ?",
-      )
-        .bind(upgradedHash, email, String(u.pass_hash || ""))
-        .run();
-    } catch (e) {
-      console.error("password hash upgrade failed", e);
-    }
   }
 
   const now = Date.now();
@@ -1782,6 +1769,10 @@ async function sha256(str) {
   const data = new TextEncoder().encode(str);
   const hash = await crypto.subtle.digest("SHA-256", data);
   return bufToHex(hash);
+}
+
+function passwordV2Enabled(env) {
+  return String(env?.AUTH_PASSWORD_V2 || "") === "1";
 }
 
 async function derivePasswordHash(password, saltBytes, iterations) {

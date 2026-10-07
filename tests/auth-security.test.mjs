@@ -191,9 +191,10 @@ assert.equal(
 );
 assert.equal(isSessionPayloadCurrent({ iat: now }, now), false);
 
-assert.match(source, /const passHash = await hashPassword\(password\);/);
+assert.match(source, /const passHash = passwordV2Enabled\(env\)/);
+assert.match(source, /function passwordV2Enabled\(env\)/);
 assert.match(source, /verifyPasswordHash\(password, u\.pass_hash\)/);
-assert.match(
+assert.doesNotMatch(
   source,
   /UPDATE users SET pass_hash = \? WHERE email = \? AND pass_hash = \?/,
 );
@@ -212,7 +213,8 @@ console.log(
       iterations: constants.PASSWORD_PBKDF2_ITERATIONS,
       saltBytes: constants.PASSWORD_SALT_BYTES,
       sessionHours: constants.AUTH_SESSION_MS / (60 * 60 * 1000),
-      legacyMigration: true,
+      legacyCompatible: true,
+      stagedPasswordV2: true,
       workerSyntax: true,
     },
     null,
