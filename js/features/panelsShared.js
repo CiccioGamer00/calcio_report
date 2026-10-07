@@ -141,7 +141,7 @@ function normalizeCornersStats(statArray) {
       const n = Number(v);
       if (Number.isFinite(n)) return n;
     }
-    return 0;
+    return null;
   };
 
   return {
