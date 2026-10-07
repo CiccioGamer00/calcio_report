@@ -1,8 +1,20 @@
 # Calcio Report — Project Status
 
-_Last updated: 2026-09-18_
+_Last updated: 2026-10-07_
 
-This file is the operational source of truth for the current Core V2 rebuild. Keep it updated when architecture, infrastructure, or implementation status changes.
+This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
+
+## Current operating state — 2026-10-07
+
+- Core V2 is released on `main` and is the current public frontend at `https://app.calcioreport.com/`.
+- `main` is the stable production branch. New work must start from current `main` on a small feature/fix branch and return through a tested pull request.
+- `core-v2` is now historical; do not use it as the base for new work.
+- The production request path Browser → Cloudflare Worker → OVH relay → API-Football is verified and remains the required architecture.
+- Matchday / Giornata is released and verified in production.
+- Shared fixture-statistics caching plus the official-match sample rule are released and verified in production.
+- No currently visible panel has a known blocking regression. Do not change an audited panel unless a new reproducible bug, duplicated request or measurable efficiency issue is found.
+- Infrastructure still has one explicit non-blocking follow-up: security update policy / logging review on the OVH VPS.
+- Historical release-candidate and pre-merge sections below are retained as project history; when they conflict with this section, this current operating state takes precedence.
 
 ## Product direction
 
@@ -78,12 +90,11 @@ The relay is intended to provide a stable outbound IP while preserving Cloudflar
 
 Repository: `CiccioGamer00/calcio_report`
 
-- `main` = protected/stable public branch. Do not modify until Core V2 is tested.
-- `core-v2` = active development branch.
-- Core V2 was created from main commit `a595ad710c1dba96e151cf2acab66b8b4514d28f`.
-- Historical commit `6553c287148271bddb62f50a85f0fadd10e1463b` is reference only, not a rollback target.
-- Use small coherent commits.
-- Do not delete important legacy code until replacement behavior is verified.
+- `main` = stable public/production branch and current source for new work.
+- `core-v2` = historical development branch; do not branch new work from it.
+- New work: branch from current `main`, use small coherent commits, run focused/full tests as appropriate, then merge through a pull request after verification.
+- Historical Core V2 base commit `a595ad710c1dba96e151cf2acab66b8b4514d28f` and historical commit `6553c287148271bddb62f50a85f0fadd10e1463b` are reference only.
+- Do not delete important working code until replacement behavior is verified.
 
 ## Local development
 
@@ -93,17 +104,21 @@ Typical local folder:
 C:\Users\stefa\Desktop\progetti\calcio_report_v2
 ```
 
-Branch:
+Normal stable branch:
 
 ```text
-core-v2
+main
 ```
 
-Update:
+Update stable local checkout:
 
 ```bash
-git pull
+git fetch origin
+git switch main
+git pull --ff-only origin main
 ```
+
+Feature/fix work uses a dedicated branch created from current `main`.
 
 Local static server:
 
@@ -501,9 +516,12 @@ Focused automated tests passed for Under/Over direction, decision boundaries, th
 - Automated coverage added for shared cache behavior, missing statistics, official-sample filtering and frontend JavaScript syntax.
 - PR #6 merged into `main` at commit `ecf9d0268bfdc8a542e06a1dbbad018103a76aa3`.
 - Production smoke test on `https://app.calcioreport.com/` passed after Ctrl+F5: Corner/Tiri show the official-sample label, the Frosinone-Benevento friendly is excluded, and Indicatori loads without error.
-Open bugs / required work, in priority order:
+## Current follow-up / next work
 
-1. **Panel parity and call audit.** Continue testing each unchanged panel against `main`. Preserve its content and presentation; change code only for a reproduced bug, duplicated request or measurable efficiency improvement. `Arbitro`, `Squadre`, `Predizione`, `Corner`, `Tiri`, `Indisponibili`, `Classifica` and the corrected Indicatori score presentation are verified; continue with the remaining panels.
+1. **No known blocking visible-panel regression.** Match, Giornata, Arbitro, Squadre, Predizione, Corner, Tiri, Indisponibili, Classifica and Indicatori have all been exercised during the Core V2/release work. Reopen panel code only for a reproduced defect or measurable request/performance improvement.
+2. **Infrastructure follow-up:** review OVH security-update policy and operational logging; this is non-blocking for the current public app.
+3. **Prediction research:** the Prediction Lab / v3 work remains a separate track. Do not change public prediction behavior casually; continue only with explicit validation and production deployment steps.
+4. **Polish/features:** mobile tab polish, planned Falli visibility or other new UI work are product choices, not unfinished Core V2 blockers.
 
 Closed frontend regressions:
 
@@ -549,13 +567,15 @@ Closed frontend regressions:
 - header status badges for PRO / TRIAL / expired state;
 - auth/login/register/payment flows should not be casually rewritten during Core migration.
 
-## Public deployment checkpoint — 2026-09-14
+## Public deployment checkpoint — current 2026-10-07
 
 - The public site is online at `https://app.calcioreport.com/`.
-- GitHub Pages currently deploys the stable `main` branch, whose Core V2 base commit is `a595ad710c1dba96e151cf2acab66b8b4514d28f`.
-- The tested `core-v2` frontend is not yet the public version.
-- The deployed Cloudflare Worker and OVH relay already serve the live backend path.
-- Do not describe Core V2 as publicly released until the final parity, security and performance review is complete and the production deployment source has been deliberately switched or merged.
+- GitHub Pages deploys the stable `main` branch.
+- Core V2 is publicly released; the historical `core-v2` branch is no longer the active development base.
+- Matchday / Giornata is released and verified in production.
+- Shared fixture-statistics caching and the official-match sample rule are released and verified in production.
+- The deployed Cloudflare Worker and OVH relay serve the live backend path.
+- Continue to preserve `main` stability by developing on small branches and merging only after verification.
 
 ## Prediction model review — 2026-09-14
 
@@ -626,7 +646,7 @@ No production Worker/frontend behavior changed during this milestone. The next P
 - if a failure can be diagnosed in-app, add diagnostics rather than requiring browser developer tools;
 - update this file whenever a meaningful milestone or architectural decision changes.
 
-## Release-first decision — 2026-09-15
+## Historical release-first decision — 2026-09-15 (completed)
 
 The immediate product objective is to publish the tested Core V2 frontend as soon as the essential release checks pass.
 
@@ -674,7 +694,7 @@ Release-candidate checks completed:
 - `core-v2...main` review found no embedded secret, no direct API-Football frontend URL and no public literal IP;
 - localhost diagnostics are guarded by hostname and remain absent from the public site.
 
-Release candidate status: functionally ready for a deliberate merge/deployment after confirming a clean local worktree and receiving explicit final approval. The existing stable `main` commit remains the rollback point.
+Historical result: this release-candidate phase was completed and Core V2 was subsequently merged/released. See the current operating state at the top of this file.
 
 ## Prediction v3 production integration candidate — 2026-09-18
 
