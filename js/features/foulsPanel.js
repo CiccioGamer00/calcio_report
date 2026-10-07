@@ -11,7 +11,7 @@ function normalizeFouls(statArray) {
       const n = Number(map.get(k));
       if (Number.isFinite(n)) return n;
     }
-    return 0;
+    return null;
   };
 
   return {
@@ -20,21 +20,23 @@ function normalizeFouls(statArray) {
 }
 
 async function getFoulsForFixtureTeams(fixtureId, homeId, awayId) {
-  const out = new Map();
-  out.set(homeId, { fouls: 0 });
-  out.set(awayId, { fouls: 0 });
-
   const rows = await getFixtureStatisticsRowsCached(fixtureId);
-  if (rows.length === 0) return out;
+  if (rows.length === 0) return null;
 
+  const out = new Map();
   for (const row of rows) {
     const teamId = row?.team?.id ?? null;
     if (!teamId) continue;
     if (teamId !== homeId && teamId !== awayId) continue;
 
     const stats = normalizeFouls(row?.statistics || []);
+    if (stats.fouls == null) continue;
     out.set(teamId, stats);
   }
+
+  if (!out.has(homeId) || !out.has(awayId)) return null;
+  return out;
+}
 
   return out;
 }
@@ -56,17 +58,18 @@ async function buildTeamFouls(team, limit) {
     if (!fixtureId || !homeId || !awayId) continue;
 
     const map = await getFoulsForFixtureTeams(fixtureId, homeId, awayId);
+    if (!map) continue;
 
-    const mine = map.get(team.id) || { fouls: 0 };
+    const mine = map.get(team.id);
     const oppId = team.id === homeId ? awayId : homeId;
-    const opp = map.get(oppId) || { fouls: 0 };
+    const opp = map.get(oppId);
 
     sumFor += Number(mine.fouls) || 0;
     sumAg += Number(opp.fouls) || 0;
     n++;
   }
 
-  if (n === 0) return { team, limit: 0, avgFoulsFor: "0.00", avgFoulsAgainst: "0.00" };
+  if (n === 0) return { team, limit: 0, avgFoulsFor: null, avgFoulsAgainst: null };
 
   return {
     team,
@@ -90,12 +93,12 @@ async function loadTeamsFouls() {
     if (window.publishIndicatorData) {
       window.publishIndicatorData("fouls", {
         home: {
-          avgFoulsFor: Number(homeF.avgFoulsFor),
-          avgFoulsAgainst: Number(homeF.avgFoulsAgainst),
+          avgFoulsFor: homeF.avgFoulsFor == null ? null : Number(homeF.avgFoulsFor),
+          avgFoulsAgainst: homeF.avgFoulsAgainst == null ? null : Number(homeF.avgFoulsAgainst),
         },
         away: {
-          avgFoulsFor: Number(awayF.avgFoulsFor),
-          avgFoulsAgainst: Number(awayF.avgFoulsAgainst),
+          avgFoulsFor: awayF.avgFoulsFor == null ? null : Number(awayF.avgFoulsFor),
+          avgFoulsAgainst: awayF.avgFoulsAgainst == null ? null : Number(awayF.avgFoulsAgainst),
         },
       });
     }
