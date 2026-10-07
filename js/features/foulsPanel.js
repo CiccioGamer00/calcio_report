@@ -39,9 +39,9 @@ async function getFoulsForFixtureTeams(fixtureId, homeId, awayId) {
 }
 
 async function buildTeamFouls(team, limit) {
-  const fixtures = await fetchTeamLastFixtures(team.id, limit);
+  const fixtures = await fetchTeamStatCandidates(team.id, limit);
   if (fixtures.length === 0) {
-    return { team, limit: 0, avgFoulsFor: "0.00", avgFoulsAgainst: "0.00" };
+    return { team, limit: 0, avgFoulsFor: null, avgFoulsAgainst: null };
   }
 
   let sumFor = 0;
@@ -64,6 +64,7 @@ async function buildTeamFouls(team, limit) {
     sumFor += Number(mine.fouls) || 0;
     sumAg += Number(opp.fouls) || 0;
     n++;
+    if (n >= limit) break;
   }
 
   if (n === 0) return { team, limit: 0, avgFoulsFor: null, avgFoulsAgainst: null };
