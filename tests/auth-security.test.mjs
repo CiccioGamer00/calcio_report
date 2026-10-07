@@ -123,26 +123,37 @@ assert.match(hash1, /^pbkdf2_sha256\$20000\$[^$]+\$[^$]+$/);
 assert.match(hash2, /^pbkdf2_sha256\$20000\$[^$]+\$[^$]+$/);
 assert.notEqual(hash1, hash2, "Il salt deve rendere diversi due hash uguali.");
 
-assert.deepEqual(
-  await verifyPasswordHash(password, hash1),
-  { ok: true, needsUpgrade: false },
-);
-assert.deepEqual(
-  await verifyPasswordHash("password-sbagliata", hash1),
-  { ok: false, needsUpgrade: false },
-);
+{
+  const result = await verifyPasswordHash(password, hash1);
+  assert.equal(result.ok, true);
+  assert.equal(result.needsUpgrade, false);
+}
+{
+  const result = await verifyPasswordHash("password-sbagliata", hash1);
+  assert.equal(result.ok, false);
+  assert.equal(result.needsUpgrade, false);
+}
 
 const legacyHash = await sha256(password);
 assert.match(legacyHash, /^[a-f0-9]{64}$/);
-assert.deepEqual(
-  await verifyPasswordHash(password, legacyHash),
-  { ok: true, needsUpgrade: true },
-  "Un vecchio SHA-256 corretto deve poter essere migrato al login.",
-);
-assert.deepEqual(
-  await verifyPasswordHash("password-sbagliata", legacyHash),
-  { ok: false, needsUpgrade: false },
-);
+{
+  const result = await verifyPasswordHash(password, legacyHash);
+  assert.equal(
+    result.ok,
+    true,
+    "Un vecchio SHA-256 corretto deve restare valido.",
+  );
+  assert.equal(
+    result.needsUpgrade,
+    true,
+    "Un vecchio SHA-256 corretto deve essere marcato per la migrazione.",
+  );
+}
+{
+  const result = await verifyPasswordHash("password-sbagliata", legacyHash);
+  assert.equal(result.ok, false);
+  assert.equal(result.needsUpgrade, false);
+}
 
 const now = Date.UTC(2026, 9, 7, 16, 0, 0);
 const sixHours = constants.AUTH_SESSION_MS;
