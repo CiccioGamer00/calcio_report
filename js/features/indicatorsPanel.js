@@ -836,7 +836,7 @@ function renderBettingHTML(B, homeMeta, awayMeta, goalsLine) {
     <div class="bet-box">
       <div class="bet-head2">
         <strong>Bookmaker</strong>
-        <span class="muted">Hit rate ultime ${safeHTML(B.n)}</span>
+        <span class="muted">Hit rate ultime ${safeHTML(B.n)} ufficiali</span>
       </div>
 
       ${renderBetRow(overGoalsTitle, homeMeta, awayMeta, overGoalsHome, overGoalsAway)}
@@ -945,6 +945,7 @@ function publishIndicatorData(key, payload) {
    ========================= */
 function renderIndicators() {
   const I = window.__IND__ || {};
+  const sampleN = typeof getLimitForTeams === "function" ? getLimitForTeams() : 5;
   const teams = I.teams;
   const corners = I.corners;
   const shots = I.shots;
@@ -1096,6 +1097,7 @@ if (el) el.innerHTML = html;
       <button class="btn" onclick="window.__IND_ACTIVE__=false; renderIndicators();">Chiudi</button>
     </div>
     ${summary}
+    <p class="muted" style="margin:6px 0 12px;"><em>Campione: ultime ${safeHTML(sampleN)} gare ufficiali. Corner, tiri e falli usano solo gare con statistiche disponibili.</em></p>
     <div class="ind-grid">
       ${tile({
         icon: "⚽",
