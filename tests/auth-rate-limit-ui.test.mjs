@@ -30,6 +30,23 @@ assert.equal(
   "Errore login.",
 );
 
+assert.equal(
+  authErrorMessage(
+    { status: 0, json: {}, fetchBlocked: true, offline: false },
+    "Errore login.",
+  ),
+  "Richiesta temporaneamente bloccata. Riprova tra qualche secondo.",
+);
+assert.equal(
+  authErrorMessage(
+    { status: 0, json: {}, fetchBlocked: true, offline: true },
+    "Errore login.",
+  ),
+  "Connessione assente. Controlla la rete e riprova.",
+);
+
+
+
 assert.match(
   source,
   /setAuthMsg\(authErrorMessage\(res, "Errore login\."\)\);/,
@@ -38,6 +55,9 @@ assert.match(
   source,
   /setAuthMsg\(authErrorMessage\(res, "Errore registrazione\."\)\);/,
 );
+assert.match(source, /fetchBlocked: true/);
+assert.match(source, /navigator\.onLine === false/);
+
 
 console.log(
   JSON.stringify(
@@ -47,6 +67,8 @@ console.log(
       rateLimitMessage: true,
       loginCovered: true,
       registerCovered: true,
+      blockedFetchCovered: true,
+      offlineCovered: true,
     },
     null,
     2,
