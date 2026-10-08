@@ -1984,7 +1984,7 @@ async function sendPasswordResetEmail(env, email, resetUrl) {
 
   const from = String(
     env.PASSWORD_RESET_FROM ||
-      "Calcio Report <noreply@calcioreport.com>",
+      "Calcio Report <noreply@mail.calcioreport.com>",
   ).trim();
 
   const res = await fetch("https://api.resend.com/emails", {
