@@ -388,7 +388,7 @@ async function handleRedeem(request, env) {
   }
 
   const u = await env.DB.prepare(
-    "SELECT paid_until, pass_hash FROM users WHERE email = ?",
+    "SELECT paid_until, pass_hash, COALESCE(disabled,0) as disabled FROM users WHERE email = ?",
   )
     .bind(sess.email)
     .first();
@@ -398,6 +398,9 @@ async function handleRedeem(request, env) {
     !(await sessionPasswordVersionMatches(env, sess, u.pass_hash))
   ) {
     return json({ error: "AUTH_INVALID" }, 401, corsHeaders());
+  }
+  if (Number(u.disabled || 0) === 1) {
+    return json({ error: "ACCOUNT_DISABLED" }, 403, corsHeaders());
   }
 
   const body = await request.json().catch(() => ({}));
@@ -1867,6 +1870,7 @@ async function makeSessionToken(env, email, passHash, now = Date.now()) {
     passHash,
   );
   return signToken(env, {
+    kind: "session",
     email: normEmail(email),
     iat: now,
     exp: now + AUTH_SESSION_MS,
@@ -1889,12 +1893,16 @@ async function sessionPasswordVersionMatches(env, session, passHash) {
 function isSessionPayloadCurrent(payload, now = Date.now()) {
   if (!payload?.email) return false;
 
+  // I token sessione nuovi sono marcati esplicitamente. Le sessioni legacy
+  // senza "kind" restano ammesse solo se hanno il loro iat originale.
+  if (payload.kind && payload.kind !== "session") return false;
+  const iat = Number(payload.iat || 0);
+  if (!Number.isFinite(iat) || iat <= 0) return false;
+
   const exp = Number(payload.exp || 0);
   if (Number.isFinite(exp) && exp > 0) return now < exp;
 
-  // Compatibilità con token già emessi prima dell'introduzione di "exp".
-  const iat = Number(payload.iat || 0);
-  if (!Number.isFinite(iat) || iat <= 0) return false;
+  // Compatibilità con token emessi prima dell'introduzione di "exp".
   return now < iat + AUTH_SESSION_MS;
 }
 
@@ -2267,6 +2275,17 @@ async function requireActiveUser(request, env) {
       res: json(
         { error: "AUTH_INVALID", message: "Sessione scaduta o non valida." },
         401,
+        corsHeaders(),
+      ),
+    };
+  }
+
+  if (Number(u.disabled || 0) === 1) {
+    return {
+      ok: false,
+      res: json(
+        { error: "ACCOUNT_DISABLED", message: "Account disabilitato." },
+        403,
         corsHeaders(),
       ),
     };
