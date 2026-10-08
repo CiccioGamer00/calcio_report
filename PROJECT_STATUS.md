@@ -531,7 +531,18 @@ Focused automated tests passed for Under/Over direction, decision boundaries, th
 - Production verification confirmed the sixth rapid request is blocked with HTTP 429.
 - Because the Cloudflare Free WAF block response may not be readable by browser JavaScript through CORS, the frontend now also handles blocked `fetch()` calls and shows a clear temporary-block message instead of leaving the stale credential error visible.
 - Local UI verification confirmed the temporary-block message appears after the rate limit triggers.
-- Next auth step: password recovery and account deletion.
+- Password recovery implementation is prepared on branch `auth/password-recovery` and is **not deployed yet**:
+  - `POST /auth/forgot` always returns the same generic response, whether or not the account exists;
+  - reset links expire after 20 minutes and use a password-reset-specific HMAC scope, so they cannot be used as session tokens;
+  - reset links are placed in the URL fragment (`#reset=...`) so the reset token is not sent in the page request;
+  - reset tokens are invalidated by a password change and the conditional D1 update makes them single-use even under concurrent requests;
+  - new session tokens carry a password version; changing the password invalidates new sessions immediately, while pre-release sessions remain compatible only until their existing six-hour expiry;
+  - session parsing now rejects license-code-shaped tokens that have no session `iat`;
+  - the central active-user gate and license redemption now enforce `disabled` for already-open sessions too;
+  - frontend adds “Password dimenticata?”, reset-password mode, confirmation field and clear success/error states.
+- Outbound reset email is prepared through Resend using secret `RESEND_API_KEY`. Cloudflare Email Sending to arbitrary customer addresses is not available on the current Workers Free plan, so it is not used for this rollout.
+- Before production rollout: verify a sending domain in Resend, add `RESEND_API_KEY` as a Worker secret, expand the existing Cloudflare rate-limit rule to include `/auth/forgot` and `/auth/reset`, deploy the Worker/frontend, then run a controlled end-to-end reset test.
+- Next auth step after password recovery is verified: account deletion.
 
 ## Current follow-up / next work
 
