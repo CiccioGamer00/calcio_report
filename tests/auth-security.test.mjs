@@ -160,7 +160,12 @@ const sixHours = constants.AUTH_SESSION_MS;
 
 assert.equal(
   isSessionPayloadCurrent(
-    { email: "user@example.com", iat: now, exp: now + sixHours },
+    {
+      kind: "session",
+      email: "user@example.com",
+      iat: now,
+      exp: now + sixHours,
+    },
     now + sixHours - 1,
   ),
   true,
@@ -191,14 +196,44 @@ assert.equal(
 );
 assert.equal(isSessionPayloadCurrent({ iat: now }, now), false);
 
+assert.equal(
+  isSessionPayloadCurrent(
+    { email: "license@example.com", exp: now + sixHours },
+    now,
+  ),
+  false,
+  "Un codice licenza privo di iat non deve essere accettato come sessione.",
+);
+assert.equal(
+  isSessionPayloadCurrent(
+    {
+      kind: "license",
+      email: "license@example.com",
+      iat: now,
+      exp: now + sixHours,
+    },
+    now,
+  ),
+  false,
+  "Un token con kind diverso da session deve essere rifiutato.",
+);
+
 assert.match(source, /const passHash = passwordV2Enabled\(env\)/);
 assert.match(source, /function passwordV2Enabled\(env\)/);
 assert.match(source, /verifyPasswordHash\(password, u\.pass_hash\)/);
-assert.doesNotMatch(
-  source,
-  /UPDATE users SET pass_hash = \? WHERE email = \? AND pass_hash = \?/,
+const loginSource = source.slice(
+  source.indexOf("async function handleLogin"),
+  source.indexOf("async function handleForgotPassword"),
 );
-assert.match(source, /makeSessionToken\(env, email, now\)/);
+assert.doesNotMatch(
+  loginSource,
+  /UPDATE users SET pass_hash/,
+  "Il login non deve riscrivere automaticamente le password legacy.",
+);
+assert.match(source, /makeSessionToken\(env, email, passHash, now\)/);
+assert.match(source, /makeSessionToken\(env, email, u\.pass_hash, now\)/);
+assert.match(source, /kind: "session"/);
+assert.match(source, /ACCOUNT_DISABLED/);
 assert.match(
   source,
   /COALESCE\(disabled,0\) as disabled FROM users WHERE email = \?/,
