@@ -1,15 +1,19 @@
 # Calcio Report — Project Status
 
-_Last updated: 2026-10-07_
+_Last updated: 2026-10-09_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
 
-## Current operating state — 2026-10-07
+## Current operating state — 2026-10-09
 
 - Core V2 is released on `main` and is the current public frontend at `https://app.calcioreport.com/`.
 - `main` is the stable production branch. New work must start from current `main` on a small feature/fix branch and return through a tested pull request.
 - `core-v2` is now historical; do not use it as the base for new work.
 - The production request path Browser → Cloudflare Worker → OVH relay → API-Football is verified and remains the required architecture.
+- **Password recovery RELEASED to `main` on 2026-10-09** via PR #12, merge commit `a4bf6c1447fff876dd05a4cadce5bc8446000596`. GitHub Pages deployment for the merge commit completed successfully. The Worker recovery endpoints were manually deployed and exercised before the merge. Manual E2E on the updated local frontend passed: new password accepted, old password rejected, reused reset link rejected, login with new password successful. Local automated suite: **15 pass / 0 fail**, clean branch. Public browser smoke check on `https://app.calcioreport.com/` is pending.
+- Resend: `mail.calcioreport.com` verified, DKIM and SPF provider-verified. Two test recovery emails arrived in **Libero spam**, not Gmail. Frontend now instructs users to check spam. Inbox placement remains a non-blocking follow-up; do not change DNS/sender speculatively.
+- Existing Cloudflare check `Workers Builds: calcioreport` failed on both the pre-merge stable `main` and the PR head. It refers to `calcioreport`, not the production Worker `calcio-report-proxy`; GitHub Pages deployment succeeded separately. Review obsolete Cloudflare build integration later.
+- Workflow: when the user runs local steps, provide **all related terminal commands in one coherent batch**, not one per conversational turn. Request a single combined report.
 - Matchday / Giornata is released and verified in production.
 - Shared fixture-statistics caching plus the official-match sample rule are released and verified in production.
 - No currently visible panel has a known blocking regression. Do not change an audited panel unless a new reproducible bug, duplicated request or measurable efficiency issue is found.
