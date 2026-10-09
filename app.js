@@ -174,6 +174,116 @@ function authErrorMessage(res, fallback) {
   return res?.json?.message || fallback;
 }
 
+function passwordResetTokenFromHash() {
+  const raw = String(location.hash || "");
+  if (!raw.startsWith("#reset=")) return "";
+  try {
+    return decodeURIComponent(raw.slice("#reset=".length)).trim();
+  } catch {
+    return "";
+  }
+}
+
+function clearPasswordResetHash() {
+  if (!String(location.hash || "").startsWith("#reset=")) return;
+  history.replaceState(null, "", location.pathname + location.search);
+}
+
+function setPasswordResetMode(enabled) {
+  const standard = document.getElementById("authStandardBox");
+  const reset = document.getElementById("authResetBox");
+  const title = document.getElementById("authModalTitle");
+
+  standard?.classList.toggle("hidden", !!enabled);
+  reset?.classList.toggle("hidden", !enabled);
+  if (title) {
+    title.textContent = enabled ? "Reimposta password" : "Login / Registrazione";
+  }
+}
+
+function setupPasswordRecovery() {
+  const forgotBtn = document.getElementById("btnForgotPassword");
+  const resetBtn = document.getElementById("btnResetPassword");
+  const cancelBtn = document.getElementById("btnCancelPasswordReset");
+  let resetToken = passwordResetTokenFromHash();
+
+  forgotBtn?.addEventListener("click", async () => {
+    const email = document.getElementById("authEmail")?.value || "";
+    if (!String(email).includes("@")) {
+      setAuthMsg("Inserisci prima l'email del tuo account.");
+      return;
+    }
+
+    setAuthMsg("Invio del link di recupero…");
+    const res = await authPost("/auth/forgot", { email });
+    if (res.ok) {
+      setAuthMsg(
+        (res.json?.message ||
+          "Se l'email è registrata, riceverai un link per reimpostare la password.") +
+          " Controlla anche la cartella Spam / Posta indesiderata.",
+      );
+    } else {
+      setAuthMsg(authErrorMessage(res, "Impossibile richiedere il recupero."));
+    }
+  });
+
+  resetBtn?.addEventListener("click", async () => {
+    const password = document.getElementById("resetPass")?.value || "";
+    const confirm = document.getElementById("resetPassConfirm")?.value || "";
+
+    if (!resetToken) {
+      setAuthMsg("Link di recupero non valido o mancante.");
+      return;
+    }
+    if (password.length < 6) {
+      setAuthMsg("La nuova password deve avere almeno 6 caratteri.");
+      return;
+    }
+    if (password !== confirm) {
+      setAuthMsg("Le due password non coincidono.");
+      return;
+    }
+
+    setAuthMsg("Aggiornamento password…");
+    const res = await authPost("/auth/reset", {
+      token: resetToken,
+      password,
+    });
+
+    if (res.ok && res.json?.ok) {
+      resetToken = "";
+      clearPasswordResetHash();
+      setPasswordResetMode(false);
+      const authPass = document.getElementById("authPass");
+      const resetPass = document.getElementById("resetPass");
+      const resetConfirm = document.getElementById("resetPassConfirm");
+      if (authPass) authPass.value = "";
+      if (resetPass) resetPass.value = "";
+      if (resetConfirm) resetConfirm.value = "";
+      setAuthMsg(
+        res.json?.message ||
+          "Password aggiornata. Ora puoi effettuare il login.",
+      );
+      return;
+    }
+
+    setAuthMsg(authErrorMessage(res, "Link di recupero non valido o scaduto."));
+  });
+
+  cancelBtn?.addEventListener("click", () => {
+    resetToken = "";
+    clearPasswordResetHash();
+    setPasswordResetMode(false);
+    setAuthMsg("Puoi effettuare il login o richiedere un nuovo link.");
+  });
+
+  if (resetToken) {
+    setPasswordResetMode(true);
+    document.getElementById("authModal")?.classList.remove("hidden");
+    setAuthMsg("Inserisci e conferma la nuova password.");
+  }
+}
+
 async function showRemainingInPopup() {
   const me = await fetchMe();
   const json = me?.json;
@@ -349,9 +459,9 @@ function setupModalClose() {
   document
     .getElementById("btnCloseAuth")
     ?.addEventListener("click", closeAuthModal);
-  document.getElementById("authModal")?.addEventListener("click", (e) => {
-    if (e.target?.id === "authModal") closeAuthModal();
-  });
+  // Non chiudere sul backdrop: la selezione dei suggerimenti email/password
+  // del browser può generare un click sullo sfondo e nascondere il form.
+  // Rimane disponibile la chiusura esplicita con la X.
 }
 
 function goToPayment(opts = {}) {
@@ -926,6 +1036,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (isWelcomeDone()) hideWelcomeCard();
   setupTopButton();
   setupAuthActions();
+  setupPasswordRecovery();
   setupModalClose();
   setupProLockCTA();
   setupTelegramHeader();

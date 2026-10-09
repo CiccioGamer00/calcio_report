@@ -16,6 +16,10 @@ if (url.pathname === "/stripe/webhook" && request.method === "POST") {
       return handleRegister(request, env);
     if (url.pathname === "/auth/login" && request.method === "POST")
       return handleLogin(request, env);
+    if (url.pathname === "/auth/forgot" && request.method === "POST")
+      return handleForgotPassword(request, env, ctx);
+    if (url.pathname === "/auth/reset" && request.method === "POST")
+      return handleResetPassword(request, env);
     if (url.pathname === "/auth/me" && request.method === "GET")
       return handleMe(request, env);
     if (url.pathname === "/license/redeem" && request.method === "POST")
@@ -61,6 +65,12 @@ if (url.pathname === "/stripe/webhook" && request.method === "POST") {
    AUTH: register/login/me
    ========================= */
 const AUTH_SESSION_MS = 6 * 60 * 60 * 1000;
+const PASSWORD_RESET_TTL_MS = 20 * 60 * 1000;
+const PASSWORD_RESET_TOKEN_SCOPE = "password-reset-v1";
+const SESSION_PASSWORD_VERSION_SCOPE = "session-password-version-v1";
+const RESET_PASSWORD_VERSION_SCOPE = "reset-password-version-v1";
+const PASSWORD_RESET_GENERIC_MESSAGE =
+  "Se l'email è registrata, riceverai un link per reimpostare la password.";
 
 // Work factor volutamente compatibile con Workers Free.
 // Il formato versionato permette di alzarlo in futuro senza cambiare schema.
@@ -110,7 +120,7 @@ async function handleRegister(request, env) {
     .bind(crypto.randomUUID(), email, passHash, trialEndsAt, 0, now)
     .run();
 
-  const token = await makeSessionToken(env, email, now);
+  const token = await makeSessionToken(env, email, passHash, now);
 
   return json(
     {
@@ -168,7 +178,7 @@ async function handleLogin(request, env) {
   }
 
   const now = Date.now();
-  const token = await makeSessionToken(env, email, now);
+  const token = await makeSessionToken(env, email, u.pass_hash, now);
 
   return json(
     {
@@ -176,6 +186,151 @@ async function handleLogin(request, env) {
       token,
       trialEndsAt: Number(u.trial_ends_at || 0),
       paidUntil: Number(u.paid_until || 0),
+    },
+    200,
+    corsHeaders(),
+  );
+}
+
+async function handleForgotPassword(request, env, ctx) {
+  const body = await request.json().catch(() => ({}));
+  const email = normEmail(body.email);
+
+  // Risposta volutamente identica per email esistenti e non esistenti:
+  // evita di trasformare il recupero password in un enumeratore di account.
+  if (email) {
+    const u = await env.DB.prepare(
+      "SELECT pass_hash, COALESCE(disabled,0) as disabled FROM users WHERE email = ?",
+    )
+      .bind(email)
+      .first();
+
+    if (u?.pass_hash && Number(u.disabled || 0) !== 1) {
+      const resetToken = await makePasswordResetToken(
+        env,
+        email,
+        u.pass_hash,
+      );
+      const appOrigin = passwordResetAppOrigin(env);
+      const resetUrl = `${appOrigin}/#reset=${encodeURIComponent(resetToken)}`;
+
+      const delivery = sendPasswordResetEmail(env, email, resetUrl).catch(
+        (err) => {
+          console.error(
+            "password reset email delivery failed",
+            String(err?.message || err || "unknown error"),
+          );
+        },
+      );
+
+      if (ctx?.waitUntil) ctx.waitUntil(delivery);
+      else await delivery;
+    }
+  }
+
+  return json(
+    { ok: true, message: PASSWORD_RESET_GENERIC_MESSAGE },
+    200,
+    corsHeaders(),
+  );
+}
+
+async function handleResetPassword(request, env) {
+  const body = await request.json().catch(() => ({}));
+  const token = String(body.token || "").trim();
+  const password = String(body.password || "");
+
+  if (!token || password.length < 6) {
+    return json(
+      {
+        error: "BAD_INPUT",
+        message: "Link non valido o password inferiore a 6 caratteri.",
+      },
+      400,
+      corsHeaders(),
+    );
+  }
+
+  const payload = await verifyPasswordResetTokenEnvelope(env, token);
+  const email = normEmail(payload?.email);
+  const exp = Number(payload?.exp || 0);
+
+  if (
+    !email ||
+    !payload?.pv ||
+    !Number.isFinite(exp) ||
+    exp <= Date.now()
+  ) {
+    return json(
+      {
+        error: "RESET_INVALID",
+        message: "Link di recupero non valido o scaduto.",
+      },
+      400,
+      corsHeaders(),
+    );
+  }
+
+  const u = await env.DB.prepare(
+    "SELECT pass_hash, COALESCE(disabled,0) as disabled FROM users WHERE email = ?",
+  )
+    .bind(email)
+    .first();
+
+  if (!u?.pass_hash || Number(u.disabled || 0) === 1) {
+    return json(
+      {
+        error: "RESET_INVALID",
+        message: "Link di recupero non valido o scaduto.",
+      },
+      400,
+      corsHeaders(),
+    );
+  }
+
+  const expectedVersion = await passwordVersion(
+    env,
+    RESET_PASSWORD_VERSION_SCOPE,
+    u.pass_hash,
+  );
+  if (!timingSafeEq(String(payload.pv), expectedVersion)) {
+    return json(
+      {
+        error: "RESET_INVALID",
+        message: "Link di recupero non valido o già utilizzato.",
+      },
+      400,
+      corsHeaders(),
+    );
+  }
+
+  const newHash = passwordV2Enabled(env)
+    ? await hashPassword(password)
+    : await sha256(password);
+
+  // Il confronto sul vecchio hash rende il token single-use anche in caso
+  // di due richieste concorrenti.
+  const update = await env.DB.prepare(
+    "UPDATE users SET pass_hash = ? WHERE email = ? AND pass_hash = ?",
+  )
+    .bind(newHash, email, u.pass_hash)
+    .run();
+
+  if (Number(update?.meta?.changes || 0) !== 1) {
+    return json(
+      {
+        error: "RESET_INVALID",
+        message: "Link di recupero non valido o già utilizzato.",
+      },
+      400,
+      corsHeaders(),
+    );
+  }
+
+  return json(
+    {
+      ok: true,
+      message: "Password aggiornata. Ora puoi effettuare il login.",
     },
     200,
     corsHeaders(),
@@ -190,12 +345,15 @@ async function handleMe(request, env) {
   if (!sess?.email) return json({ ok: false }, 200, corsHeaders());
 
   const u = await env.DB.prepare(
-    "SELECT email, trial_ends_at, paid_until, COALESCE(disabled,0) as disabled FROM users WHERE email = ?",
+    "SELECT email, pass_hash, trial_ends_at, paid_until, COALESCE(disabled,0) as disabled FROM users WHERE email = ?",
   )
     .bind(sess.email)
     .first();
 
   if (!u) return json({ ok: false }, 200, corsHeaders());
+  if (!(await sessionPasswordVersionMatches(env, sess, u.pass_hash))) {
+    return json({ ok: false, error: "AUTH_INVALID" }, 200, corsHeaders());
+  }
   if (Number(u.disabled || 0) === 1) {
     return json({ ok: false, error: "ACCOUNT_DISABLED" }, 200, corsHeaders());
   }
@@ -227,6 +385,22 @@ async function handleRedeem(request, env) {
   const sess = await verifySignedToken(env, token);
   if (!sess?.email) {
     return json({ error: "AUTH_INVALID" }, 401, corsHeaders());
+  }
+
+  const u = await env.DB.prepare(
+    "SELECT paid_until, pass_hash, COALESCE(disabled,0) as disabled FROM users WHERE email = ?",
+  )
+    .bind(sess.email)
+    .first();
+
+  if (
+    !u ||
+    !(await sessionPasswordVersionMatches(env, sess, u.pass_hash))
+  ) {
+    return json({ error: "AUTH_INVALID" }, 401, corsHeaders());
+  }
+  if (Number(u.disabled || 0) === 1) {
+    return json({ error: "ACCOUNT_DISABLED" }, 403, corsHeaders());
   }
 
   const body = await request.json().catch(() => ({}));
@@ -262,10 +436,6 @@ async function handleRedeem(request, env) {
   }
 
   // Attiva 30 giorni da adesso (o estendi se già attivo)
-  const u = await env.DB.prepare("SELECT paid_until FROM users WHERE email = ?")
-    .bind(sess.email)
-    .first();
-
   const now = Date.now();
   const currentPaid = Number(u?.paid_until || 0);
   const base = Math.max(now, currentPaid);
@@ -1693,23 +1863,46 @@ async function signToken(env, payload) {
   return `${body}.${sig}`;
 }
 
-async function makeSessionToken(env, email, now = Date.now()) {
+async function makeSessionToken(env, email, passHash, now = Date.now()) {
+  const av = await passwordVersion(
+    env,
+    SESSION_PASSWORD_VERSION_SCOPE,
+    passHash,
+  );
   return signToken(env, {
+    kind: "session",
     email: normEmail(email),
     iat: now,
     exp: now + AUTH_SESSION_MS,
+    av,
   });
+}
+
+async function sessionPasswordVersionMatches(env, session, passHash) {
+  // Compatibilità temporanea con sessioni emesse prima di questa release.
+  // Scadranno comunque entro le 6 ore già imposte dal Worker.
+  if (!session?.av) return true;
+  const expected = await passwordVersion(
+    env,
+    SESSION_PASSWORD_VERSION_SCOPE,
+    passHash,
+  );
+  return timingSafeEq(String(session.av), expected);
 }
 
 function isSessionPayloadCurrent(payload, now = Date.now()) {
   if (!payload?.email) return false;
 
+  // I token sessione nuovi sono marcati esplicitamente. Le sessioni legacy
+  // senza "kind" restano ammesse solo se hanno il loro iat originale.
+  if (payload.kind && payload.kind !== "session") return false;
+  const iat = Number(payload.iat || 0);
+  if (!Number.isFinite(iat) || iat <= 0) return false;
+
   const exp = Number(payload.exp || 0);
   if (Number.isFinite(exp) && exp > 0) return now < exp;
 
-  // Compatibilità con token già emessi prima dell'introduzione di "exp".
-  const iat = Number(payload.iat || 0);
-  if (!Number.isFinite(iat) || iat <= 0) return false;
+  // Compatibilità con token emessi prima dell'introduzione di "exp".
   return now < iat + AUTH_SESSION_MS;
 }
 
@@ -1724,6 +1917,103 @@ async function verifySignedToken(env, token) {
     return isSessionPayloadCurrent(payload) ? payload : null;
   } catch {
     return null;
+  }
+}
+
+async function passwordVersion(env, scope, passHash) {
+  return hmacSha256(
+    env.LICENSE_SECRET,
+    `${String(scope || "")}\n${String(passHash || "")}`,
+  );
+}
+
+async function makePasswordResetToken(
+  env,
+  email,
+  passHash,
+  now = Date.now(),
+) {
+  const body = base64urlEncode(
+    JSON.stringify({
+      email: normEmail(email),
+      exp: now + PASSWORD_RESET_TTL_MS,
+      pv: await passwordVersion(
+        env,
+        RESET_PASSWORD_VERSION_SCOPE,
+        passHash,
+      ),
+      nonce: base64urlFromBytes(
+        crypto.getRandomValues(new Uint8Array(16)),
+      ),
+    }),
+  );
+  const sig = await hmacSha256(
+    env.LICENSE_SECRET,
+    `${PASSWORD_RESET_TOKEN_SCOPE}\n${body}`,
+  );
+  return `${body}.${sig}`;
+}
+
+async function verifyPasswordResetTokenEnvelope(env, token) {
+  const parts = String(token || "").split(".");
+  if (parts.length !== 2) return null;
+  const [body, sig] = parts;
+  const expected = await hmacSha256(
+    env.LICENSE_SECRET,
+    `${PASSWORD_RESET_TOKEN_SCOPE}\n${body}`,
+  );
+  if (!timingSafeEq(sig, expected)) return null;
+
+  try {
+    return JSON.parse(base64urlDecode(body));
+  } catch {
+    return null;
+  }
+}
+
+function passwordResetAppOrigin(env) {
+  const configured = String(
+    env.PASSWORD_RESET_APP_ORIGIN || "https://app.calcioreport.com",
+  ).trim();
+  return configured.replace(/\/+$/, "");
+}
+
+async function sendPasswordResetEmail(env, email, resetUrl) {
+  const apiKey = String(env.RESEND_API_KEY || "").trim();
+  if (!apiKey) throw new Error("RESEND_API_KEY non configurata");
+
+  const from = String(
+    env.PASSWORD_RESET_FROM ||
+      "Calcio Report <noreply@mail.calcioreport.com>",
+  ).trim();
+
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from,
+      to: [email],
+      subject: "Reimposta la password di Calcio Report",
+      text:
+        "Hai richiesto di reimpostare la password di Calcio Report.\n\n" +
+        `Apri questo link entro 20 minuti:\n${resetUrl}\n\n` +
+        "Se non hai richiesto tu il recupero, ignora questa email.",
+      html:
+        "<p>Hai richiesto di reimpostare la password di Calcio Report.</p>" +
+        `<p><a href="${resetUrl}">Reimposta password</a></p>` +
+        "<p>Il link scade tra 20 minuti.</p>" +
+        "<p>Se non hai richiesto tu il recupero, ignora questa email.</p>",
+    }),
+  });
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(
+      `Resend HTTP ${res.status}${detail ? `: ${detail.slice(0, 180)}` : ""}`,
+    );
   }
 }
 
@@ -1967,7 +2257,7 @@ async function requireActiveUser(request, env) {
   }
 
   const u = await env.DB.prepare(
-    "SELECT trial_ends_at, paid_until, COALESCE(disabled,0) as disabled FROM users WHERE email = ?",
+    "SELECT pass_hash, trial_ends_at, paid_until, COALESCE(disabled,0) as disabled FROM users WHERE email = ?",
   )
     .bind(sess.email)
     .first();
@@ -1976,6 +2266,28 @@ async function requireActiveUser(request, env) {
     return {
       ok: false,
       res: json({ error: "USER_NOT_FOUND" }, 404, corsHeaders()),
+    };
+  }
+
+  if (!(await sessionPasswordVersionMatches(env, sess, u.pass_hash))) {
+    return {
+      ok: false,
+      res: json(
+        { error: "AUTH_INVALID", message: "Sessione scaduta o non valida." },
+        401,
+        corsHeaders(),
+      ),
+    };
+  }
+
+  if (Number(u.disabled || 0) === 1) {
+    return {
+      ok: false,
+      res: json(
+        { error: "ACCOUNT_DISABLED", message: "Account disabilitato." },
+        403,
+        corsHeaders(),
+      ),
     };
   }
 
