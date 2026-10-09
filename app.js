@@ -218,8 +218,9 @@ function setupPasswordRecovery() {
     const res = await authPost("/auth/forgot", { email });
     if (res.ok) {
       setAuthMsg(
-        res.json?.message ||
-          "Se l'email è registrata, riceverai un link per reimpostare la password.",
+        (res.json?.message ||
+          "Se l'email è registrata, riceverai un link per reimpostare la password.") +
+          " Controlla anche la cartella Spam / Posta indesiderata.",
       );
     } else {
       setAuthMsg(authErrorMessage(res, "Impossibile richiedere il recupero."));
