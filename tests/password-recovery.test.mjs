@@ -52,6 +52,7 @@ assert.match(html, /id="btnForgotPassword"/);
 assert.match(html, /id="authResetBox" class="hidden"/);
 assert.match(html, /id="resetPassConfirm"/);
 assert.match(app, /authPost\("\/auth\/forgot", \{ email \}\)/);
+assert.match(app, /Controlla anche la cartella Spam \/ Posta indesiderata\./);
 assert.match(app, /authPost\("\/auth\/reset",/);
 assert.match(app, /password !== confirm/);
 assert.match(app, /passwordResetTokenFromHash/);
