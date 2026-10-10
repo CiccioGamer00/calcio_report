@@ -234,3 +234,22 @@ or PRO activation was exercised. Do not repeat this flow absent a relevant chang
 Next: inspect the existing Cloudflare authentication rate-limit rule and actual API
 hostname coverage. Production activation/merge still require explicit approval.
 Narrow/keyboard deletion-modal checks and external retention settings remain unverified.
+
+### Cloudflare protection confirmed — 2026-10-10
+
+Owner screenshots showed the active Calcio Report auth protection rule, grouped
+by IP, 5 requests / 10 seconds, Block for 10 seconds. The owner then confirmed
+saving this complete expression:
+
+```text
+(http.request.uri.path in {"/auth/login" "/auth/register" "/auth/forgot" "/auth/reset" "/auth/delete"})
+```
+
+A bounded live probe against the repository-configured API origin
+https://api.calcioreport.com/auth/delete sent eight empty unauthenticated POSTs:
+401, 401, 401, 401, 401, 429, 429, 429. Coverage of the new path on the actual app
+API origin is verified. No credentials were used and no account data changed.
+This does not prove that alternate workers.dev routes are disabled/protected;
+review any alternate public entry points before enabling deletion. Production
+application code and main remain unchanged; the owner changed only the edge rule.
+Narrow/keyboard modal checks and external backup/log settings remain unverified.
