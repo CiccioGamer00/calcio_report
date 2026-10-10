@@ -8,19 +8,30 @@ import vm from 'node:vm';
 const source = readFileSync(new URL('../worker/worker.js', import.meta.url), 'utf8');
 function harness() {
   const db = new DatabaseSync(':memory:');
-  db.exec(`CREATE TABLE users (id TEXT PRIMARY KEY, email TEXT UNIQUE, pass_hash TEXT,
-    trial_ends_at INTEGER, paid_until INTEGER, created_at INTEGER, disabled INTEGER DEFAULT 0,
-    note TEXT, last_seen_at INTEGER, paid_activated_at INTEGER);`);
+  db.exec(readFileSync(new URL('./fixtures/account-schema.sql', import.meta.url), 'utf8'));
   let beforeDelete;
   const env = { LICENSE_SECRET: 'test-only-secret', STRIPE_WEBHOOK_SECRET: 'test-stripe-secret',
     ACCOUNT_DELETION_ENABLED: '1', DB: { prepare(sql) {
       return { bind(...args) { return {
+        sql, args,
         async first() { return db.prepare(sql).get(...args); },
         async run() {
-          if (sql.startsWith('DELETE') && beforeDelete) beforeDelete();
           return { meta: { changes: db.prepare(sql).run(...args).changes } };
         },
       }; } };
+    }, async batch(statements) {
+      // Simulate a race after credential read, before D1's serialized transaction.
+      if (beforeDelete) beforeDelete();
+      db.exec('BEGIN');
+      try {
+        const results = statements.map(statement => ({ success:true,
+          meta:{changes:db.prepare(statement.sql).run(...statement.args).changes} }));
+        db.exec('COMMIT');
+        return results;
+      } catch (error) {
+        db.exec('ROLLBACK');
+        throw error;
+      }
     } } };
   const context = vm.createContext({ crypto: webcrypto, TextEncoder, TextDecoder, Uint8Array,
     Request, Response, Headers, URL, btoa, atob, console,
@@ -126,4 +137,71 @@ test('Stripe cannot recreate deleted users or credit old checkout to re-register
 test('turning deletion off does not allow Stripe to recreate deleted users', async () => {
   const h = harness(); h.env.ACCOUNT_DELETION_ENABLED = '';
   await h.webhook(Math.floor(Date.now()/1000)); assert.equal(h.row(), undefined);
+});
+
+function seedTrial(h, email = h.email) {
+  h.db.prepare('INSERT INTO trial_usage (email, day_key, daily_used, total_used, updated_at) VALUES (?, ?, 3, 8, 123)')
+    .run(email, '2026-10-10');
+  for (const search of ['search-1','search-2']) {
+    h.db.prepare('INSERT INTO trial_search_log (email, search_id, created_at) VALUES (?, ?, 123)').run(email,search);
+  }
+}
+function trialRows(h, email = h.email) {
+  return {
+    usage: h.db.prepare('SELECT * FROM trial_usage WHERE email = ?').all(email),
+    searches: h.db.prepare('SELECT * FROM trial_search_log WHERE email = ? ORDER BY search_id').all(email),
+  };
+}
+
+test('deletion clears both trial tables for its owner only and never touches Cloudflare metadata', async () => {
+  const h = harness(); const {token} = await h.register();
+  await h.call('/auth/register', {email:'other@example.com',password:h.password});
+  seedTrial(h);seedTrial(h,'other@example.com');
+  const other = trialRows(h,'other@example.com');
+  h.db.exec("CREATE TABLE _cf_KV (key TEXT PRIMARY KEY, value BLOB) WITHOUT ROWID; INSERT INTO _cf_KV VALUES ('sentinel', 'preserve');");
+  assert.equal((await h.remove(token)).status,200);
+  assert.equal(h.row(),undefined);
+  assert.deepEqual(trialRows(h),{usage:[],searches:[]});
+  assert.deepEqual(trialRows(h,'other@example.com'),other);
+  assert.equal(h.db.prepare('SELECT value FROM _cf_KV').get().value,'preserve');
+});
+
+test('failure at any delete rolls back every table, including already deleted trial records', async () => {
+  for (const table of ['trial_search_log','trial_usage','users']) {
+    const h=harness();const {token}=await h.register();seedTrial(h);
+    const account=h.row(),before=trialRows(h);
+    h.db.exec(`CREATE TRIGGER reject_delete BEFORE DELETE ON ${table} BEGIN SELECT RAISE(ABORT, 'test failure'); END;`);
+    assert.equal((await h.remove(token)).status,503,table);
+    assert.deepEqual(h.row(),account,table);
+    assert.deepEqual(trialRows(h),before,table);
+  }
+});
+
+test('concurrent password reset or account replacement preserves all trial records', async () => {
+  for (const change of ["UPDATE users SET pass_hash = 'changed'", "UPDATE users SET id = 'replacement-account'"]) {
+    const h=harness();const {token}=await h.register();seedTrial(h);
+    const before=trialRows(h);h.race(()=>h.db.exec(change));
+    assert.equal((await h.remove(token)).status,409);
+    assert.ok(h.row());assert.deepEqual(trialRows(h),before);
+  }
+});
+
+test('missing trial table is an explicit failure, never a partial deletion', async () => {
+  const h=harness();const {token}=await h.register();seedTrial(h);
+  h.db.exec('DROP TABLE trial_usage');
+  const account=h.row();
+  const searches=h.db.prepare('SELECT * FROM trial_search_log').all();
+  assert.equal((await h.remove(token)).status,503);
+  assert.deepEqual(h.row(),account);
+  assert.deepEqual(h.db.prepare('SELECT * FROM trial_search_log').all(),searches);
+});
+
+test('re-registration receives seven days with no counters or searches from the deleted account', async () => {
+  const h=harness();const {token}=await h.register();seedTrial(h);
+  assert.equal((await h.remove(token)).status,200);
+  const before=Date.now();const next=await h.register();
+  assert.ok(next.trialEndsAt>=before+7*86400000);
+  assert.ok(next.trialEndsAt<=Date.now()+7*86400000);
+  assert.equal(next.paidUntil,0);
+  assert.deepEqual(trialRows(h),{usage:[],searches:[]});
 });

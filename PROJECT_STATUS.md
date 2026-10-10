@@ -7,12 +7,13 @@ This file is the operational source of truth for Calcio Report. Keep it updated 
 ## Account deletion candidate — 2026-10-10 (NOT RELEASED)
 
 - Branch `auth/account-deletion` from stable `main` `c05438a`; PR #12 remains the production baseline.
-- Implemented password-confirmed self-service deletion with explicit `ELIMINA`, atomic user-row deletion, account-ID-bound sessions/reset links, footer modal and error handling. New feature disabled unless `ACCOUNT_DELETION_ENABLED=1`.
+- Implemented password-confirmed self-service deletion with explicit `ELIMINA`, atomic deletion across `users`, `trial_usage` and `trial_search_log`, account-ID-bound sessions/reset links, footer modal and error handling. New feature disabled unless `ACCOUNT_DELETION_ENABLED=1`.
 - Stripe candidate no longer creates users from payment events and rejects checkout sessions predating the current account. Registration-before-payment must be accepted before release; the owner confirmed on 2026-10-10 that PRO payments are one-time, with no subscriptions or automatic renewal.
 - Email verification evaluated, not enabled/implemented: recommend new registrations verify before the seven-day trial begins, while preserving existing TRIAL/PRO access.
-- Full local suite: **26 passed / 0 failed** on Node 24, including Worker routes against SQLite and frontend behavior tests. No external football/email/payment calls were made by tests.
+- Full local suite: **31 passed / 0 failed** on Node 24, including Worker routes against SQLite and frontend behavior tests. No external football/email/payment calls were made by tests.
 - Repeat-trial policy agreed on 2026-10-10: deletion followed by re-registration may receive a fresh seven-day TRIAL, including with the same email. PRO-only prediction remains the paid differentiator; do not add retained email identifiers solely to prevent repeat trials. Revisit only if observed abuse/API costs justify it.
-- Remaining: production data inventory, registration-before-payment decision, isolated D1/browser smoke test, rate-limit coverage and explicit merge/deploy approval.
+- D1 table schema confirmed from the owner screenshot on 2026-10-10: three application tables (`users`, `trial_usage`, `trial_search_log`) plus Cloudflare `_cf_KV`, which is never modified. The initial users-only candidate was corrected before deployment. A guarded D1 batch removes all three user records atomically; rollback, cross-account isolation, concurrent reset/re-registration and fresh-trial cleanup are tested. Empty test database schema: `tests/fixtures/account-schema.sql`.
+- Remaining: external data/backup inventory, registration-before-payment decision, isolated D1/browser smoke test, rate-limit coverage and explicit merge/deploy approval.
 - Detailed design, limitations and test/release checklist: `docs/account-deletion-email-verification.md`.
 - `main` and production have not been modified by this work.
 

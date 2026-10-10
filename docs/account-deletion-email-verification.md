@@ -8,8 +8,8 @@ Status: implementation tested locally; NOT deployed; approval required before me
 - `POST /auth/delete`: valid bearer session, current password and exact `ELIMINA` confirmation.
 - Available independently of trial/paid expiry. A disabled account with an existing valid session can delete; a disabled account without a session still requires support because login remains blocked.
 - Disabled by default. `ACCOUNT_DELETION_ENABLED=1` enables the endpoint and advertises it through `/auth/me`; the footer action is hidden otherwise.
-- One parameterized conditional `DELETE` on user ID, email and password hash removes the complete `users` row, including credentials, email, notes, entitlement and activity fields. A concurrent password change cannot cause a stale deletion to succeed. Constraint failures are not reported as success.
-- This is the only user-data table referenced by the current Worker. Production D1 schema, additional tables/integrations and backups have NOT been inspected. Confirm actual coverage before presenting this as complete deletion in production. No retention or backup-erasure promise is implied.
+- One transactional D1 `batch` removes the user’s `trial_search_log`, `trial_usage` and `users` records, including credentials, email, notes, entitlement, activity and trial counters. Every deletion is guarded by the authenticated user ID, email and current password hash. A concurrent reset/re-registration leaves all records untouched. Any SQL error rolls back the entire batch; failures are not reported as success.
+- The owner’s 2026-10-10 schema screenshot confirms these three application tables in D1 `calcio_users`, plus `_cf_KV` (Cloudflare-managed; never delete or copy it). The initial users-only implementation was corrected before deployment. `tests/fixtures/account-schema.sql` reproduces the supplied application table definitions for an empty isolated test database. External integrations, triggers and backups have not been inventoried; no backup-erasure or provider-record deletion promise is implied.
 - New session and reset tokens include the immutable user ID. All session gates check account identity, preventing an old token from becoming valid after registration with the same email/password. Old tokens use issuance time versus account creation time for compatibility. Reset updates also include the user ID in their conditional write.
 - UI reuses the existing modal and footer, requires explicit input, prevents duplicate submissions, clears entered password after a request, and logs out/reloads only after confirmed success. Network ambiguity is shown without claiming the account still exists.
 - Other accounts, football cache, panels and TRIAL/PRO duration rules are unchanged. No request to the relay or API-Football is added.
@@ -61,6 +61,7 @@ Sources reviewed:
 - https://cheatsheetseries.owasp.org/cheatsheets/Email_Validation_and_Verification_Cheat_Sheet.html
 - https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html
 - https://docs.stripe.com/api/checkout/sessions/object
+- https://developers.cloudflare.com/d1/worker-api/d1-database/#batch
 
 ## Local validation and manual release gate
 
@@ -71,11 +72,11 @@ node --test tests/*.test.mjs
 git diff --check
 ```
 
-Tests cover real SQLite SQL execution behind a D1-shaped adapter, Worker routes, legacy/new token behavior, password recovery, both duplicate and failed deletion, delayed Stripe events, frontend cancellation/duplicate submit/error handling and the existing suite. This does NOT replace a Cloudflare D1 integration or visual browser test.
+31 tests pass on Node 24. Tests cover real SQLite SQL execution and transaction rollback behind a D1-shaped adapter, Worker routes, legacy/new token behavior, password recovery, both duplicate and failed deletion, delayed Stripe events, frontend cancellation/duplicate submit/error handling and the existing suite. This does NOT replace a Cloudflare D1 integration or visual browser test.
 
 Before an approved deployment:
 
-- Resolve the remaining product decisions above and inspect the actual D1 schema/user-data inventory and backup/log retention. The owner has confirmed the one-time payment model.
+- Resolve the remaining product decisions above and review external data integrations and backup/log retention. The D1 table definitions have been inspected through the owner-provided schema output. The owner has confirmed the one-time payment model.
 - Include `/auth/delete` in the existing Cloudflare authentication rate-limit rule before activation. Do not rely on the browser to rate-limit password checks.
 - Deploy/test only in an isolated Worker/D1 test environment first. Use test accounts and test-mode billing, never an owner's real paid account.
 - Check desktop/mobile modal, keyboard access, cancel, wrong password, successful deletion, another open tab, expired TRIAL and PRO, recovery link invalidation, same-email registration, delayed Stripe event and normal fresh payment.

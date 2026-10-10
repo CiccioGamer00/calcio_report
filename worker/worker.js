@@ -378,9 +378,20 @@ async function handleDeleteAccount(request, env) {
     return json({ error: "PASSWORD_INVALID", message: "Password non corretta. Account non cancellato." }, 403, headers);
   }
   try {
-    // Single atomic statement: a concurrent reset/re-registration cannot be deleted.
-    const result = await env.DB.prepare("DELETE FROM users WHERE id = ? AND email = ? AND pass_hash = ?")
-      .bind(user.id, session.email, user.pass_hash).run();
+    // D1 batch is transactional: any SQL failure rolls back all three deletions.
+    // Each child deletion checks the same account incarnation/password, so a
+    // concurrent reset or re-registration leaves ALL its records untouched.
+    const results = await env.DB.batch([
+      env.DB.prepare(
+        "DELETE FROM trial_search_log WHERE email = ? AND EXISTS (SELECT 1 FROM users WHERE id = ? AND email = ? AND pass_hash = ?)",
+      ).bind(session.email, user.id, session.email, user.pass_hash),
+      env.DB.prepare(
+        "DELETE FROM trial_usage WHERE email = ? AND EXISTS (SELECT 1 FROM users WHERE id = ? AND email = ? AND pass_hash = ?)",
+      ).bind(session.email, user.id, session.email, user.pass_hash),
+      env.DB.prepare("DELETE FROM users WHERE id = ? AND email = ? AND pass_hash = ?")
+        .bind(user.id, session.email, user.pass_hash),
+    ]);
+    const result = results[2];
     if (Number(result?.meta?.changes || 0) !== 1) {
       return json({ error: "ACCOUNT_CHANGED", message: "Account modificato. Effettua nuovamente il login prima di riprovare." }, 409, headers);
     }
