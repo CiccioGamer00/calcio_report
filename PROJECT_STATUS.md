@@ -1,8 +1,19 @@
 # Calcio Report — Project Status
 
-_Last updated: 2026-10-09_
+_Last updated: 2026-10-10_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
+
+## Account deletion candidate — 2026-10-10 (NOT RELEASED)
+
+- Branch `auth/account-deletion` from stable `main` `c05438a`; PR #12 remains the production baseline.
+- Implemented password-confirmed self-service deletion with explicit `ELIMINA`, atomic user-row deletion, account-ID-bound sessions/reset links, footer modal and error handling. New feature disabled unless `ACCOUNT_DELETION_ENABLED=1`.
+- Stripe candidate no longer creates users from payment events and rejects checkout sessions predating the current account. Registration-before-payment must be accepted before release; recurring billing configuration is not yet verified.
+- Email verification evaluated, not enabled/implemented: recommend new registrations verify before the seven-day trial begins, while preserving existing TRIAL/PRO access.
+- Full local suite: **26 passed / 0 failed** on Node 24, including Worker routes against SQLite and frontend behavior tests. No external football/email/payment calls were made by tests.
+- Remaining: production data inventory, billing and repeat-trial policy decisions, isolated D1/browser smoke test, rate-limit coverage and explicit merge/deploy approval.
+- Detailed design, limitations and test/release checklist: `docs/account-deletion-email-verification.md`.
+- `main` and production have not been modified by this work.
 
 ## Current operating state — 2026-10-09
 
