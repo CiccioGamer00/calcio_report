@@ -265,3 +265,24 @@ preserving the previously verified browser-autofill fix. Regression assertions c
 Escape, unrelated keys and handled/composition events. Assets 20261010r3; 38 tests
 pass. Only a quick manual check of login Escape remains for this small UI change;
 do not repeat completed deletion/purchase tests. No Worker or production change.
+
+
+### Routing and final UI checkpoint — 2026-10-10 17:52 Europe/Rome
+
+Owner confirmed the login Escape fix. Narrow-window login Tab auto-scroll is
+explicitly accepted as nonblocking; deletion-modal keyboard/layout checks passed.
+
+Owner changed the existing active Stripe destination URL to
+`https://api.calcioreport.com/stripe/webhook`, retaining two selected events,
+and disabled production and preview workers.dev URLs in the production Worker's
+Domains page while retaining api.calcioreport.com. Unsigned empty webhook POST
+returned 400 Invalid signature. Subsequent public frontend and custom API /auth/me
+checks returned 200; direct production workers.dev/auth/me returned 404. Preview
+disabling is dashboard evidence only. Preserve these routing settings on deploy.
+No signed Stripe delivery or real payment/PRO activation was tested.
+
+Application code/main remain unchanged in production. PR #13 remains a draft;
+merge and production application deployment still require explicit approval.
+External provider log/backup retention remains unverified; deletion makes no
+promise to erase provider receipts or backups. Next product goal after this release:
+Apple App Store preparation, including a separate review of payment requirements.
