@@ -29,10 +29,10 @@ The candidate therefore requires registration BEFORE payment:
 - Payments received without an eligible account require manual reconciliation/refund assessment. Do not silently promise PRO access to pre-registration payments.
 - Existing webhook duplicate-event/idempotency behavior is outside this change; this is not a full billing audit.
 
-## Remaining product decisions
+## Product decisions and remaining proposals
 
 1. Payment model confirmed: one-time, no subscriptions or automatic renewal. Acceptance of registration-before-payment remains to be confirmed.
-2. Confirm policy for deletion followed by re-registration. This candidate keeps the current registration rule (a new account receives seven days). It stores no email tombstone or anti-abuse identifier after deletion. Email verification alone cannot prevent repeated trials. If repeat-trial prevention is required, agree on a separate minimal-retention policy before adding storage.
+2. Agreed on 2026-10-10: allow a fresh seven-day TRIAL after deletion and re-registration, including the same email. Preserve the current implementation; no email tombstone or anti-abuse identifier is retained after deletion. The user accepts repeat free access because prediction remains PRO-only and other email addresses could bypass an email-only restriction anyway. Reassess if actual abuse or API costs become material; do not add speculative tracking. Email verification remains useful for ownership, not as a guarantee against repeat trials.
 3. Approve or revise the email verification proposal below; it is intentionally not implemented in this PR.
 
 ## Proposed email verification

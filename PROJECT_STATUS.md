@@ -11,7 +11,8 @@ This file is the operational source of truth for Calcio Report. Keep it updated 
 - Stripe candidate no longer creates users from payment events and rejects checkout sessions predating the current account. Registration-before-payment must be accepted before release; the owner confirmed on 2026-10-10 that PRO payments are one-time, with no subscriptions or automatic renewal.
 - Email verification evaluated, not enabled/implemented: recommend new registrations verify before the seven-day trial begins, while preserving existing TRIAL/PRO access.
 - Full local suite: **26 passed / 0 failed** on Node 24, including Worker routes against SQLite and frontend behavior tests. No external football/email/payment calls were made by tests.
-- Remaining: production data inventory, registration-before-payment and repeat-trial policy decisions, isolated D1/browser smoke test, rate-limit coverage and explicit merge/deploy approval.
+- Repeat-trial policy agreed on 2026-10-10: deletion followed by re-registration may receive a fresh seven-day TRIAL, including with the same email. PRO-only prediction remains the paid differentiator; do not add retained email identifiers solely to prevent repeat trials. Revisit only if observed abuse/API costs justify it.
+- Remaining: production data inventory, registration-before-payment decision, isolated D1/browser smoke test, rate-limit coverage and explicit merge/deploy approval.
 - Detailed design, limitations and test/release checklist: `docs/account-deletion-email-verification.md`.
 - `main` and production have not been modified by this work.
 
