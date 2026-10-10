@@ -133,3 +133,93 @@ live backend checks as completed evidence; repeat only if a relevant change warr
 it. Resume with the remaining release decisions/checks in PROJECT_STATUS.md, then
 obtain explicit approval before merge or production deployment. Email verification
 remains evaluated only. Main and production are unchanged.
+
+## Resumed release review — 2026-10-10
+
+The credit pause is over. The existing six-step manual deletion result and 15
+isolated backend checks remain valid for the unchanged Worker. No production
+settings, schema, secrets or deployment have been changed in this review.
+
+### Purchase flow prepared for owner acceptance
+
+All in-app payment entries now go through `/auth/me` before offering checkout.
+Anonymous/expired sessions must log in or register; deleted/disabled accounts and
+network failures do not open checkout. An expired TRIAL or expired PRO entitlement
+can still purchase with a valid account. A second explicit click opens the provider
+page, avoiding asynchronous popup blocking. The confirmation cannot be hidden by
+saved hint preferences. Logout/account changes invalidate that confirmation.
+The existing design is preserved; the purchase copy now says one-time 30-day PRO,
+not a subscription. Email verification remains a proposal for a later PR.
+
+This is a UX safeguard, not a server-created checkout session. Public/shared Stripe
+links still work outside the app, and an account can be deleted while a checkout is
+open. The webhook continues to reject absent/replaced accounts; exceptional paid
+orders require support reconciliation. Owner acceptance of registration-before-
+payment is still required before release. No real payment was made or initiated.
+
+### Data inventory from repository code
+
+| Location | What the code sends/stores | Deletion coverage |
+| --- | --- | --- |
+| D1 users | Credentials, email, account ID, entitlement, note and activity | Conditional atomic deletion |
+| D1 trial tables | Email-linked counters and search IDs | Deleted in the same transaction |
+| Browser | Session token/time, UI preferences, football caches | Token/time removed on successful deletion; public football caches/preferences retained |
+| Stripe | Checkout email and payment/receipt records | No provider deletion or automatic refund |
+| Resend | Recovery email recipient and reset-link message | No provider history/mailbox deletion; old reset token invalidated |
+| OVH/API-Football | Football query plus server transport authentication | No account email/password/session forwarded by fetchRelay |
+| Cloudflare/OVH logs and D1 backups | Depends on dashboard/server retention configuration | Not inspectable from repository; do not claim erased |
+
+Repository inspection cannot confirm external triggers, exports, dashboards or
+backup retention. A database restore can restore deleted records: do not restore
+an old production snapshot without reconciling deletions through a controlled
+operational process. No retained email blacklist is added.
+
+### Activation sequence (requires explicit approval; not performed)
+
+1. Accept the registration-before-payment flow. Review exceptional payment support
+   and actual backup/log retention with the owner.
+2. In the EXISTING Cloudflare auth rate-limit rule, preserve its hostname/scope and
+   thresholds, and add the exact path `/auth/delete` alongside login/register/
+   forgot/reset. Existing recorded policy: 5 requests per IP / 10 seconds and a
+   10-second block. Do not replace the whole expression with a path-only rule.
+   Confirm the rule covers the public Worker hostname actually used by config.js;
+   if it does not, activation is blocked until an effective backend/edge limit exists.
+3. After release approval, deploy the reviewed Worker with deletion disabled,
+   preserving production secrets/bindings and AUTH_PASSWORD_V2; merge the frontend
+   only with explicit approval. Do not execute the empty test schema in production.
+4. Verify the rate-limit coverage, then enable deletion only under that approval.
+   Use a disposable account for the production smoke. Do not reuse test secrets.
+5. Emergency stop: disable ACCOUNT_DELETION_ENABLED. Keep the new account-ID and
+   Stripe protections; never roll back to the old webhook that recreates users.
+
+### Validation at this checkpoint
+
+38 local tests pass on Node 24, including six new payment-flow tests and a real
+PBKDF2 deletion test matching the production hash flag. The asset version is
+20261010r2. The Worker source is unchanged from the isolated deployment. No external
+email/payment/football requests are made by the local suite.
+
+Remaining manual checks: changed purchase UI and narrow/keyboard modal usability.
+The test server now supports a LOCAL mock checkout. From the repository folder:
+
+```powershell
+git fetch origin
+git switch auth/account-deletion
+git pull --ff-only origin auth/account-deletion
+py scripts/serve-account-test.py --mock-payment
+```
+
+Stop any older local server with Ctrl+C first. Open http://127.0.0.1:5501:
+logged-out Acquista PRO must ask for login; with a dummy test account it must show
+the one-time 30-day confirmation; Vai al pagamento opens only a local page saying
+Pagamento simulato. No Stripe request, real payment or entitlement activation occurs.
+Default invocation still disables all payment URLs. Both mock routes were smoke
+checked locally. Test the deletion modal in a narrow window and with Tab/Escape;
+no need to repeat the completed six-step deletion flow. Stop the server with Ctrl+C.
+
+Separate billing follow-up: the existing webhook does not persist fulfillment
+IDs and does not check payment_status before extension. Duplicate/delayed payment
+handling needs its own small billing patch before enabling additional asynchronous
+payment methods; this review does not claim a full billing audit or change those
+pre-existing semantics. Stripe reference:
+https://docs.stripe.com/checkout/fulfillment.md?payment-ui=stripe-hosted

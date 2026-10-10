@@ -67,6 +67,16 @@ test('deletion is opt-in; no token, forged token, wrong password and missing con
   assert.ok(h.row());
 });
 
+test('deletion verifies production PBKDF2 passwords as well as legacy hashes', async () => {
+  const h = harness(); h.env.AUTH_PASSWORD_V2 = '1';
+  const { token } = await h.register();
+  assert.match(h.row().pass_hash, /^pbkdf2_sha256/);
+  assert.equal((await h.call('/auth/delete', { password:'wrong', confirmation:'ELIMINA' }, token)).status, 403);
+  assert.ok(h.row());
+  assert.equal((await h.remove(token)).status, 200);
+  assert.equal(h.row(), undefined);
+});
+
 test('TRIAL, expired, PRO and disabled accounts can delete with valid session/password; other users untouched', async () => {
   for (const variant of ['trial','expired','pro','disabled']) {
     const h = harness(); const { token } = await h.register();

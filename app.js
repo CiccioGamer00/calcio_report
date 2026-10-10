@@ -310,9 +310,10 @@ async function showRemainingInPopup() {
   }
 }
 
-function openAuthModal() {
+function openAuthModal(message = "") {
   document.getElementById("authModal")?.classList.remove("hidden");
-  showRemainingInPopup();
+  if (message) setAuthMsg(message);
+  else showRemainingInPopup();
 }
 
 function closeAuthModal() {
@@ -340,21 +341,8 @@ function setupUpgradeButton() {
   btn.addEventListener("click", (e) => {
     e.preventDefault();
 
-    const pay = window.API_CONFIG?.paymentUrl || window.API_CONFIG?.paypalUrl || "";
-    const tg = window.API_CONFIG?.telegramUrl || "";
+    goToPayment();
 
-    showToast({
-      key: "hint_pay_email",
-      title: "Passa a PRO ⚡",
-      text:
-        "Per attivazione automatica: paga con la STESSA email con cui fai login nell’app.\n" +
-        "Se usi un’email diversa, scrivimi su Telegram e ti abilito io.",
-      allowDisable: true,
-      ctaLabel: pay ? "Vai al pagamento" : (tg ? "Apri Telegram" : ""),
-      ctaUrl: pay || tg
-    });
-
-    // non apriamo Stripe “a tradimento”, ci pensa il bottone del toast
   });
 }
 function setupAuthActions() {
@@ -444,7 +432,7 @@ function setupAuthActions() {
     if (res.ok && data.ok) {
       localStorage.setItem(LS_LOGIN_TS, String(Date.now()));
 
-      setAuthMsg("Abbonamento attivato per 30 giorni.");
+      setAuthMsg("PRO attivato per 30 giorni.");
       await refreshTopAuthUI();
 
       const me = await fetchMe();
@@ -467,32 +455,59 @@ function setupModalClose() {
 }
 
 function goToPayment(opts = {}) {
-  const { noLoginFallback = false } = opts || {};
+  return prepareAccountPayment(opts);
+}
 
-  const url =
-    window.API_CONFIG?.paypalUrl ||
-    window.API_CONFIG?.paymentUrl ||
-    "";
-
-  if (url) {
-    window.open(url, "_blank", "noopener");
+let paymentCheckPending = false;
+async function prepareAccountPayment(opts = {}) {
+  if (paymentCheckPending) return;
+  const token = getToken();
+  const requireLogin = () => {
+    openAuthModal("Prima di acquistare PRO, registrati o accedi. Poi premi di nuovo Acquista PRO.");
+  };
+  if (!token || isSessionExpired()) {
+    requireLogin();
     return;
   }
 
-  // fallback: se non configurato
-  if (noLoginFallback) {
-    showToast({
-      key: "hint_payment_missing",
-      title: "Pagamento non configurato",
-      text: "Il link di pagamento non è ancora impostato. Contattami su Telegram per attivazione.",
-      allowDisable: true,
-      ctaLabel: (window.API_CONFIG?.telegramUrl ? "Apri Telegram" : ""),
-      ctaUrl: (window.API_CONFIG?.telegramUrl || "")
-    });
+  paymentCheckPending = true;
+  let me;
+  try {
+    me = await fetchMe();
+  } catch {
+    me = null;
+  } finally {
+    paymentCheckPending = false;
+  }
+  if (getToken() !== token) return;
+  if (!me?.ok) {
+    showToast({ title: "Pagamento non aperto", text: "Non riesco a verificare l’account. Riprova tra poco.", allowDisable: false });
+    return;
+  }
+  if (!me.json?.ok) {
+    requireLogin();
     return;
   }
 
-  openAuthModal();
+  const url = window.API_CONFIG?.paymentUrl || window.API_CONFIG?.paypalUrl || "";
+  const tg = window.API_CONFIG?.telegramUrl || "";
+  if (!url) {
+    showToast({ title: "Pagamento non configurato", text: "Contatta il supporto per attivare PRO.",
+      allowDisable: false, ctaLabel: tg ? "Apri Telegram" : "", ctaUrl: tg });
+    return;
+  }
+  closeAuthModal();
+  // A second explicit click opens the tab synchronously, avoiding popup blockers.
+  showToast({
+    title: "Acquista PRO · 30 giorni",
+    text: "Pagamento una tantum, senza rinnovo automatico. Usa la STESSA email del tuo account Calcio Report per l’attivazione automatica.",
+    allowDisable: false,
+    ctaLabel: "Vai al pagamento",
+    ctaAction: () => {
+      if (getToken() !== token || isSessionExpired()) { requireLogin(); return; }
+      window.open(url, "_blank", "noopener");
+    },
+  });
 }
 // =========================
 // PRO upsell (Telegram group)
@@ -663,6 +678,7 @@ function showToast({
   allowDisable = true,
   ctaLabel = "",
   ctaUrl = "",
+  ctaAction = null,
 } = {}) {
   const el = document.getElementById("crToast");
   if (!el) return;
@@ -682,7 +698,7 @@ function showToast({
       <button type="button" class="tClose" data-tclose="1">Chiudi</button>
     </div>
        <div class="tActions">
-      ${ctaLabel && ctaUrl ? `<button type="button" class="tClose" data-tcta="1">${ctaLabel}</button>` : ``}
+      ${ctaLabel && (ctaUrl || ctaAction) ? `<button type="button" class="tClose" data-tcta="1">${ctaLabel}</button>` : ``}
       ${allowDisable && key ? `<button type="button" class="tLink" data-tdisable="1" data-key="${key}">Non mostrare più</button>` : ``}
     </div>
   `;
@@ -695,9 +711,10 @@ function showToast({
     el.innerHTML = "";
   });
   el.querySelector("[data-tcta='1']")?.addEventListener("click", () => {
-    if (ctaUrl) window.open(ctaUrl, "_blank", "noopener");
     el.classList.add("hidden");
     el.innerHTML = "";
+    if (ctaAction) ctaAction();
+    else if (ctaUrl) window.open(ctaUrl, "_blank", "noopener");
   });
 
   el.querySelector("[data-tdisable='1']")?.addEventListener("click", (e) => {
@@ -961,7 +978,8 @@ function setupTabs() {
       "Passa a PRO per sbloccare statistiche avanzate e predizioni.",
     allowDisable: true,
     ctaLabel: pay ? "⚡ Passa a PRO" : (tg ? "Apri Telegram" : ""),
-    ctaUrl: pay || tg
+    ctaUrl: pay ? "" : tg,
+    ctaAction: pay ? () => goToPayment() : null
   });
 
   // 3) evidenzia tab attiva (così resta selezionata)
