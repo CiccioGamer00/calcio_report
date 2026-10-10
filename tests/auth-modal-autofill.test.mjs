@@ -35,4 +35,14 @@ assert.equal(close.listeners.has("click"), true, "La X deve chiudere il popup");
 assert.equal(modal.listeners.has("click"), false, "Il backdrop non deve chiudere il popup durante l'autocompletamento");
 close.listeners.get("click")();
 assert.equal(closes, 1, "La chiusura esplicita deve funzionare");
-console.log("PASS: login modal stays open on backdrop/autofill; close button works");
+const keydown = modal.listeners.get("keydown");
+assert.equal(typeof keydown, "function");
+for (const event of [{key:"Tab"}, {key:"Enter"}, {key:"Escape",defaultPrevented:true}, {key:"Escape",isComposing:true}]) {
+  keydown({...event, preventDefault() { throw new Error("Unrelated key consumed"); }});
+}
+assert.equal(closes, 1, "Non chiudere su Tab/Enter o Escape già gestito");
+let prevented = false;
+keydown({key:"Escape", preventDefault() { prevented=true; }});
+assert.equal(closes, 2, "Escape deve chiudere il login");
+assert.equal(prevented, true);
+console.log("PASS: login X/Escape close; backdrop/autofill and unrelated keys preserved");

@@ -1,8 +1,31 @@
 # Calcio Report — Project Status
 
-_Last updated: 2026-10-09_
+_Last updated: 2026-10-10_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
+
+## Account deletion candidate — 2026-10-10 (NOT RELEASED)
+
+- Branch `auth/account-deletion` from stable `main` `c05438a`; PR #12 remains the production baseline.
+- Implemented password-confirmed self-service deletion with explicit `ELIMINA`, atomic deletion across `users`, `trial_usage` and `trial_search_log`, account-ID-bound sessions/reset links, footer modal and error handling. New feature disabled unless `ACCOUNT_DELETION_ENABLED=1`.
+- Stripe candidate no longer creates users from payment events and rejects checkout sessions predating the current account. Registration-before-payment was explicitly accepted by the owner on 2026-10-10; the owner confirmed on 2026-10-10 that PRO payments are one-time, with no subscriptions or automatic renewal.
+- Email verification evaluated, not enabled/implemented: recommend new registrations verify before the seven-day trial begins, while preserving existing TRIAL/PRO access.
+- Full local suite: **31 passed / 0 failed** on Node 24, including Worker routes against SQLite and frontend behavior tests. No external football/email/payment calls were made by tests.
+- Repeat-trial policy agreed on 2026-10-10: deletion followed by re-registration may receive a fresh seven-day TRIAL, including with the same email. PRO-only prediction remains the paid differentiator; do not add retained email identifiers solely to prevent repeat trials. Revisit only if observed abuse/API costs justify it.
+- D1 table schema confirmed from the owner screenshot on 2026-10-10: three application tables (`users`, `trial_usage`, `trial_search_log`) plus Cloudflare `_cf_KV`, which is never modified. The initial users-only candidate was corrected before deployment. A guarded D1 batch removes all three user records atomically; rollback, cross-account isolation, concurrent reset/re-registration and fresh-trial cleanup are tested. Empty test database schema: `tests/fixtures/account-schema.sql`.
+- Isolated environment created by the owner on 2026-10-10: `calcio-report-test.stemoro84.workers.dev` → `DB` binding → `calcio_users_test`; separate `LICENSE_SECRET`, deletion enabled. The owner deployed the candidate Worker; production is unchanged.
+- Live isolated backend smoke: **15 checks passed** using disposable `example.invalid` accounts, all cleaned up. Verified register/me, deletion availability, wrong-password/missing-confirmation rejection, successful D1 batch deletion, revoked access/login, same-email/password re-registration, fresh seven-day trial and protection against old tokens deleting the replacement account. No email/payment/football-provider calls made. Local rollback/child-row tests remain distinct from this live smoke (which had no seeded child records).
+- Browser handoff: `py scripts/serve-account-test.py` serves the actual frontend at `http://127.0.0.1:5501`, overriding configuration in the HTTP response only to target the test Worker and disable payment URLs. No production config file changes; independent browser origin. Local serving/config check passed.
+- Owner browser confirmation (2026-10-10): all six requested steps passed: registration, cancel, wrong-password rejection, deletion/logout, old-login rejection and same-email registration with a fresh seven-day TRIAL. Narrow desktop-window layout subsequently passed; native mobile browser not separately tested.
+- Earlier credit pause ended; do not repeat completed tests without a relevant code change. Next: review external data/backup inventory, confirmed registration-before-payment flow and rate-limit coverage, then request explicit merge/deploy approval. Email verification remains a separate proposal.
+- Resumed 2026-10-10: prepared authenticated purchase flow across all in-app payment CTAs and corrected subscription wording to one-time 30-day PRO. Owner explicitly accepted registration/login before payment on 2026-10-10: grant 30-day PRO to the same registered user. Current webhook matching requires the same payment email; no claim of error-proof checkout identity binding. Frontend assets `20261010r2`; Worker unchanged from the tested isolated deployment.
+- Latest suite: **38 passed / 0 failed**, including six payment-flow tests and PBKDF2 deletion coverage with the production hash flag. Existing manual deletion/backend smoke evidence is preserved; the changed purchase flow has now also passed owner manual confirmation.
+- Repository data inventory and exact activation/rollback sequence are recorded in the design document. Cloudflare coverage on the configured API hostname is now verified (see below). Backup/log settings remain unverified; production application deployment still requires approval.
+- Purchase UI manual smoke PASSED (owner confirmation 2026-10-10): logged-out upgrade requests login; logged-in upgrade shows one-time 30-day PRO; confirmation opens the local mock payment page. No real payment or PRO activation tested. Cloudflare path/hostname rate-limit coverage is now verified below. Narrow/keyboard modal checks subsequently passed; external retention settings remain unverified.
+- Cloudflare auth rule updated by owner on 2026-10-10 to include `/auth/delete`, retaining login/register/forgot/reset, IP grouping, 5 requests per 10 seconds and a 10-second block. Live bounded check against `https://api.calcioreport.com/auth/delete`: five unauthenticated empty POSTs returned 401, then three returned 429. This confirms rate-limit coverage on the configured API hostname; no credentials, user records or entitlement changes involved. Direct Worker alternate-hostname coverage was not tested.
+- Owner manual confirmation 2026-10-10: fresh dummy account registration/logout/login works; narrow deletion modal remains readable, Tab moves focus/scroll appropriately, Escape closes. These UI checks are complete. Owner noticed login did not close with Escape; added a scoped handler preserving X, backdrop/autofill behavior, and already-handled/composition keyboard events. Regression test extended; assets 20261010r3.
+- Detailed design, limitations and test/release checklist: `docs/account-deletion-email-verification.md`.
+- `main` and production application code are unchanged. The owner has updated the production Cloudflare auth protection rule; account deletion is not released.
 
 ## Current operating state — 2026-10-09
 
