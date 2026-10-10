@@ -16,7 +16,7 @@ assert.match(html, /data-view="matchdayPanel"/, "Tab Giornata mancante.");
 assert.match(html, /id="matchdayPanel"/, "Viewport Giornata mancante.");
 assert.match(
   html,
-  /js\/features\/matchdayPanel\.js\?v=20261008r1/,
+  /js\/features\/matchdayPanel\.js\?v=20261010r1/,
   "Script Giornata non incluso o versione errata.",
 );
 

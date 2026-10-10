@@ -16,7 +16,7 @@ assert.ok(references.length > 0, "Nessun asset locale versionato trovato.");
 const versions = new Set(references.map((item) => item.version));
 assert.deepEqual(
   [...versions],
-  ["20261008r1"],
+  ["20261010r1"],
   "Tutti gli asset del release candidate devono avere la stessa versione.",
 );
 

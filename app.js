@@ -93,6 +93,8 @@ async function refreshTopAuthUI() {
   }
 
   const { json } = await fetchMe();
+  document.getElementById("btnOpenDeleteAccount")?.classList.toggle("hidden",
+    !json?.ok || !json?.accountDeletionAvailable);
 
   // NON loggato
   if (!json?.ok) {
@@ -1037,6 +1039,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupTopButton();
   setupAuthActions();
   setupPasswordRecovery();
+  setupAccountDeletion();
   setupModalClose();
   setupProLockCTA();
   setupTelegramHeader();
