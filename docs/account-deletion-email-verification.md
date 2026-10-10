@@ -1,7 +1,7 @@
 # Account deletion candidate and email verification proposal
 
 Date: 2026-10-10. Branch: `auth/account-deletion`, based on `main` at `c05438a`.
-Status: implementation tested locally; NOT deployed; approval required before merge/deployment.
+Status: tested locally and in the isolated test environment; NOT released to production; approval required before merge/production deployment.
 
 ## Implemented deletion
 
@@ -120,3 +120,16 @@ Check registration/TRIAL badge, footer deletion action, cancel, wrong password,
 correct deletion/logout, rejected old login and same-email registration with seven
 days. Repeat the modal check with a narrow browser window. Remove the dummy account
 at the end and stop the local server with Ctrl+C. Report any error text verbatim.
+
+### Owner browser confirmation and pause — 2026-10-10
+
+The owner confirmed all six requested browser steps passed: registration, cancel,
+wrong-password rejection, successful deletion/logout, rejected old login and
+same-email registration with a fresh seven-day TRIAL. Narrow/mobile layout and
+final cleanup of the owner-created dummy account were not separately reported.
+
+Work is paused to conserve credits. Preserve the existing 31 local tests and 15
+live backend checks as completed evidence; repeat only if a relevant change warrants
+it. Resume with the remaining release decisions/checks in PROJECT_STATUS.md, then
+obtain explicit approval before merge or production deployment. Email verification
+remains evaluated only. Main and production are unchanged.
