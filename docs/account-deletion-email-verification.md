@@ -224,3 +224,13 @@ handling needs its own small billing patch before enabling additional asynchrono
 payment methods; this review does not claim a full billing audit or change those
 pre-existing semantics. Stripe reference:
 https://docs.stripe.com/checkout/fulfillment.md?payment-ui=stripe-hosted
+
+### Purchase UI manual result — 2026-10-10
+
+Owner confirmed all three purchase checks passed, including the logged-out gate
+after explicitly logging out. Screenshots showed the authenticated one-time PRO
+confirmation and the local simulated-payment success page. No real Stripe payment
+or PRO activation was exercised. Do not repeat this flow absent a relevant change.
+Next: inspect the existing Cloudflare authentication rate-limit rule and actual API
+hostname coverage. Production activation/merge still require explicit approval.
+Narrow/keyboard deletion-modal checks and external retention settings remain unverified.
