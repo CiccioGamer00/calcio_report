@@ -82,3 +82,41 @@ Before an approved deployment:
 - Check desktop/mobile modal, keyboard access, cancel, wrong password, successful deletion, another open tab, expired TRIAL and PRO, recovery link invalidation, same-email registration, delayed Stripe event and normal fresh payment.
 - Worker and frontend deployment to production and merge remain subject to explicit user approval. No environment setting was changed by this PR.
 - Rollout may first deploy with deletion disabled; enable only after the checks. Switch the flag off to stop new deletion requests while retaining webhook protections. Deleted user rows cannot be restored by rolling back code.
+
+
+## Isolated live checkpoint — 2026-10-10
+
+The owner created `calcio_users_test`, ran the supplied schema, configured a separate
+`LICENSE_SECRET` and `ACCOUNT_DELETION_ENABLED=1`, and deployed the candidate to
+`https://calcio-report-test.stemoro84.workers.dev` (production remains unchanged).
+The binding to the test database was visible in the owner's dashboard screenshot.
+
+15 live backend checks passed: registration, `/auth/me`, deletion availability,
+invalid password/confirmation handling, successful D1 batch deletion, old session
+and login rejection, same-email/password registration, a fresh seven-day trial,
+and rejection of an old token attempting to delete the replacement account.
+All disposable accounts were cleaned up; no external provider requests were made.
+This live run had no preseeded trial rows; row cleanup and rollback failures were
+verified separately by the SQLite transaction tests, not by modifying remote schema.
+
+### Browser test handoff
+
+From the existing repository folder, run this entire block:
+
+```powershell
+git fetch origin
+git switch auth/account-deletion
+git pull --ff-only origin auth/account-deletion
+py scripts/serve-account-test.py
+```
+
+Open `http://127.0.0.1:5501`. The page shows COLLAUDO ACCOUNT; leave the terminal
+open. The server binds only to loopback, serves a test-specific `config.js` response,
+disables payment links and leaves the tracked configuration unchanged. No football
+relay or email delivery is configured for this account-only test environment.
+Use dummy credentials, for example `collaudo-stefano@example.invalid`.
+
+Check registration/TRIAL badge, footer deletion action, cancel, wrong password,
+correct deletion/logout, rejected old login and same-email registration with seven
+days. Repeat the modal check with a narrow browser window. Remove the dummy account
+at the end and stop the local server with Ctrl+C. Report any error text verbatim.
