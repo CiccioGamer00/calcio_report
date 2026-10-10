@@ -25,13 +25,13 @@ The candidate therefore requires registration BEFORE payment:
 - Existing account and new checkout: retain the existing 30-day extension. The update is conditional on immutable user ID, preventing a concurrent delete/re-registration from crediting the wrong account.
 - This protection stays active even when self-service deletion is switched off. Do not roll back to a Worker that recreates users after deletion has been enabled.
 - Stripe checkout creation has second precision while account creation has millisecond precision. A checkout in the same second as registration can be conservatively rejected; support must reconcile this rare case. Account-ID metadata in server-created checkout sessions is a future stronger link.
-- This is NOT an automatic refund, subscription cancellation or deletion of provider receipts/customer records. Verify whether Stripe/PayPal payments are one-time or recurring before activation. If recurring billing is possible, keep deletion disabled and implement provider cancellation/reconciliation first.
+- The owner confirmed on 2026-10-10 that PRO payments are one-time, with no subscriptions or automatic renewal. Subscription cancellation is therefore outside the current product scope and is not a release blocker. Deletion does not automatically refund the payment or remove provider receipts/customer records.
 - Payments received without an eligible account require manual reconciliation/refund assessment. Do not silently promise PRO access to pre-registration payments.
 - Existing webhook duplicate-event/idempotency behavior is outside this change; this is not a full billing audit.
 
 ## Remaining product decisions
 
-1. Confirm one-time payments versus recurring subscriptions, and accept registration-before-payment.
+1. Payment model confirmed: one-time, no subscriptions or automatic renewal. Acceptance of registration-before-payment remains to be confirmed.
 2. Confirm policy for deletion followed by re-registration. This candidate keeps the current registration rule (a new account receives seven days). It stores no email tombstone or anti-abuse identifier after deletion. Email verification alone cannot prevent repeated trials. If repeat-trial prevention is required, agree on a separate minimal-retention policy before adding storage.
 3. Approve or revise the email verification proposal below; it is intentionally not implemented in this PR.
 
@@ -75,7 +75,7 @@ Tests cover real SQLite SQL execution behind a D1-shaped adapter, Worker routes,
 
 Before an approved deployment:
 
-- Confirm the three product decisions above and inspect the actual D1 schema/user-data inventory, provider billing configuration and backup/log retention.
+- Resolve the remaining product decisions above and inspect the actual D1 schema/user-data inventory and backup/log retention. The owner has confirmed the one-time payment model.
 - Include `/auth/delete` in the existing Cloudflare authentication rate-limit rule before activation. Do not rely on the browser to rate-limit password checks.
 - Deploy/test only in an isolated Worker/D1 test environment first. Use test accounts and test-mode billing, never an owner's real paid account.
 - Check desktop/mobile modal, keyboard access, cancel, wrong password, successful deletion, another open tab, expired TRIAL and PRO, recovery link invalidation, same-email registration, delayed Stripe event and normal fresh payment.
