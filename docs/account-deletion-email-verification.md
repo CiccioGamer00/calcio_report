@@ -253,3 +253,15 @@ This does not prove that alternate workers.dev routes are disabled/protected;
 review any alternate public entry points before enabling deletion. Production
 application code and main remain unchanged; the owner changed only the edge rule.
 Narrow/keyboard modal checks and external backup/log settings remain unverified.
+
+### Final local UI confirmation and login Escape fix — 2026-10-10
+
+Owner confirmed fresh dummy registration/logout/login, readable deletion modal in
+narrow desktop window, Tab focus/scroll and Escape close. Prior forgotten-password
+report was not reproduced with the new account; no auth regression demonstrated.
+Login modal lacked Escape handling: added a scoped keydown listener that respects
+already-prevented/composition events. X still closes; backdrop still does not close,
+preserving the previously verified browser-autofill fix. Regression assertions cover
+Escape, unrelated keys and handled/composition events. Assets 20261010r3; 38 tests
+pass. Only a quick manual check of login Escape remains for this small UI change;
+do not repeat completed deletion/purchase tests. No Worker or production change.

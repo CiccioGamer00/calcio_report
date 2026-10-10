@@ -449,6 +449,12 @@ function setupModalClose() {
   document
     .getElementById("btnCloseAuth")
     ?.addEventListener("click", closeAuthModal);
+  document.getElementById("authModal")?.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !event.defaultPrevented && !event.isComposing) {
+      event.preventDefault();
+      closeAuthModal();
+    }
+  });
   // Non chiudere sul backdrop: la selezione dei suggerimenti email/password
   // del browser può generare un click sullo sfondo e nascondere il form.
   // Rimane disponibile la chiusura esplicita con la X.
