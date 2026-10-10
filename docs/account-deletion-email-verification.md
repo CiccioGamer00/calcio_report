@@ -14,7 +14,7 @@ Status: tested locally and in the isolated test environment; NOT released to pro
 - UI reuses the existing modal and footer, requires explicit input, prevents duplicate submissions, clears entered password after a request, and logs out/reloads only after confirmed success. Network ambiguity is shown without claiming the account still exists.
 - Other accounts, football cache, panels and TRIAL/PRO duration rules are unchanged. No request to the relay or API-Football is added.
 
-## Payment change requiring review
+## Payment flow accepted by owner
 
 The previous Stripe webhook creates a passwordless user when no matching account exists. Keeping this behavior would allow delayed payment events to recreate a deleted account.
 
@@ -31,7 +31,7 @@ The candidate therefore requires registration BEFORE payment:
 
 ## Product decisions and remaining proposals
 
-1. Payment model confirmed: one-time, no subscriptions or automatic renewal. Acceptance of registration-before-payment remains to be confirmed.
+1. Payment model confirmed: one-time, no subscriptions or automatic renewal. Registration/login before payment explicitly accepted on 2026-10-10; the purchase must grant 30-day PRO to that registered user.
 2. Agreed on 2026-10-10: allow a fresh seven-day TRIAL after deletion and re-registration, including the same email. Preserve the current implementation; no email tombstone or anti-abuse identifier is retained after deletion. The user accepts repeat free access because prediction remains PRO-only and other email addresses could bypass an email-only restriction anyway. Reassess if actual abuse or API costs become material; do not add speculative tracking. Email verification remains useful for ownership, not as a guarantee against repeat trials.
 3. Approve or revise the email verification proposal below; it is intentionally not implemented in this PR.
 
@@ -140,7 +140,7 @@ The credit pause is over. The existing six-step manual deletion result and 15
 isolated backend checks remain valid for the unchanged Worker. No production
 settings, schema, secrets or deployment have been changed in this review.
 
-### Purchase flow prepared for owner acceptance
+### Purchase flow accepted by owner
 
 All in-app payment entries now go through `/auth/me` before offering checkout.
 Anonymous/expired sessions must log in or register; deleted/disabled accounts and
@@ -154,8 +154,9 @@ not a subscription. Email verification remains a proposal for a later PR.
 This is a UX safeguard, not a server-created checkout session. Public/shared Stripe
 links still work outside the app, and an account can be deleted while a checkout is
 open. The webhook continues to reject absent/replaced accounts; exceptional paid
-orders require support reconciliation. Owner acceptance of registration-before-
-payment is still required before release. No real payment was made or initiated.
+orders require support reconciliation. The owner accepted registration/login before payment on 2026-10-10.
+The current webhook matches by payment email, so the same email remains required;
+this is not a guarantee against mistyped email or a shared checkout link. No real payment was made or initiated.
 
 ### Data inventory from repository code
 
@@ -176,7 +177,7 @@ operational process. No retained email blacklist is added.
 
 ### Activation sequence (requires explicit approval; not performed)
 
-1. Accept the registration-before-payment flow. Review exceptional payment support
+1. Registration-before-payment accepted on 2026-10-10. Review exceptional payment support
    and actual backup/log retention with the owner.
 2. In the EXISTING Cloudflare auth rate-limit rule, preserve its hostname/scope and
    thresholds, and add the exact path `/auth/delete` alongside login/register/
