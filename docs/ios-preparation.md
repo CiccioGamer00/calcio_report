@@ -1,6 +1,6 @@
 # Calcio Report — iOS preparation
 
-Status: isolated native prototype, 2026-10-11. Unsigned compile passes; signed archive validation is being configured. No payment integration or submission yet.
+Status: isolated native prototype, 2026-10-11. Unsigned compile passes; signed device archive validation passes. No payment integration or submission yet.
 
 ## Product and payment decision
 
@@ -139,5 +139,5 @@ certificate matching, imports the P12 into an ephemeral keychain, archives the
 test-backend app for devices and verifies its signature. No upload or artifacts;
 App Store Connect API secrets are not used by this check. Dependencies are
 installed before signing secrets are provided. Actions are pinned to commit SHAs.
-Signing result is pending the first macOS run. This is not a TestFlight-ready app:
+Signing PASSED at 945a1da, Actions run 38144848197 / job 114485941251: profile\nvalidation, P12 import/matching, Release device archive and codesign verification\nall succeeded. No IPA export/upload or App Store API authentication tested.\nThis is not a TestFlight-ready app:
 native storage, recovery and real-device behavior remain outstanding.

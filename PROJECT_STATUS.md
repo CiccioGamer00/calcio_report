@@ -9,7 +9,7 @@ This file is the operational source of truth for Calcio Report. Keep it updated 
 PR #14 remains draft on `mobile/ios-preparation`. Latest unsigned iOS compile
 passed at e7ef13e. Owner completed Apple API key, Windows certificate/P12 and
 App Store profile setup in GitHub secrets. Branch-only signed archive check
-prepared; first run pending. No TestFlight upload or production change.
+PASSED at 945a1da (Actions 38144848197): profile/identity validation, device\narchive and codesign verification all succeeded. No TestFlight upload or production change.
 See `docs/ios-preparation.md` for validation and remaining runtime gates.
 
 ## Current release — 2026-10-11
