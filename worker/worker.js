@@ -20,6 +20,8 @@ if (url.pathname === "/stripe/webhook" && request.method === "POST") {
       return handleForgotPassword(request, env, ctx);
     if (url.pathname === "/auth/reset" && request.method === "POST")
       return handleResetPassword(request, env);
+    if (url.pathname === "/auth/delete" && request.method === "POST")
+      return handleDeleteAccount(request, env);
     if (url.pathname === "/auth/me" && request.method === "GET")
       return handleMe(request, env);
     if (url.pathname === "/license/redeem" && request.method === "POST")
@@ -109,6 +111,7 @@ async function handleRegister(request, env) {
   
 
   const now = Date.now();
+  const accountId = crypto.randomUUID();
   const trialEndsAt = now + 7 * 24 * 60 * 60 * 1000; // 7 giorni
   const passHash = passwordV2Enabled(env)
     ? await hashPassword(password)
@@ -117,10 +120,10 @@ async function handleRegister(request, env) {
   await env.DB.prepare(
     "INSERT INTO users (id, email, pass_hash, trial_ends_at, paid_until, created_at) VALUES (?, ?, ?, ?, ?, ?)",
   )
-    .bind(crypto.randomUUID(), email, passHash, trialEndsAt, 0, now)
+    .bind(accountId, email, passHash, trialEndsAt, 0, now)
     .run();
 
-  const token = await makeSessionToken(env, email, passHash, now);
+  const token = await makeSessionToken(env, email, passHash, now, accountId);
 
   return json(
     {
@@ -148,7 +151,7 @@ async function handleLogin(request, env) {
   }
 
   const u = await env.DB.prepare(
-    "SELECT email, pass_hash, trial_ends_at, paid_until, COALESCE(disabled,0) as disabled FROM users WHERE email = ?",
+    "SELECT id, created_at, email, pass_hash, trial_ends_at, paid_until, COALESCE(disabled,0) as disabled FROM users WHERE email = ?",
   )
     .bind(email)
     .first();
@@ -178,7 +181,7 @@ async function handleLogin(request, env) {
   }
 
   const now = Date.now();
-  const token = await makeSessionToken(env, email, u.pass_hash, now);
+  const token = await makeSessionToken(env, email, u.pass_hash, now, u.id);
 
   return json(
     {
@@ -200,7 +203,7 @@ async function handleForgotPassword(request, env, ctx) {
   // evita di trasformare il recupero password in un enumeratore di account.
   if (email) {
     const u = await env.DB.prepare(
-      "SELECT pass_hash, COALESCE(disabled,0) as disabled FROM users WHERE email = ?",
+      "SELECT id, created_at, pass_hash, COALESCE(disabled,0) as disabled FROM users WHERE email = ?",
     )
       .bind(email)
       .first();
@@ -210,6 +213,8 @@ async function handleForgotPassword(request, env, ctx) {
         env,
         email,
         u.pass_hash,
+        Date.now(),
+        u.id,
       );
       const appOrigin = passwordResetAppOrigin(env);
       const resetUrl = `${appOrigin}/#reset=${encodeURIComponent(resetToken)}`;
@@ -272,12 +277,14 @@ async function handleResetPassword(request, env) {
   }
 
   const u = await env.DB.prepare(
-    "SELECT pass_hash, COALESCE(disabled,0) as disabled FROM users WHERE email = ?",
+    "SELECT id, created_at, pass_hash, COALESCE(disabled,0) as disabled FROM users WHERE email = ?",
   )
     .bind(email)
     .first();
 
-  if (!u?.pass_hash || Number(u.disabled || 0) === 1) {
+  if (!u?.pass_hash || Number(u.disabled || 0) === 1 ||
+      (payload.uid && payload.uid !== u.id) ||
+      Number(u.created_at || 0) > Number(payload.iat || (exp - PASSWORD_RESET_TTL_MS))) {
     return json(
       {
         error: "RESET_INVALID",
@@ -311,9 +318,9 @@ async function handleResetPassword(request, env) {
   // Il confronto sul vecchio hash rende il token single-use anche in caso
   // di due richieste concorrenti.
   const update = await env.DB.prepare(
-    "UPDATE users SET pass_hash = ? WHERE email = ? AND pass_hash = ?",
+    "UPDATE users SET pass_hash = ? WHERE email = ? AND pass_hash = ? AND id = ?",
   )
-    .bind(newHash, email, u.pass_hash)
+    .bind(newHash, email, u.pass_hash, u.id)
     .run();
 
   if (Number(update?.meta?.changes || 0) !== 1) {
@@ -337,6 +344,64 @@ async function handleResetPassword(request, env) {
   );
 }
 
+// Account deletion must be enabled only after the billing/deployment checklist.
+function accountDeletionEnabled(env) {
+  return String(env.ACCOUNT_DELETION_ENABLED || "") === "1";
+}
+
+function sessionBelongsToAccount(session, user) {
+  if (session.uid) return session.uid === user.id;
+  // Legacy sessions expire within six hours; never accept them for a new account.
+  return Number(session.iat || 0) >= Number(user.created_at || 0);
+}
+
+async function handleDeleteAccount(request, env) {
+  const headers = { ...corsHeaders(), "Cache-Control": "no-store" };
+  if (!accountDeletionEnabled(env)) {
+    return json({ error: "DELETION_UNAVAILABLE", message: "Cancellazione account non ancora disponibile." }, 503, headers);
+  }
+  const session = await verifySignedToken(env, readBearer(request));
+  if (!session?.email) return json({ error: "AUTH_INVALID", message: "Effettua nuovamente il login." }, 401, headers);
+  // Deliberately independent of the TRIAL/PRO paywall and disabled flag.
+  const user = await env.DB.prepare("SELECT id, created_at, pass_hash FROM users WHERE email = ?")
+    .bind(session.email).first();
+  if (!user || !sessionBelongsToAccount(session, user) ||
+      !(await sessionPasswordVersionMatches(env, session, user.pass_hash))) {
+    return json({ error: "AUTH_INVALID", message: "Effettua nuovamente il login." }, 401, headers);
+  }
+  const body = await request.json().catch(() => null);
+  if (body?.confirmation !== "ELIMINA" || typeof body?.password !== "string" ||
+      !body.password || body.password.length > 1024) {
+    return json({ error: "BAD_INPUT", message: "Inserisci la password e scrivi ELIMINA per confermare." }, 400, headers);
+  }
+  if (!(await verifyPasswordHash(body.password, user.pass_hash)).ok) {
+    return json({ error: "PASSWORD_INVALID", message: "Password non corretta. Account non cancellato." }, 403, headers);
+  }
+  try {
+    // D1 batch is transactional: any SQL failure rolls back all three deletions.
+    // Each child deletion checks the same account incarnation/password, so a
+    // concurrent reset or re-registration leaves ALL its records untouched.
+    const results = await env.DB.batch([
+      env.DB.prepare(
+        "DELETE FROM trial_search_log WHERE email = ? AND EXISTS (SELECT 1 FROM users WHERE id = ? AND email = ? AND pass_hash = ?)",
+      ).bind(session.email, user.id, session.email, user.pass_hash),
+      env.DB.prepare(
+        "DELETE FROM trial_usage WHERE email = ? AND EXISTS (SELECT 1 FROM users WHERE id = ? AND email = ? AND pass_hash = ?)",
+      ).bind(session.email, user.id, session.email, user.pass_hash),
+      env.DB.prepare("DELETE FROM users WHERE id = ? AND email = ? AND pass_hash = ?")
+        .bind(user.id, session.email, user.pass_hash),
+    ]);
+    const result = results[2];
+    if (Number(result?.meta?.changes || 0) !== 1) {
+      return json({ error: "ACCOUNT_CHANGED", message: "Account modificato. Effettua nuovamente il login prima di riprovare." }, 409, headers);
+    }
+    return json({ ok: true, message: "Account cancellato definitivamente." }, 200, headers);
+  } catch {
+    // A foreign-key/schema/storage error must never be reported as success.
+    return json({ error: "DELETION_FAILED", message: "Cancellazione non completata. Riprova più tardi." }, 503, headers);
+  }
+}
+
 async function handleMe(request, env) {
   const token = readBearer(request);
   if (!token) return json({ ok: false }, 200, corsHeaders());
@@ -345,13 +410,13 @@ async function handleMe(request, env) {
   if (!sess?.email) return json({ ok: false }, 200, corsHeaders());
 
   const u = await env.DB.prepare(
-    "SELECT email, pass_hash, trial_ends_at, paid_until, COALESCE(disabled,0) as disabled FROM users WHERE email = ?",
+    "SELECT id, created_at, email, pass_hash, trial_ends_at, paid_until, COALESCE(disabled,0) as disabled FROM users WHERE email = ?",
   )
     .bind(sess.email)
     .first();
 
   if (!u) return json({ ok: false }, 200, corsHeaders());
-  if (!(await sessionPasswordVersionMatches(env, sess, u.pass_hash))) {
+  if (!sessionBelongsToAccount(sess, u) || !(await sessionPasswordVersionMatches(env, sess, u.pass_hash))) {
     return json({ ok: false, error: "AUTH_INVALID" }, 200, corsHeaders());
   }
   if (Number(u.disabled || 0) === 1) {
@@ -362,6 +427,7 @@ async function handleMe(request, env) {
     {
       ok: true,
       email: u.email,
+      accountDeletionAvailable: accountDeletionEnabled(env),
       trialEndsAt: Number(u.trial_ends_at || 0),
       paidUntil: Number(u.paid_until || 0),
       now: Date.now(),
@@ -388,13 +454,13 @@ async function handleRedeem(request, env) {
   }
 
   const u = await env.DB.prepare(
-    "SELECT paid_until, pass_hash, COALESCE(disabled,0) as disabled FROM users WHERE email = ?",
+    "SELECT id, created_at, paid_until, pass_hash, COALESCE(disabled,0) as disabled FROM users WHERE email = ?",
   )
     .bind(sess.email)
     .first();
 
   if (
-    !u ||
+    !u || !sessionBelongsToAccount(sess, u) ||
     !(await sessionPasswordVersionMatches(env, sess, u.pass_hash))
   ) {
     return json({ error: "AUTH_INVALID" }, 401, corsHeaders());
@@ -1863,13 +1929,14 @@ async function signToken(env, payload) {
   return `${body}.${sig}`;
 }
 
-async function makeSessionToken(env, email, passHash, now = Date.now()) {
+async function makeSessionToken(env, email, passHash, now = Date.now(), accountId) {
   const av = await passwordVersion(
     env,
     SESSION_PASSWORD_VERSION_SCOPE,
     passHash,
   );
   return signToken(env, {
+    uid: accountId,
     kind: "session",
     email: normEmail(email),
     iat: now,
@@ -1932,9 +1999,11 @@ async function makePasswordResetToken(
   email,
   passHash,
   now = Date.now(),
+  accountId,
 ) {
   const body = base64urlEncode(
     JSON.stringify({
+      uid: accountId,
       email: normEmail(email),
       exp: now + PASSWORD_RESET_TTL_MS,
       pv: await passwordVersion(
@@ -1942,6 +2011,7 @@ async function makePasswordResetToken(
         RESET_PASSWORD_VERSION_SCOPE,
         passHash,
       ),
+      iat: now,
       nonce: base64urlFromBytes(
         crypto.getRandomValues(new Uint8Array(16)),
       ),
@@ -2257,7 +2327,7 @@ async function requireActiveUser(request, env) {
   }
 
   const u = await env.DB.prepare(
-    "SELECT pass_hash, trial_ends_at, paid_until, COALESCE(disabled,0) as disabled FROM users WHERE email = ?",
+    "SELECT id, created_at, pass_hash, trial_ends_at, paid_until, COALESCE(disabled,0) as disabled FROM users WHERE email = ?",
   )
     .bind(sess.email)
     .first();
@@ -2269,7 +2339,7 @@ async function requireActiveUser(request, env) {
     };
   }
 
-  if (!(await sessionPasswordVersionMatches(env, sess, u.pass_hash))) {
+  if (!sessionBelongsToAccount(sess, u) || !(await sessionPasswordVersionMatches(env, sess, u.pass_hash))) {
     return {
       ok: false,
       res: json(
@@ -2347,28 +2417,27 @@ async function handleStripeWebhook(request, env) {
   if (!email) return new Response("No email", { status: 200 });
 
   // Estendi di 30 giorni (se già PRO, estende da fine)
-  const row = await env.DB.prepare("SELECT paid_until FROM users WHERE email = ?")
+  const row = await env.DB.prepare("SELECT id, paid_until, created_at FROM users WHERE email = ?")
     .bind(email)
     .first();
+
+  // Do not recreate deleted accounts or credit an older checkout to a new account.
+  if (!row ||
+      !Number.isFinite(Number(session.created)) ||
+      Number(session.created) * 1000 < Number(row.created_at || 0)) {
+    console.warn("Stripe checkout ignored: missing account or checkout predates account");
+    return new Response("Account unavailable for this checkout", { status: 200 });
+  }
 
   const now = Date.now();
   const currentPaid = Number(row?.paid_until || 0);
   const base = Math.max(now, currentPaid);
   const newPaidUntil = base + 30 * 24 * 60 * 60 * 1000;
 
-  if (!row) {
-    // Se l’utente non è ancora registrato, lo creiamo “vuoto”:
-    // così quando si registra con la stessa email risulta già PRO.
-    await env.DB.prepare(
-      "INSERT INTO users (id, email, pass_hash, trial_ends_at, paid_until, created_at) VALUES (?, ?, ?, ?, ?, ?)"
-    )
-      .bind(crypto.randomUUID(), email, "", 0, newPaidUntil, now)
-      .run();
-  } else {
-    await env.DB.prepare("UPDATE users SET paid_until = ? WHERE email = ?")
-      .bind(newPaidUntil, email)
-      .run();
-  }
+  // Keep this guard even if self-service deletion is later switched off.
+  await env.DB.prepare("UPDATE users SET paid_until = ? WHERE email = ? AND id = ?")
+    .bind(newPaidUntil, email, row.id)
+    .run();
 
   return new Response("OK", { status: 200 });
 }

@@ -230,8 +230,8 @@ assert.doesNotMatch(
   /UPDATE users SET pass_hash/,
   "Il login non deve riscrivere automaticamente le password legacy.",
 );
-assert.match(source, /makeSessionToken\(env, email, passHash, now\)/);
-assert.match(source, /makeSessionToken\(env, email, u\.pass_hash, now\)/);
+assert.match(source, /makeSessionToken\(env, email, passHash, now, accountId\)/);
+assert.match(source, /makeSessionToken\(env, email, u\.pass_hash, now, u\.id\)/);
 assert.match(source, /kind: "session"/);
 assert.match(source, /ACCOUNT_DISABLED/);
 assert.match(

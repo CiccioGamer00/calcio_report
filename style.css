@@ -2614,3 +2614,13 @@ body {
   }
 }
 
+
+/* Account deletion uses the existing modal theme, with mobile scrolling. */
+#deleteAccountForm {
+  box-sizing: border-box;
+  width: min(440px, calc(100% - 24px));
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+}
+#deleteAccountForm .auth-buttons { flex-wrap: wrap; }
+#btnConfirmDeleteAccount { border: 1px solid #d87979; }
