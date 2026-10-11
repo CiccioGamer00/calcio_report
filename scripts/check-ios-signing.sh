@@ -1,5 +1,5 @@
 #!/bin/bash
-# Trusted branch only. No upload, no artifacts, no App Store API key access.
+# Trusted branch only. Export a test IPA; no Apple upload or API key access.
 set -euo pipefail
 umask 077
 : "${RUNNER_TEMP:?Run on a GitHub-hosted macOS runner}"
@@ -67,10 +67,56 @@ xcodebuild -quiet -project mobile/ios/App/App.xcodeproj -scheme App \
   -configuration Release -destination 'generic/platform=iOS' \
   -archivePath "$SIGN_DIR/CalcioReport.xcarchive" \
   -derivedDataPath "$SIGN_DIR/derived" \
+  CURRENT_PROJECT_VERSION="${GITHUB_RUN_NUMBER:?}.${GITHUB_RUN_ATTEMPT:?}" \
   DEVELOPMENT_TEAM=S3Z89L9T94 CODE_SIGN_STYLE=Manual \
   CODE_SIGN_IDENTITY="$IDENTITY" PROVISIONING_PROFILE_SPECIFIER="$UUID" \
   OTHER_CODE_SIGN_FLAGS="--keychain $KEYCHAIN" archive
 codesign --verify --deep --strict "$SIGN_DIR/CalcioReport.xcarchive/Products/Applications/App.app"
-echo 'Signed device archive verified. No upload or distribution performed.'
-echo '### iOS signing check passed' >> "$GITHUB_STEP_SUMMARY"
-echo 'Profile and signing identity match. Release device archive and signature verification succeeded. Test backend only; no upload or artifacts.' >> "$GITHUB_STEP_SUMMARY"
+# Export locally with manual signing; never contact Apple to upload this build.
+python3 - <<'PYEXPORT'
+import os, plistlib
+from pathlib import Path
+root = Path(os.environ['SIGN_DIR'])
+options = {
+    'method': 'app-store-connect', 'destination': 'export',
+    'teamID': 'S3Z89L9T94', 'signingStyle': 'manual',
+    'signingCertificate': (root / 'identity').read_text(),
+    'provisioningProfiles': {'com.calcioreport.app': (root / 'uuid').read_text()},
+    'testFlightInternalTestingOnly': True,
+    'manageAppVersionAndBuildNumber': False,
+    'uploadSymbols': False,
+}
+(root / 'export-options.plist').write_bytes(plistlib.dumps(options))
+PYEXPORT
+xcodebuild -quiet -exportArchive -archivePath "$SIGN_DIR/CalcioReport.xcarchive" \
+  -exportOptionsPlist "$SIGN_DIR/export-options.plist" -exportPath "$SIGN_DIR/export"
+python3 - <<'PYVERIFY'
+import hashlib, json, os, plistlib, shutil, zipfile
+from pathlib import Path
+root = Path(os.environ['SIGN_DIR'])
+ipas = list((root / 'export').glob('*.ipa'))
+assert len(ipas) == 1, 'Expected one exported IPA'
+with zipfile.ZipFile(ipas[0]) as z:
+    infos = [n for n in z.namelist() if n.startswith('Payload/') and n.count('/') == 2 and n.endswith('/Info.plist')]
+    assert len(infos) == 1, 'Expected one main app'
+    info = plistlib.loads(z.read(infos[0]))
+    assert info['CFBundleIdentifier'] == 'com.calcioreport.app'
+    app = infos[0].removesuffix('Info.plist')
+    config = z.read(app + 'public/config.js').decode()
+    assert 'https://calcio-report-test.stemoro84.workers.dev' in config
+    assert 'https://api.calcioreport.com' not in config
+    assert '"paymentUrl": ""' in config and '"paypalUrl": ""' in config
+out = Path(os.environ['RUNNER_TEMP']) / 'calcio-ipa'
+out.mkdir(exist_ok=False)
+target = out / 'CalcioReport-test.ipa'
+shutil.copyfile(ipas[0], target)
+(out / 'build.json').write_text(json.dumps({
+    'commit': os.environ['GITHUB_SHA'], 'bundleId': info['CFBundleIdentifier'],
+    'version': info['CFBundleShortVersionString'], 'build': info['CFBundleVersion'],
+    'sha256': hashlib.sha256(target.read_bytes()).hexdigest(),
+    'backend': 'test', 'payments': 'disabled', 'appleUpload': False,
+}, indent=2) + '\n')
+print('IPA export verified: correct bundle, test backend and disabled payment URLs.')
+PYVERIFY
+echo '### iOS signing and IPA export passed' >> "$GITHUB_STEP_SUMMARY"
+echo 'Signed device archive and test IPA verified. Artifact retained for one day. No Apple upload or distribution performed.' >> "$GITHUB_STEP_SUMMARY"
