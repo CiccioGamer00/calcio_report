@@ -112,3 +112,13 @@ purchase message; production frontend files are unchanged. Packaging, JavaScript
 syntax and a runtime smoke for purchase messaging/viewport resize passed. These
 checks do not replace real iPhone visual testing. Signing, secure native token
 storage and recovery-link handling still precede a usable TestFlight handoff.
+
+## Apple app record confirmed — 2026-10-11
+
+Owner screenshots confirm the explicit identifier com.calcioreport.app is
+registered and the Calcio Report app record exists in App Store Connect (iOS 1.0,
+prepare for submission). Capacitor now uses this identifier and display name.
+The build still targets only the test backend and disables payments; this does
+not change it into a production build. No certificate/profile/upload key has been
+configured and no signed build has been uploaded. DSA status remains outstanding
+for EU distribution. Do not modify the unrelated OCR app identifier.

@@ -1,5 +1,5 @@
 {
-  "appId": "com.calcioreport.prototype",
-  "appName": "Calcio Report Test",
+  "appId": "com.calcioreport.app",
+  "appName": "Calcio Report",
   "webDir": "www"
 }
