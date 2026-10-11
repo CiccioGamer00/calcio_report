@@ -4,6 +4,19 @@ _Last updated: 2026-10-11_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
 
+## iOS IPA export checkpoint — 2026-10-11 evening
+
+PR #14 remains draft; main/production unchanged. Commit `fcf2006` passed 45 tests,
+signed device archive and IPA export (Actions `38164705461`). Export uses manual
+signing, internal-TestFlight-only option and a unique run/attempt build number.
+IPA checks verify the bundle ID, test API and empty payment URLs. GitHub artifact
+retention is one day; no Apple upload/distribution has been performed.
+Native-origin preflight against the test Worker returned 204 with compatible CORS
+using a browser user agent; Python's default agent was rejected by Cloudflare 1010.
+This is not a real-device runtime test. Next: verify test email configuration,
+prepare TestFlight upload and collaudate on iPhone. Store assets, purchase support
+and production release remain separate gates.
+
 ## Native session candidate — 2026-10-11
 
 PR #14 adds packaged-only iOS Keychain session storage and pasted-email-link
@@ -550,43 +563,7 @@ Reproduced behavior:
 
 - the large percentage shown on Corner, Tiri, Cartellini and Falli tiles is **not a probability of the displayed betting label**;
 - it is a linear 0–100 intensity index produced by `scoreLinear()` from the expected raw volume;
-- example observed: `Cartellini: Under 4.5`, expected cards `2.60`, displayed score `12%`; the 12% comes from scaling 2.60 between 2 and 7 and therefore means low card volume, not 12% probability of Under 4.5;
-- the same issue explains examples such as Corner 20%, Tiri 26% and Falli 5%;
-- the separate Bookmaker section above is different: those percentages are actual historical hit rates (`hit / total`) over recent matches.
-
-Implemented behavior:
-
-- Corner, Tiri, Cartellini and Falli now show `Forza N/100` instead of a percentage that could be mistaken for probability;
-- `50/100` represents a value near the decision boundary and the strength increases, up to `95/100`, as the expected value supports the displayed label;
-- Under labels become stronger as the expected value falls below their threshold, while Over labels become stronger as it rises above the threshold;
-- the medium-shots band is strongest near its center and weaker at its boundaries;
-- Gol 1T and Gol 2T retain their existing percentage presentation;
-- the Bookmaker section remains unchanged and continues to show real historical hit rates;
-- no expected-value calculation, endpoint or request count was changed.
-
-Focused automated tests passed for Under/Over direction, decision boundaries, the medium-shots band, missing values, the new `Forza N/100` rendering and unchanged goal percentages. The real UI test was completed successfully after a hard refresh and one `Carica dati` action. The Indicators score-semantics bug is closed.
-
-### Shared statistics cache and official sample — RELEASED / VERIFIED IN PRODUCTION 2026-10-07
-
-- Corner, Tiri, Falli and Indicatori now reuse one session-wide fixture-statistics cache.
-- Concurrent requests for the same fixture are deduplicated; failed responses are not cached.
-- Friendly matches are excluded from the statistics sample.
-- Corner, Tiri and Falli keep searching backward until they collect the requested number of official matches with statistics available, up to the configured lookback.
-- Missing detailed statistics are no longer converted into fake zero values.
-- The UI now states that the sample uses the latest official matches; Indicatori also explains that Corner, Tiri and Falli require available statistics.
-- Local regression test on Napoli-Frosinone confirmed that the Frosinone-Benevento friendly no longer distorts the sample and Indicatori loads correctly.
-- Automated coverage added for shared cache behavior, missing statistics, official-sample filtering and frontend JavaScript syntax.
-- PR #6 merged into `main` at commit `ecf9d0268bfdc8a542e06a1dbbad018103a76aa3`.
-- Production smoke test on `https://app.calcioreport.com/` passed after Ctrl+F5: Corner/Tiri show the official-sample label, the Frosinone-Benevento friendly is excluded, and Indicatori loads without error.
-## Auth hardening — deployed / production smoke verified 2026-10-07
-
-- Worker auth now verifies session age server-side with a six-hour lifetime; legacy tokens without `exp` remain valid only within six hours of their original `iat`.
-- Login and `/auth/me` now respect disabled accounts consistently.
-- The Worker can validate both legacy single-SHA-256 password hashes and the staged PBKDF2-SHA256 format with random salt.
-- PBKDF2 creation is gated behind `AUTH_PASSWORD_V2=1`; the flag is now **enabled in production**.
-- Existing legacy SHA-256 accounts remain compatible; the rollout does not rewrite existing password records.
-- Automated suite passed 12/12 locally after staging the rollout flag, including Worker syntax, PBKDF2 behavior, legacy compatibility and session expiry.
-- Worker version `e714fba0` was deployed manually to 100% traffic.
+- example observed: `Cartellini: Under 4.5`, expected cards `2.60`, displayed score `12%…897 tokens truncated…on `e714fba0` was deployed manually to 100% traffic.
 - Production smoke test passed for an existing account: logout/login, Giornata fixture selection and protected Predizione access all worked normally after deployment.
 - Controlled production registration with a new account succeeded with `AUTH_PASSWORD_V2=1`, followed by logout/login with the same credentials; PBKDF2 write/read behavior is therefore verified end-to-end.
 - Cloudflare rate limiting is active for `/auth/login` and `/auth/register`, grouped by IP at 5 requests / 10 seconds with a 10-second block.

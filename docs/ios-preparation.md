@@ -167,3 +167,20 @@ configuration/email delivery remains to be checked before device recovery tests.
 packaging and generated JS syntax pass. New native plugin simulator compilation and signed device archive PASSED
 at 18a01d2 (Actions 38145418576 and 38145414073). Real iPhone login/restart/logout/deletion/recovery remains a manual
 gate before distribution. App Store API authentication/upload is still untested.
+
+## IPA export checkpoint — 2026-10-11 evening
+
+Signed archive and IPA export passed at `fcf2006`, Actions `38164705461`, with
+45 tests passing. ExportOptions uses app-store-connect, destination export,
+manual signing and testFlightInternalTestingOnly=true; no Apple API key is read.
+Build numbers use GitHub run number plus attempt. The exported IPA is checked for
+bundle ID, isolated test API and empty payment URLs; artifact contains only IPA
+and provenance/hash JSON and is retained one day. Signing keys/profile staging and
+archive are removed at job exit. No TestFlight upload or Apple validation yet.
+
+Test Worker native-origin OPTIONS preflight returned 204 with required CORS headers
+using a browser user agent. Default Python user agent received Cloudflare 1010;
+actual iPhone connectivity remains a required runtime check. Before recovery tests,
+confirm the test Worker's RESEND_API_KEY and PASSWORD_RESET_FROM configuration.
+Do not expose secret values. Native icon is still the generated Capacitor default;
+store artwork and privacy disclosures remain outstanding before submission.
