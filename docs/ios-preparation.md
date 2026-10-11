@@ -164,6 +164,6 @@ Automatic email-to-app Universal Links are not implemented. Test Worker Resend
 configuration/email delivery remains to be checked before device recovery tests.
 
 45 local tests pass including failure/restart/race/expiry/link-validation cases;
-packaging and generated JS syntax pass. New native plugin compilation/signing is
-pending CI. Real iPhone login/restart/logout/deletion/recovery remains a manual
+packaging and generated JS syntax pass. New native plugin simulator compilation and signed device archive PASSED
+at 18a01d2 (Actions 38145418576 and 38145414073). Real iPhone login/restart/logout/deletion/recovery remains a manual
 gate before distribution. App Store API authentication/upload is still untested.

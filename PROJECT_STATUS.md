@@ -8,7 +8,7 @@ This file is the operational source of truth for Calcio Report. Keep it updated 
 
 PR #14 adds packaged-only iOS Keychain session storage and pasted-email-link
 password recovery. Production web/Worker unchanged. 45 local tests passed;
-new plugin simulator/device signing CI pending. Real iPhone checks and test
+new plugin simulator/device signing CI PASSED at 18a01d2 (runs 38145418576 / 38145414073). Real iPhone checks and test
 email configuration remain outstanding. No TestFlight upload.
 
 ## iOS signing setup — 2026-10-11
