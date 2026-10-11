@@ -1,8 +1,24 @@
 # Calcio Report — Project Status
 
-_Last updated: 2026-10-10_
+_Last updated: 2026-10-11_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
+
+## Current release — 2026-10-11
+
+PR #13 released with explicit owner approval (2026-10-10, resumed 2026-10-11).
+Merge: `6b6953c0a21e6fe15798719de2883fbe67fe806c`. Production Worker updated by owner;
+GitHub Pages deployment succeeded and public assets `20261010r3` were verified.
+`ACCOUNT_DELETION_ENABLED=1` is active. Unsigned deletion is rejected with 401;
+direct production workers.dev remains 404. Owner confirmed production registration,
+opening deletion, password + ELIMINA, successful deletion/logout and rejected login
+at 09:31 Europe/Rome. Release complete; 38 automated tests previously passed.
+Real Stripe payment/PRO activation is not newly tested. Email verification remains
+proposal only. Older NOT RELEASED notes below are historical and superseded here.
+
+Next branch: `mobile/ios-preparation`. See `docs/ios-preparation.md` for proposed
+Apple payments, retained UI and implementation sequence. No iOS build or store
+submission yet; new production releases still require approval.
 
 ## Account deletion candidate — 2026-10-10 (NOT RELEASED)
 
