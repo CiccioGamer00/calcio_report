@@ -103,3 +103,12 @@ Local packaging, cap add ios and all 38 existing tests passed. Native compilatio
 must be verified by the macOS workflow; no local Xcode, signed build, TestFlight
 upload, runtime iPhone test, purchase support or secure native session storage yet.
 Native CORS and recovery remain follow-up gates before device testing.
+
+## Native viewport checkpoint
+
+Unsigned macOS compile passed for 5117b06 (Actions 38124190575). Added packaged-only
+safe-area/visual viewport layout for keyboard-sized modals and a clear unavailable
+purchase message; production frontend files are unchanged. Packaging, JavaScript
+syntax and a runtime smoke for purchase messaging/viewport resize passed. These
+checks do not replace real iPhone visual testing. Signing, secure native token
+storage and recovery-link handling still precede a usable TestFlight handoff.
