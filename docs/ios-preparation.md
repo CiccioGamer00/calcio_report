@@ -1,6 +1,6 @@
 # Calcio Report — iOS preparation
 
-Status: proposal, 2026-10-11. No native build, payment integration or submission yet.
+Status: isolated native prototype, 2026-10-11. Unsigned compile passes; signed archive validation is being configured. No payment integration or submission yet.
 
 ## Product and payment decision
 
@@ -122,3 +122,22 @@ The build still targets only the test backend and disables payments; this does
 not change it into a production build. No certificate/profile/upload key has been
 configured and no signed build has been uploaded. DSA status remains outstanding
 for EU distribution. Do not modify the unrelated OCR app identifier.
+
+## Signing setup checkpoint — 2026-10-11 afternoon
+
+Owner created a Developer-role team API key and saved APP_STORE_CONNECT_KEY_ID,
+APP_STORE_CONNECT_ISSUER_ID and APP_STORE_CONNECT_PRIVATE_KEY as repository secrets
+(names confirmed by screenshot, values not inspected). Owner generated an encrypted
+RSA key/CSR on Windows, downloaded a new Apple Distribution certificate, exported
+a password-protected P12, and confirmed saving IOS_DISTRIBUTION_P12_BASE64,
+IOS_DISTRIBUTION_P12_PASSWORD and IOS_PROVISION_PROFILE_BASE64. Original iOS
+Distribution certificate expiring 2027-10-05 remains untouched.
+
+Unsigned compilation also passed at e7ef13e (Actions 38125225376). Added a trusted
+branch-only signing check that validates team/app/profile type/expiration and
+certificate matching, imports the P12 into an ephemeral keychain, archives the
+test-backend app for devices and verifies its signature. No upload or artifacts;
+App Store Connect API secrets are not used by this check. Dependencies are
+installed before signing secrets are provided. Actions are pinned to commit SHAs.
+Signing result is pending the first macOS run. This is not a TestFlight-ready app:
+native storage, recovery and real-device behavior remain outstanding.
