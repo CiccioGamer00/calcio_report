@@ -144,3 +144,26 @@ validation, P12 import/matching, Release device archive and codesign verificatio
 all succeeded. No IPA export/upload or App Store API authentication tested.
 This is not a TestFlight-ready app:
 native storage, recovery and real-device behavior remain outstanding.
+
+## Native session and recovery candidate — 2026-10-11
+
+Packaged iOS copies now use @aparajita/capacitor-secure-storage 8.0.1 with
+Keychain whenUnlockedThisDeviceOnly, explicit no-iCloud synchronization and a
+single session record. A non-secret installation/logout marker prevents restoring
+a Keychain session after reinstall or failed logout removal. Legacy plaintext
+prototype credentials are discarded, not migrated. Native storage failure blocks
+use instead of falling back to localStorage. Source web app and Worker unchanged.
+
+Guarded packaging patches await session hydration and persistence, route API reads
+to in-memory credentials, and clear the session on logout/deletion/reset. A
+packaged-only recovery field accepts a pasted exact HTTPS Calcio Report reset
+link, clears the input immediately and opens the existing reset form. Tokens are
+never put in navigation URLs by this flow. Backend signature/single-use checks
+remain authoritative; test-backend builds cannot reset production accounts.
+Automatic email-to-app Universal Links are not implemented. Test Worker Resend
+configuration/email delivery remains to be checked before device recovery tests.
+
+45 local tests pass including failure/restart/race/expiry/link-validation cases;
+packaging and generated JS syntax pass. New native plugin compilation/signing is
+pending CI. Real iPhone login/restart/logout/deletion/recovery remains a manual
+gate before distribution. App Store API authentication/upload is still untested.

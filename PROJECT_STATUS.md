@@ -4,6 +4,13 @@ _Last updated: 2026-10-11_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
 
+## Native session candidate — 2026-10-11
+
+PR #14 adds packaged-only iOS Keychain session storage and pasted-email-link
+password recovery. Production web/Worker unchanged. 45 local tests passed;
+new plugin simulator/device signing CI pending. Real iPhone checks and test
+email configuration remain outstanding. No TestFlight upload.
+
 ## iOS signing setup — 2026-10-11
 
 PR #14 remains draft on `mobile/ios-preparation`. Latest unsigned iOS compile

@@ -5,6 +5,8 @@ on:
     paths:
       - '.github/workflows/ios-signing-check.yml'
       - 'scripts/check-ios-signing.sh'
+      - 'scripts/build-mobile.mjs'
+      - 'mobile/**'
   workflow_dispatch:
 permissions:
   contents: read
@@ -23,6 +25,7 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24'
+      - run: node --test tests/*.test.mjs
       - run: npm ci
         working-directory: mobile
       - run: npm run build:web && npx cap add ios

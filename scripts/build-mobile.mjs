@@ -2,6 +2,8 @@
 import { cp, mkdir, rm, writeFile, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { build } from '../mobile/node_modules/esbuild/lib/main.js';
+import { patchApp } from '../mobile/src/patch-frontend.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = path.join(root, 'mobile/www');
 await rm(output, { recursive: true, force: true });
@@ -14,8 +16,16 @@ await writeFile(path.join(output, 'config.js'), `window.API_CONFIG = ${JSON.stri
   headers: {}, telegramUrl: '', supportEmail: '', paymentUrl: '', paypalUrl: ''
 }, null, 2)};\n`);
 await cp(path.join(root, 'mobile/assets'), path.join(output, 'native'), { recursive: true });
+await build({ entryPoints: [path.join(root, 'mobile/src/bootstrap.js')], bundle: true,
+  format: 'iife', platform: 'browser', target: 'safari15',
+  outfile: path.join(output, 'native/bootstrap.js') });
+await writeFile(path.join(output, 'app.js'), patchApp(await readFile(path.join(root, 'app.js'), 'utf8')));
+const api = await readFile(path.join(output, 'js/api.js'), 'utf8');
+if (!api.includes('localStorage.getItem("CR_TOKEN")')) throw new Error('Native API token hook changed');
+await writeFile(path.join(output, 'js/api.js'), api.replace('localStorage.getItem("CR_TOKEN")', 'window.CRSession.token'));
 let html = await readFile(path.join(output, 'index.html'), 'utf8');
-html = html.replace('width=device-width, initial-scale=1', 'width=device-width, initial-scale=1, viewport-fit=cover')
+html = html.replace('<script src="app.js', '<script src="native/bootstrap.js"></script>\n<script src="app.js')
+  .replace('width=device-width, initial-scale=1', 'width=device-width, initial-scale=1, viewport-fit=cover')
   .replace('</head>', '<link rel="stylesheet" href="native/native.css" />\n</head>')
   .replace('</body>', '<script src="native/native.js"></script>\n</body>');
 await writeFile(path.join(output, 'index.html'), html);
