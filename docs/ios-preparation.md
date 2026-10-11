@@ -7,8 +7,9 @@ Status: proposal, 2026-10-11. No native build, payment integration or submission
 Preserve current graphics, football panels, seven-day TRIAL, existing accounts and
 one-time 30-day PRO. Recommend Apple In-App Purchase in iOS and existing Stripe
 on the web. Apple calls the limited-duration, manually repurchased product a
-Non-Renewing Subscription; this does not introduce automatic renewal. Owner
-approval of this payment channel and later price/net revenue is still needed.
+Non-Renewing Subscription; this does not introduce automatic renewal. Owner delegated the valid technical/payment route on 2026-10-11 and confirmed
+Apple Developer membership. Proceed with Apple IAP design; pricing, contractual
+enrollment and any paid service require an informed owner decision.
 Existing web PRO should be recognized by the same backend account; Apple guideline
 3.1.3(b) permits cross-platform access when the items are also offered as IAP.
 Do not assume the current Stripe link can be shipped unchanged worldwide in iOS.
@@ -65,3 +66,28 @@ Email verification stays separate; do not silently enable it for current users.
 
 Documentation-only change: git diff --check; existing 38-test result retained.
 No new runtime tests are needed until code changes.
+
+## Windows-only build decision — 2026-10-11
+
+Owner confirmed Windows only; do not request a local Mac or Xcode installation.
+Repository visibility verified as public. Prefer standard GitHub-hosted macOS
+runners for an initial unsigned simulator compile, followed by separately gated
+signing/TestFlight delivery. GitHub documents standard hosted runners as free for
+public repositories; this does not imply all artifact storage or larger runners
+are free. Keep artifact retention short and avoid paid runner sizes/services.
+
+First compile should need no Apple secrets. Later signing must use protected
+GitHub secrets and a trusted workflow, not credentials committed in this public
+repository or exposed to pull requests. Do not request Apple account passwords in
+chat. Configure certificates/profiles and App Store Connect upload only when the
+native build is ready. Build tooling and credentials remain unconfigured today.
+
+Sources:
+- https://docs.github.com/en/actions/reference/runners/github-hosted-runners
+- https://docs.github.com/en/actions/how-tos/deploy/deploy-to-third-party-platforms/sign-xcode-applications
+
+Commercial follow-up: apply for Small Business Program eligibility/approval before
+assuming 15% commission. Owner membership is confirmed but Small Business enrollment
+is not. Current Apple EU documentation reviewed 2026-10-11 lists 26% standard IAP,
+15% eligible program IAP; confirm applicable account terms before pricing. No
+purchase, enrollment, paid CI service or submission has been performed.
