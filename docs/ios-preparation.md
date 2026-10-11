@@ -91,3 +91,15 @@ assuming 15% commission. Owner membership is confirmed but Small Business enroll
 is not. Current Apple EU documentation reviewed 2026-10-11 lists 26% standard IAP,
 15% eligible program IAP; confirm applicable account terms before pricing. No
 purchase, enrollment, paid CI service or submission has been performed.
+
+## Prototype implementation checkpoint
+
+Added mobile/package.json and lockfile (Capacitor 8.5.3), prototype-only app ID
+com.calcioreport.prototype, allowlisted web packaging and unsigned simulator CI.
+Packaged config always targets the isolated test Worker with payment/contact links
+disabled; source production config/UI unchanged. iOS project is generated from
+pinned npm dependencies; generated assets, iOS and node_modules are ignored.
+Local packaging, cap add ios and all 38 existing tests passed. Native compilation
+must be verified by the macOS workflow; no local Xcode, signed build, TestFlight
+upload, runtime iPhone test, purchase support or secure native session storage yet.
+Native CORS and recovery remain follow-up gates before device testing.
