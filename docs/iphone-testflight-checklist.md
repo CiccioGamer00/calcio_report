@@ -1,0 +1,78 @@
+# Primo collaudo iPhone — Calcio Report
+
+Versione di prova: branch `mobile/ios-preparation`, PR #14, API
+`https://calcio-report-test.stemoro84.workers.dev`, database `calcio_users_test`.
+Gli account sono separati da quelli del sito pubblico; acquisti disattivati.
+
+## Stato prima del collaudo
+
+- Certificato e profilo Apple: verificati con archivio dispositivo firmato.
+- Pacchetto IPA: esportato e validato con Apple il 12 ottobre (Actions 38209412616);
+  credenziali API accettate. Caricamento TestFlight ancora da eseguire.
+- Email: il proprietario ha aggiunto RESEND_API_KEY al Worker test e confermato
+  la ricezione l'11 ottobre alle 21:44; messaggio nella cartella spam.
+- Il link ricevuto allora dura 20 minuti: richiederne uno nuovo durante il test.
+- API calcistiche: le schermate del Worker test mostrano che mancano
+  CR_RELAY_URL e CR_RELAY_SECRET. Il codice usa entrambe e restituisce
+  "Relay non configurato" in loro assenza. APISPORTS_KEY non è letta da questo
+  Worker: non copiarla per tentativi. Per il test dei pannelli serve collegare
+  consapevolmente il relay; il suo uso consuma la quota del provider.
+- Nel test manca anche AUTH_PASSWORD_V2=1, presente in produzione. Attivarla nel
+  solo Worker test prima di creare nuovi account per collaudare il formato PBKDF2.
+  Gli account già creati restano compatibili. Non copiare LICENSE_SECRET dalla
+  produzione: quello di test deve restare distinto.
+
+## Accesso sul telefono (dopo caricamento ed elaborazione Apple)
+
+Aprire TestFlight con l'Apple Account abilitato al test interno e installare
+Calcio Report. L'icona è ancora quella provvisoria generata da Capacitor.
+Per il primo collaudo non usare pagamenti o account reali di clienti.
+
+1. Registrare un account di prova con una propria email e password nota.
+2. Chiudere del tutto e riaprire l'app: la sessione deve restare attiva, entro
+   le sei ore previste. Verificare anche blocco/sblocco del telefono.
+3. Fare logout, chiudere e riaprire: deve chiedere nuovamente l'accesso.
+4. Richiedere il recupero password nell'app. Dalla mail copiare l'indirizzo del
+   pulsante di recupero (non il testo), tornare nell'app e incollarlo nel campo
+   "Hai già ricevuto l'email?"; premere "Usa link di recupero".
+5. Impostare una password nuova e accedere. Quella precedente deve essere rifiutata;
+   lo stesso link non deve permettere un secondo cambio password.
+6. Cancellare l'account: annullare una volta, provare password errata, poi usare
+   password corretta e conferma ELIMINA. L'app deve uscire dall'account; dopo
+   riavvio le vecchie credenziali non devono funzionare.
+7. Registrarsi nuovamente con la stessa email: deve partire una nuova TRIAL.
+8. Controllare modali con tastiera aperta, scorrimento e chiusura, aree sopra/sotto
+   lo schermo. Segnalare blocchi o pulsanti irraggiungibili; la piccola imperfezione
+   del Tab sul login desktop è già accettata e non blocca questo collaudo.
+9. Dopo la configurazione del relay, verificare ricerca squadra, giornata e
+   apertura dei pannelli disponibili in TRIAL. Predizione deve restare protetta.
+   Il tasto PRO deve spiegare che gli acquisti non sono disponibili nella prova.
+
+Non inviare in chat password, link di recupero o valori delle chiavi.
+Annotare solo passaggio, risultato e schermata dell'eventuale errore.
+
+## Aggiornamento del PC Windows, quando serve
+
+Aprire PowerShell nella cartella del repository Calcio Report. Il blocco ferma
+l'operazione se trova modifiche locali; non le cancella e non modifica main.
+Non serve installare Xcode né ricreare certificati.
+
+```powershell
+$ErrorActionPreference = 'Stop'
+$changes = git status --porcelain
+if ($LASTEXITCODE -ne 0) { throw 'Apri PowerShell nella cartella Calcio Report.' }
+if ($changes) { throw 'Ci sono modifiche locali: conservarle prima di aggiornare.' }
+git fetch origin
+if ($LASTEXITCODE -ne 0) { throw 'Download GitHub non riuscito.' }
+git switch mobile/ios-preparation
+if ($LASTEXITCODE -ne 0) { throw 'Cambio branch non riuscito.' }
+git pull --ff-only origin mobile/ios-preparation
+if ($LASTEXITCODE -ne 0) { throw 'Aggiornamento non riuscito.' }
+git status --short --branch
+```
+
+## Ancora fuori da questo collaudo
+
+Acquisti Apple, ripristino acquisti e rimborsi; backend di produzione; materiali
+App Store, privacy e revisione. L'email nella spam prova la consegna, non la qualità
+della consegna in posta in arrivo. Il collaudo manuale non è ancora eseguito.

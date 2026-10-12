@@ -1,8 +1,27 @@
 # Calcio Report — Project Status
 
-_Last updated: 2026-10-11_
+_Last updated: 2026-10-12_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
+
+## TestFlight preparation — 2026-10-12
+
+Owner requested autonomous preparation while at work; evening PC/iPhone checks.
+On 2026-10-11 owner added a dedicated RESEND_API_KEY to the test Worker and
+confirmed password-recovery email delivery at 21:44 Europe/Rome (landed in spam).
+Delivery is verified; native password-reset completion is not yet tested.
+Screenshots show missing CR_RELAY_URL/CR_RELAY_SECRET and AUTH_PASSWORD_V2 in test.
+The current Worker requires both relay variables for football requests; do not
+copy the production LICENSE_SECRET. Test DB remains calcio_users_test.
+
+Commit b14af28 adds Apple IPA validation with existing GitHub API-key secrets,
+artifact provenance/hash checks, ephemeral P8 cleanup, and an opt-in manual upload
+path. Push events perform validation only. Local mock smoke passed for validation
+routing, artifact tamper rejection and key-file cleanup. Simulator compile passed
+(Actions 38209415495); 45 tests and signed IPA export passed in 38209412616.
+Apple validation PASSED in Actions 38209412616: API credentials and IPA accepted.
+No TestFlight upload, main merge or production deploy.
+Evening handoff: docs/iphone-testflight-checklist.md.
 
 ## iOS IPA export checkpoint — 2026-10-11 evening
 

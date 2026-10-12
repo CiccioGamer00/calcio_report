@@ -184,3 +184,27 @@ actual iPhone connectivity remains a required runtime check. Before recovery tes
 confirm the test Worker's RESEND_API_KEY and PASSWORD_RESET_FROM configuration.
 Do not expose secret values. Native icon is still the generated Capacitor default;
 store artwork and privacy disclosures remain outstanding before submission.
+
+## Apple validation and evening handoff — 2026-10-12
+
+Commit b14af28 adds scripts/apple-testflight.sh. Existing Apple API-key secrets are
+provided only to the dedicated step after build/export; the P8 lives in a temporary
+private_keys directory removed on exit. Before authenticated commands, verify
+artifact SHA-256, commit, bundle ID, test backend and disabled payments. Default
+mode runs altool --validate-app only; upload mode also requires workflow_dispatch
+on the trusted branch. No tester invitation or review-submission operation exists.
+
+Validation PASSED with Apple in Actions 38209412616, including 45 automated tests,
+signed archive and exported IPA. Simulator compilation PASSED in 38209415495.
+Local mock smoke verified validation-only routing, tampered-artifact rejection
+and temporary key cleanup. No TestFlight upload performed. Manual dispatch may
+require the workflow to exist on the default branch; do not merge main merely to
+expose that button. Before delivery, arrange an explicit trusted-branch trigger
+if dispatch remains unavailable. Apple processing and device installation are not
+proven by validation alone.
+
+Owner confirmed dedicated test email key setup and successful delivery on October
+11 at 21:44 Europe/Rome, in spam. Native reset completion still requires iPhone
+checks. Test relay URL/secret and AUTH_PASSWORD_V2=1 are absent in supplied test
+settings; evening configuration and manual checklist are documented in
+iphone-testflight-checklist.md. Production web/Worker and main unchanged.
