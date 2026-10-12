@@ -50,12 +50,12 @@ jobs:
           path: ${{ runner.temp }}/calcio-ipa/
           if-no-files-found: error
           retention-days: 1
-      - name: Validate with Apple (upload only on explicit manual dispatch)
+      - name: Validate with Apple and process explicit upload request
         env:
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
-          UPLOAD_TESTFLIGHT: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_testflight && 'true' || 'false' }}
+          UPLOAD_TESTFLIGHT: ${{ ((github.event_name == 'workflow_dispatch' && inputs.upload_testflight) || (github.event_name == 'push' && github.event.head_commit.message == 'release: upload internal TestFlight prototype 2026-10-12' && github.run_attempt == 1)) && 'true' || 'false' }}
         run: |
           if [[ "$UPLOAD_TESTFLIGHT" == true ]]; then
             bash scripts/apple-testflight.sh upload

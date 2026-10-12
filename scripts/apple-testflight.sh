@@ -1,9 +1,25 @@
 #!/bin/bash
-# Validate the isolated IPA. Upload only with an explicit manual workflow input.
+# Validate the isolated IPA. Upload requires explicit dispatch or a release commit.
 set -euo pipefail
 umask 077
 MODE=${1:-validate}
 [[ "$MODE" == validate || "$MODE" == upload ]] || { echo 'Invalid mode' >&2; exit 1; }
+if [[ "$MODE" == upload ]]; then
+  python3 - <<'PYGATE'
+import json, os
+from pathlib import Path
+assert os.environ.get('GITHUB_REPOSITORY') == 'CiccioGamer00/calcio_report', 'Wrong repository'
+assert os.environ.get('GITHUB_REF') == 'refs/heads/mobile/ios-preparation', 'Wrong upload branch'
+event = json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text())
+kind = os.environ.get('GITHUB_EVENT_NAME')
+manual = kind == 'workflow_dispatch' and str(event.get('inputs', {}).get('upload_testflight', '')).lower() == 'true'
+release = (kind == 'push' and event.get('head_commit', {}).get('message', '').strip() ==
+           'release: upload internal TestFlight prototype 2026-10-12' and
+           event.get('after') == os.environ.get('GITHUB_SHA') and
+           os.environ.get('GITHUB_RUN_ATTEMPT') == '1')
+assert manual or release, 'An explicit upload request is required'
+PYGATE
+fi
 : "${RUNNER_TEMP:?GitHub-hosted macOS runner required}"
 : "${APP_STORE_CONNECT_KEY_ID:?Missing Apple key ID}"
 : "${APP_STORE_CONNECT_ISSUER_ID:?Missing Apple issuer ID}"
@@ -36,9 +52,6 @@ xcrun altool --validate-app -f "$RUNNER_TEMP/calcio-ipa/CalcioReport-test.ipa" \
   -t ios --apiKey "$APP_STORE_CONNECT_KEY_ID" --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
 echo '### Apple IPA validation passed' >> "$GITHUB_STEP_SUMMARY"
 if [[ "$MODE" == upload ]]; then
-  [[ "${GITHUB_EVENT_NAME:-}" == workflow_dispatch && "${GITHUB_REF:-}" == refs/heads/mobile/ios-preparation ]] || {
-    echo 'Upload requires manual dispatch on the iOS branch.' >&2; exit 1;
-  }
   xcrun altool --upload-app -f "$RUNNER_TEMP/calcio-ipa/CalcioReport-test.ipa" \
     -t ios --apiKey "$APP_STORE_CONNECT_KEY_ID" --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
   echo 'Uploaded for internal TestFlight processing. No review submission or tester invitations.' >> "$GITHUB_STEP_SUMMARY"
