@@ -8,19 +8,16 @@ Gli account sono separati da quelli del sito pubblico; acquisti disattivati.
 
 - Certificato e profilo Apple: verificati con archivio dispositivo firmato.
 - Pacchetto IPA: esportato e validato con Apple il 12 ottobre (Actions 38209412616);
-  credenziali API accettate. Caricamento TestFlight ancora da eseguire.
+  credenziali API accettate. Build 1.0 (6.1) caricata il 12 ottobre alle 17:17
+  (Actions 38268628004); elaborazione Apple e assegnazione tester da verificare.
 - Email: il proprietario ha aggiunto RESEND_API_KEY al Worker test e confermato
   la ricezione l'11 ottobre alle 21:44; messaggio nella cartella spam.
 - Il link ricevuto allora dura 20 minuti: richiederne uno nuovo durante il test.
-- API calcistiche: le schermate del Worker test mostrano che mancano
-  CR_RELAY_URL e CR_RELAY_SECRET. Il codice usa entrambe e restituisce
-  "Relay non configurato" in loro assenza. APISPORTS_KEY non è letta da questo
-  Worker: non copiarla per tentativi. Per il test dei pannelli serve collegare
-  consapevolmente il relay; il suo uso consuma la quota del provider.
-- Nel test manca anche AUTH_PASSWORD_V2=1, presente in produzione. Attivarla nel
-  solo Worker test prima di creare nuovi account per collaudare il formato PBKDF2.
-  Gli account già creati restano compatibili. Non copiare LICENSE_SECRET dalla
-  produzione: quello di test deve restare distinto.
+- API calcistiche: CR_RELAY_URL e CR_RELAY_SECRET configurati dal proprietario
+  il 12 ottobre pomeriggio. Ricerca autenticata di prova /teams?id=489 riuscita:
+  HTTP 200, AC Milan, nessun errore del provider; account temporaneo eliminato.
+- AUTH_PASSWORD_V2=1 confermata nella schermata test. LICENSE_SECRET resta
+  separata dalla produzione. Nessun valore segreto condiviso o salvato nel repo.
 
 ## Accesso sul telefono (dopo caricamento ed elaborazione Apple)
 

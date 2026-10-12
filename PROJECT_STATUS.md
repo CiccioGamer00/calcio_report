@@ -4,6 +4,27 @@ _Last updated: 2026-10-12_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
 
+## Evening test environment verified — 2026-10-12
+
+Owner recovered the existing relay secret over SSH and added it only to the test
+Worker. Screenshot confirms CR_RELAY_URL, CR_RELAY_SECRET, AUTH_PASSWORD_V2=1,
+RESEND_API_KEY and independent LICENSE_SECRET. Live bounded smoke succeeded:
+disposable account registration, authenticated /teams?id=489 -> HTTP 200, one
+AC Milan result, no provider errors; account deletion -> HTTP 200 / ok true.
+No secret value was provided in chat or committed. Windows checkout was confirmed
+clean and aligned with mobile/ios-preparation at the morning checkpoint.
+
+Internal TestFlight delivery now uses an explicit release-commit trigger on the
+trusted branch, avoiding a main merge merely to expose workflow_dispatch. Only the
+exact release message on the first run attempt enables upload; the script also
+checks event SHA/repository/branch. Normal pushes validate only. Mock gate checks
+passed. An initial workflow YAML syntax failure prevented execution and was fixed
+before upload. Build 1.0 (6.1) UPLOADED successfully at b152696, Actions 38268628004,
+2026-10-12 17:17 Europe/Rome. Apple reported VERIFY SUCCEEDED and UPLOAD SUCCEEDED
+with no errors. 45 tests passed; processing/internal tester assignment and iPhone
+runtime are still unverified. No main merge, production deploy or App Store review
+submission was performed.
+
 ## TestFlight preparation — 2026-10-12
 
 Owner requested autonomous preparation while at work; evening PC/iPhone checks.

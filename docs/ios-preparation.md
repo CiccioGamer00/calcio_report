@@ -208,3 +208,25 @@ Owner confirmed dedicated test email key setup and successful delivery on Octobe
 checks. Test relay URL/secret and AUTH_PASSWORD_V2=1 are absent in supplied test
 settings; evening configuration and manual checklist are documented in
 iphone-testflight-checklist.md. Production web/Worker and main unchanged.
+
+## First internal TestFlight upload — 2026-10-12, 17:17 Europe/Rome
+
+Build 1.0 (6.1), commit b152696, Actions 38268628004: 45 tests, signed IPA export,
+Apple validation and upload all passed. altool reported UPLOAD SUCCEEDED with no
+errors, delivery UUID 0cdd1915-fbce-4317-8ac8-b1a1105de82a. Export retained the
+internal-testing-only option. Processing and internal tester availability must be
+confirmed in App Store Connect; no tester invitations or App Review submission
+were performed. Main/production unchanged.
+
+Delivery now supports an explicit release-commit message on the trusted branch
+in addition to manual dispatch; event SHA/repository/branch and first attempt are
+checked before reading Apple credentials. Ordinary pushes cannot upload. An
+initial YAML parse failure at 6c86fb2 prevented execution, corrected at b152696.
+Local mock verified rejection of ordinary pushes/reruns, validation before upload,
+and key-file cleanup. Owner's Windows checkout was aligned before these CI/doc
+changes; another pull is optional for documentation and not required for TestFlight.
+
+Test Worker relay URL/secret and AUTH_PASSWORD_V2=1 are now confirmed by screenshot.
+A live disposable-account check returned AC Milan from /teams?id=489 with HTTP 200
+and no provider errors, then deleted that account successfully. No secret values
+were received or committed. See iphone-testflight-checklist.md for device checks.
