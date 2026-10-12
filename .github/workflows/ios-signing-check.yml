@@ -5,9 +5,16 @@ on:
     paths:
       - '.github/workflows/ios-signing-check.yml'
       - 'scripts/check-ios-signing.sh'
+      - 'scripts/apple-testflight.sh'
       - 'scripts/build-mobile.mjs'
       - 'mobile/**'
   workflow_dispatch:
+    inputs:
+      upload_testflight:
+        description: 'Upload this test build to internal TestFlight (no App Store submission)'
+        type: boolean
+        required: false
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -43,3 +50,15 @@ jobs:
           path: ${{ runner.temp }}/calcio-ipa/
           if-no-files-found: error
           retention-days: 1
+      - name: Validate with Apple (upload only on explicit manual dispatch)
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+          UPLOAD_TESTFLIGHT: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_testflight && 'true' || 'false' }}
+        run: |
+          if [[ "$UPLOAD_TESTFLIGHT" == true ]]; then
+            bash scripts/apple-testflight.sh upload
+          else
+            bash scripts/apple-testflight.sh validate
+          fi
