@@ -39,4 +39,29 @@
   viewport?.addEventListener('resize', updateViewport);
   viewport?.addEventListener('scroll', updateViewport);
   window.addEventListener('resize', updateViewport);
+
+  // Freeze the page behind native modals; only their content should scroll.
+  let pageScrollY = null;
+  const syncModalScroll = () => {
+    const open = !!document.querySelector('.modal:not(.hidden)');
+    if (open && pageScrollY === null) {
+      pageScrollY = window.scrollY;
+      document.body.style.setProperty('--native-page-top', `${-pageScrollY}px`);
+      document.documentElement.classList.add('native-modal-open');
+      document.body.classList.add('native-modal-open');
+    } else if (!open && pageScrollY !== null) {
+      const restoreY = pageScrollY;
+      pageScrollY = null;
+      document.documentElement.classList.remove('native-modal-open');
+      document.body.classList.remove('native-modal-open');
+      document.body.style.removeProperty('--native-page-top');
+      window.scrollTo(0, restoreY);
+    }
+    updateViewport();
+  };
+  const modalObserver = new MutationObserver(syncModalScroll);
+  document.querySelectorAll('.modal').forEach(modal => {
+    modalObserver.observe(modal, { attributes: true, attributeFilter: ['class'] });
+  });
+  syncModalScroll();
 })();
