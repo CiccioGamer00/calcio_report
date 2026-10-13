@@ -20,7 +20,7 @@ modulo entro le aree sicure; ripetere aprendo e chiudendo la tastiera.
 ## Prossimo collaudo: correzione tastiera, build 1.0 (10.1)
 
 Consegna richiesta dal proprietario il 13 ottobre per il test serale.
-Actions 38351540078, commit 88b44ea: firma/export riusciti; invio Apple in corso.
+Actions 38351540078, commit 88b44ea: 45 test e firma/export riusciti; Apple VERIFY SUCCEEDED e UPLOAD SUCCEEDED\nsenza errori il 13 ottobre alle 07:32 (Europe/Rome). Compilazione simulatore\nriuscita. Elaborazione Apple e disponibilità nel gruppo da verificare.
 Prima di provare, controllare in TestFlight che sia installata la build 10.1.
 Se non compare, verificare elaborazione Apple e assegnazione al gruppo Test interno.
 
