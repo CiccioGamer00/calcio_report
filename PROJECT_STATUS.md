@@ -4,6 +4,24 @@ _Last updated: 2026-10-13_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
 
+## App Store product configured — 2026-10-13 19:05 Europe/Rome
+
+Owner screenshots confirm creation of non-renewing PRO 30 giorni,
+product ID com.calcioreport.app.pro30, Apple product ID 6822393280.
+Italy EUR 9.99 was shown in the pricing wizard and the resulting price schedule
+appears on the product page. Owner confirmed saving the Italian localization:
+PRO 30 giorni / PRO per 30 giorni, senza rinnovo automatico.
+The earlier suggested description exceeded Apple's displayed character limit;
+use this shorter version. Owner also confirmed saving Italy-only availability
+and disabling automatic availability in future territories. Availability scope
+is owner-reported, not independently queried through Apple APIs.
+
+Paid Apps Agreement/banking/tax status remains unverified; next owner step is
+to inspect Business > Agreements. Review screenshot and submission are pending.
+The product is not evidence of working purchases: signature verification, ledger,
+StoreKit bridge and sandbox device tests remain outstanding. No app review
+submission, production change or new TestFlight upload in this checkpoint.
+
 ## Apple launch price approved — 2026-10-13 18:53 Europe/Rome
 
 Owner accepted EUR 9.99 for 30 days of iPhone PRO, without automatic renewal,
