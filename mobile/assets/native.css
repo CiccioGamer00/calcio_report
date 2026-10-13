@@ -11,7 +11,10 @@ body {
   bottom: auto;
   height: var(--native-viewport-height, 100dvh);
   box-sizing: border-box;
-  padding: 12px;
+  padding: max(12px, env(safe-area-inset-top, 0px))
+    max(12px, env(safe-area-inset-right, 0px))
+    max(12px, env(safe-area-inset-bottom, 0px))
+    max(12px, env(safe-area-inset-left, 0px));
 }
 .modal-content {
   box-sizing: border-box;
@@ -20,4 +23,21 @@ body {
   overflow-y: auto;
   overscroll-behavior: contain;
 }
+/* Preserve content height when the keyboard reduces the visible viewport.
+   Flex shrinking would otherwise collapse authMsg underneath the form. */
+.modal-content > * { flex-shrink: 0; }
+#authStandardBox:not(.hidden),
+#authResetBox:not(.hidden) {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+#authStandardBox > *, #authResetBox > * { flex-shrink: 0; }
+.native-recovery {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.modal-content input { box-sizing: border-box; width: 100%; min-width: 0; }
+.modal-content .auth-buttons { flex-wrap: wrap; }
 input, select, textarea { font-size: 16px; }
