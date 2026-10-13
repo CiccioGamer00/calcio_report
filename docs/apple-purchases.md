@@ -2,11 +2,29 @@
 
 2026-10-13. Work branch: `mobile/ios-preparation`, draft PR #14.
 
+## App Store product configured — 2026-10-13 19:05 Europe/Rome
+
+Owner screenshots confirm creation of non-renewing PRO 30 giorni,
+product ID com.calcioreport.app.pro30, Apple product ID 6822393280.
+Italy EUR 9.99 was shown in the pricing wizard and the resulting price schedule
+appears on the product page. Owner confirmed saving the Italian localization:
+PRO 30 giorni / PRO per 30 giorni, senza rinnovo automatico.
+The earlier suggested description exceeded Apple's displayed character limit;
+use this shorter version. Owner also confirmed saving Italy-only availability
+and disabling automatic availability in future territories. Availability scope
+is owner-reported, not independently queried through Apple APIs.
+
+Paid Apps Agreement/banking/tax status remains unverified; next owner step is
+to inspect Business > Agreements. Review screenshot and submission are pending.
+The product is not evidence of working purchases: signature verification, ledger,
+StoreKit bridge and sandbox device tests remain outstanding. No app review
+submission, production change or new TestFlight upload in this checkpoint.
+
 ## Product
 
 One payment buys 30 days of PRO, without automatic renewal. App Store type:
 Non-Renewing Subscription. Selected product ID: `com.calcioreport.app.pro30`;
-bundle ID: `com.calcioreport.app`. The product has NOT been confirmed as created.
+bundle ID: `com.calcioreport.app`. Product creation confirmed by owner screenshots (Apple product ID 6822393280).
 Owner approved the launch price on 2026-10-13 at 18:53 Europe/Rome:
 EUR 9.99 for 30 days, no automatic renewal; keep the existing seven-day trial.
 Target Italian storefront price: EUR 9.99. This is a commercial decision, NOT
@@ -18,7 +36,7 @@ App Store Connect entry values:
 - Reference name: `PRO 30 giorni`
 - Product ID: `com.calcioreport.app.pro30`
 - Italian display name: `PRO 30 giorni`
-- Italian description: `Accesso alle funzioni PRO per 30 giorni, senza rinnovo automatico.`
+- Italian description: `PRO per 30 giorni, senza rinnovo automatico`
 - Italian customer price: `9,99 EUR`
 
 Product creation, pricing, localization, agreements and sandbox availability
