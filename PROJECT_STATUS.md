@@ -4,6 +4,22 @@ _Last updated: 2026-10-13_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
 
+## Apple purchase policy foundation — 2026-10-13
+
+Owner authorized proceeding with Apple purchases after successful iPhone 12.1
+acceptance. Added an isolated server-side post-verification policy module and
+seven boundary tests; all 52 repository tests pass locally. Checks include
+Sandbox/Production separation, product and account identity, immutable string
+transaction IDs, timestamps and revoked-purchase rejection. No runtime integration,
+Apple signature verifier, D1 ledger or StoreKit bridge has been enabled yet.
+Duplicate prevention and refunds still require the atomic, source-aware ledger.
+See docs/apple-purchases.md for the concrete implementation sequence and gaps.
+
+Proposed product ID: com.calcioreport.app.pro30, Non-Renewing Subscription,
+30 days, no automatic renewal. Product creation and price need owner confirmation.
+Native payment button remains disabled. No new TestFlight build, database change,
+main merge or production deployment performed for this checkpoint.
+
 ## Native modal acceptance CLOSED — 2026-10-13 17:34 Europe/Rome
 
 Owner installed the replacement TestFlight build 1.0 (12.1) and reported the
