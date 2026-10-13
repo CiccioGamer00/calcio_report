@@ -1,8 +1,26 @@
 # Calcio Report — Project Status
 
-_Last updated: 2026-10-12_
+_Last updated: 2026-10-13_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
+
+## iPhone acceptance and keyboard layout fix — 2026-10-13
+
+Owner confirmed on iPhone 16 Pro Max / TestFlight 1.0 (6.1): installation,
+login, Milan fixture loading, session retained after closing/reopening, password
+recovery via pasted email link followed by login with the new password, and
+account deletion. These are owner-reported passes, not automated device tests;
+individual negative cases from the checklist are not separately confirmed.
+
+Screenshots reproduced the visible defect: with the keyboard open, the auth
+message overlaps Email and the bottom recovery button is clipped. The native-only
+CSS constrained the flex container height but allowed children to shrink.
+The fix prevents direct modal children shrinking, spaces the login/reset/recovery
+fields, wraps action buttons and includes safe-area padding in the viewport-bound
+scrollable modal. native.js gives the recovery block an explicit CSS class.
+Only packaged assets change; web production, Worker and API request count are
+unchanged. 45 existing tests and mobile web packaging pass. Native keyboard and
+safe-area acceptance on the corrected TestFlight build remains pending.
 
 ## Evening test environment verified — 2026-10-12
 
