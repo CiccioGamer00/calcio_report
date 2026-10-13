@@ -4,6 +4,19 @@ _Last updated: 2026-10-13_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
 
+## Keyboard fix delivered to TestFlight — 2026-10-13
+
+Owner authorized autonomous continuation and evening iPhone tests. Build 1.0
+(10.1), source 88b44ea, Actions 38351540078: 45 tests, signed archive/export,
+Apple VERIFY SUCCEEDED (07:31 Europe/Rome) and UPLOAD SUCCEEDED with no errors
+(07:32 Europe/Rome). Simulator compile also passed (38351541394).
+The explicit release gate was updated only for this requested delivery; ordinary
+push, wrong SHA/branch and rerun rejection checks passed. Test backend and disabled
+payments preserved. No main merge or production deploy. Apple processing/group
+availability and real-device keyboard acceptance remain unverified.
+Evening checklist: docs/iphone-testflight-checklist.md. Confirm build 10.1 before
+checking keyboard-open login/reset/delete modals and scroll reachability.
+
 ## iPhone acceptance and keyboard layout fix — 2026-10-13
 
 Owner confirmed on iPhone 16 Pro Max / TestFlight 1.0 (6.1): installation,
