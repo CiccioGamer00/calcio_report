@@ -4,6 +4,15 @@ Versione di prova: branch `mobile/ios-preparation`, PR #14, API
 `https://calcio-report-test.stemoro84.workers.dev`, database `calcio_users_test`.
 Gli account sono separati da quelli del sito pubblico; acquisti disattivati.
 
+## Stato aggiornato — 13 ottobre, 17:34
+
+Build 1.0 (12.1) installata: il proprietario conferma superato il nuovo test del
+modulo di cancellazione con tastiera aperta, scorrimento e pulsanti raggiungibili.
+Login e accesso al pulsante recupero erano già confermati sulla 10.1.
+I due difetti di layout segnalati sono chiusi. Non occorre ripetere questi test
+senza nuove modifiche o regressioni. Restano distinti gli altri casi della checklist.
+Actions 38417873754: test, firma/export e fase validazione/caricamento Apple riusciti.
+
 ## Esito comunicato dal proprietario — 12 ottobre
 
 Su iPhone 16 Pro Max, build 1.0 (6.1), confermati: installazione, accesso,
@@ -11,16 +20,18 @@ ricerca Milan, sessione mantenuta dopo riapertura, recupero tramite link email
 incollato e accesso con nuova password, eliminazione account.
 I singoli casi negativi elencati sotto non sono stati confermati separatamente.
 
-Difetto aperto: tastiera sovrappone messaggio e campo Email e taglia il fondo
+Difetto osservato sulla 6.1 (ora chiuso): tastiera sovrappone messaggio e campo Email e taglia il fondo
 del modulo. Correzione preparata il 13 ottobre nei soli asset nativi.
 Sulla nuova build verificare login, recupero e cancellazione con tastiera aperta:
 nessuna sovrapposizione, campi/pulsanti raggiungibili scorrendo, chiusura accessibile,
 modulo entro le aree sicure; ripetere aprendo e chiudendo la tastiera.
 
-## Prossimo collaudo: correzione tastiera, build 1.0 (10.1)
+## Collaudo precedente: correzione tastiera, build 1.0 (10.1)
 
 Consegna richiesta dal proprietario il 13 ottobre per il test serale.
-Actions 38351540078, commit 88b44ea: 45 test e firma/export riusciti; Apple VERIFY SUCCEEDED e UPLOAD SUCCEEDED\nsenza errori il 13 ottobre alle 07:32 (Europe/Rome). Compilazione simulatore\nriuscita. Elaborazione Apple e disponibilità nel gruppo da verificare.
+Actions 38351540078, commit 88b44ea: 45 test e firma/export riusciti; Apple VERIFY SUCCEEDED e UPLOAD SUCCEEDED
+senza errori il 13 ottobre alle 07:32 (Europe/Rome). Compilazione simulatore
+riuscita. Elaborazione Apple e disponibilità nel gruppo da verificare.
 Prima di provare, controllare in TestFlight che sia installata la build 10.1.
 Se non compare, verificare elaborazione Apple e assegnazione al gruppo Test interno.
 
