@@ -4,6 +4,23 @@ _Last updated: 2026-10-13_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
 
+## iPhone 10.1 acceptance and deletion follow-up — 2026-10-13
+
+Owner installed 10.1 after completing Apple encryption declaration and group
+assignment. Login spacing and scrolling to the recovery button with keyboard
+open are confirmed PASS. Deletion layout FAILED: background page scrolls while
+the form stays oversized and its action buttons are obscured by the keyboard.
+Photo shows title also entering the status-bar area.
+
+Root cause: #deleteAccountForm max-height: calc(100dvh - 24px) overrides the
+lower-specificity native .modal-content constraint. Native CSS now explicitly
+includes #deleteAccountForm with max-height: 100% inside the visual-viewport
+modal. Native JS fixes the background body while any modal is open and restores
+its saved scroll position once all modals close. Web and API behavior unchanged.
+45 tests, mobile packaging and focused scroll-lock lifecycle mock passed.
+Replacement internal TestFlight upload requested; real iPhone verification of
+this deletion fix remains pending. Login acceptance does not close deletion.
+
 ## Keyboard fix delivered to TestFlight — 2026-10-13
 
 Owner authorized autonomous continuation and evening iPhone tests. Build 1.0
