@@ -5,6 +5,7 @@
     text: 'Questa versione di prova non permette acquisti. Il pagamento Apple sarà aggiunto in seguito.'
   });
   const recovery = document.createElement('div');
+  recovery.className = 'native-recovery';
   const label = document.createElement('label');
   label.htmlFor = 'nativeRecoveryLink';
   label.textContent = 'Hai già ricevuto l’email? Incolla qui il link di recupero:';
