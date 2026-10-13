@@ -4,6 +4,19 @@ Versione di prova: branch `mobile/ios-preparation`, PR #14, API
 `https://calcio-report-test.stemoro84.workers.dev`, database `calcio_users_test`.
 Gli account sono separati da quelli del sito pubblico; acquisti disattivati.
 
+## Esito comunicato dal proprietario — 12 ottobre
+
+Su iPhone 16 Pro Max, build 1.0 (6.1), confermati: installazione, accesso,
+ricerca Milan, sessione mantenuta dopo riapertura, recupero tramite link email
+incollato e accesso con nuova password, eliminazione account.
+I singoli casi negativi elencati sotto non sono stati confermati separatamente.
+
+Difetto aperto: tastiera sovrappone messaggio e campo Email e taglia il fondo
+del modulo. Correzione preparata il 13 ottobre nei soli asset nativi.
+Sulla nuova build verificare login, recupero e cancellazione con tastiera aperta:
+nessuna sovrapposizione, campi/pulsanti raggiungibili scorrendo, chiusura accessibile,
+modulo entro le aree sicure; ripetere aprendo e chiudendo la tastiera.
+
 ## Stato prima del collaudo
 
 - Certificato e profilo Apple: verificati con archivio dispositivo firmato.
@@ -72,4 +85,4 @@ git status --short --branch
 
 Acquisti Apple, ripristino acquisti e rimborsi; backend di produzione; materiali
 App Store, privacy e revisione. L'email nella spam prova la consegna, non la qualità
-della consegna in posta in arrivo. Il collaudo manuale non è ancora eseguito.
+della consegna in posta in arrivo. Gli esiti già confermati sono riportati sopra; resta il collaudo della correzione tastiera.
