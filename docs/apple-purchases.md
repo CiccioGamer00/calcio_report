@@ -5,10 +5,24 @@
 ## Product
 
 One payment buys 30 days of PRO, without automatic renewal. App Store type:
-Non-Renewing Subscription. Proposed product ID: `com.calcioreport.app.pro30`;
+Non-Renewing Subscription. Selected product ID: `com.calcioreport.app.pro30`;
 bundle ID: `com.calcioreport.app`. The product has NOT been confirmed as created.
-Price requires the owner's decision; never hardcode a price in the UI. Display
-StoreKit's localized product price when the integration is enabled.
+Owner approved the launch price on 2026-10-13 at 18:53 Europe/Rome:
+EUR 9.99 for 30 days, no automatic renewal; keep the existing seven-day trial.
+Target Italian storefront price: EUR 9.99. This is a commercial decision, NOT
+confirmation that the price has been saved in App Store Connect. Other storefront
+prices remain subject to Apple's localized price configuration. Never hardcode
+the checkout price in the UI; display StoreKit's localized product price.
+
+App Store Connect entry values:
+- Reference name: `PRO 30 giorni`
+- Product ID: `com.calcioreport.app.pro30`
+- Italian display name: `PRO 30 giorni`
+- Italian description: `Accesso alle funzioni PRO per 30 giorni, senza rinnovo automatico.`
+- Italian customer price: `9,99 EUR`
+
+Product creation, pricing, localization, agreements and sandbox availability
+still need verification in the owner's App Store Connect account.
 
 ## Implemented, not enabled
 
@@ -26,10 +40,10 @@ retries idempotent on its own. The iPhone payment button remains disabled.
 
 ## Required integration before enabling a sandbox purchase
 
-1. Confirm the product ID and owner-selected price in App Store Connect. Apple UI:
+1. Create the product with the selected ID and approved price in App Store Connect. Apple UI:
    Calcio Report > Monetization > Subscriptions > Non-Renewing Subscriptions >
    Manage > +. Reference name: `PRO 30 giorni`. Do not create an auto-renewing plan.
-   Product IDs are immutable after saving, so confirm the proposed ID first.
+   Product IDs are immutable after saving; copy the selected ID exactly.
 2. Implement server verification using Apple's signed-data verifier and trusted
    Apple root certificates. Decide deployment packaging explicitly: current
    Worker is a single file, whereas Apple's Node library needs dependencies and
