@@ -17,6 +17,21 @@ Sulla nuova build verificare login, recupero e cancellazione con tastiera aperta
 nessuna sovrapposizione, campi/pulsanti raggiungibili scorrendo, chiusura accessibile,
 modulo entro le aree sicure; ripetere aprendo e chiudendo la tastiera.
 
+## Prossimo collaudo: correzione tastiera, build 1.0 (10.1)
+
+Consegna richiesta dal proprietario il 13 ottobre per il test serale.
+Actions 38351540078, commit 88b44ea: firma/export riusciti; invio Apple in corso.
+Prima di provare, controllare in TestFlight che sia installata la build 10.1.
+Se non compare, verificare elaborazione Apple e assegnazione al gruppo Test interno.
+
+1. Aprire Login e toccare Email: il messaggio sopra non deve sovrapporsi al campo.
+2. Passare a Password, poi scorrere fino a "Usa link di recupero": tutti i
+   campi e pulsanti devono restare raggiungibili con tastiera aperta.
+3. Chiudere la tastiera e riaprirla: spaziatura regolare, nessun taglio in alto.
+4. Provare il modulo nuova password e quello di cancellazione, compresa la
+   possibilità di annullare senza eliminare un altro account per questo test.
+5. Se il layout è corretto, confermare con uno screenshot a tastiera aperta.
+
 ## Stato prima del collaudo
 
 - Certificato e profilo Apple: verificati con archivio dispositivo firmato.
