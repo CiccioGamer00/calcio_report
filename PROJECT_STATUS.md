@@ -4,6 +4,20 @@ _Last updated: 2026-10-13_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
 
+## Native modal acceptance CLOSED — 2026-10-13 17:34 Europe/Rome
+
+Owner installed the replacement TestFlight build 1.0 (12.1) and reported the
+requested deletion-modal keyboard/scroll test successful on iPhone 16 Pro Max.
+Login spacing and recovery-button reachability were already confirmed on 10.1.
+The reported login overlap and deletion-modal scrolling/button visibility bugs
+are now closed by owner device acceptance. This does not imply unreported
+negative auth cases, purchase testing or App Store readiness.
+
+Build source 3cb9dbc, Actions 38417873754: tests, signed archive/export and Apple
+validation/upload step all succeeded. Main and production unchanged; PR #14
+remains draft. Next product work: Apple purchases with server verification,
+store icon/support/privacy materials, and remaining release checklist items.
+
 ## iPhone 10.1 acceptance and deletion follow-up — 2026-10-13
 
 Owner installed 10.1 after completing Apple encryption declaration and group
@@ -18,8 +32,8 @@ includes #deleteAccountForm with max-height: 100% inside the visual-viewport
 modal. Native JS fixes the background body while any modal is open and restores
 its saved scroll position once all modals close. Web and API behavior unchanged.
 45 tests, mobile packaging and focused scroll-lock lifecycle mock passed.
-Replacement internal TestFlight upload requested; real iPhone verification of
-this deletion fix remains pending. Login acceptance does not close deletion.
+Replacement build 12.1 delivered and deletion keyboard/scroll retest confirmed
+successful by the owner at 17:34 Europe/Rome; see the current checkpoint above.
 
 ## Keyboard fix delivered to TestFlight — 2026-10-13
 
