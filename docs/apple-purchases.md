@@ -2,6 +2,25 @@
 
 2026-10-14. Work branch: `mobile/ios-preparation`, draft PR #14.
 
+## Apple verifier and administrative checkpoint — 2026-10-14 evening
+
+Screenshot confirms Paid Apps and Free Apps agreements ACTIVE, bank account ACTIVE,
+and a green DSA requirements-satisfied banner. Owner reports selecting non-trader;
+this records the UI state, not a legal/tax determination. No further bank-processing
+wait is needed. Tax-form rows were below the screenshot and are not individually verified.
+
+Added isolated services/apple-verifier Node module using the official Apple library
+3.1.0, pinned dependencies and Apple Root CA G3. Online certificate checks are
+mandatory; deployment/environment mismatches fail closed. Transactions and nested
+notification transactions are signature-verified. No HTTP route or deployment yet.
+Four real-library rejection tests pass; existing repository suite remains 60/60.
+Valid Apple Sandbox delivery and online OCSP acceptance remain untested.
+
+Next: authenticated verification transport, current refund reconciliation and atomic
+source-aware PRO grants, then StoreKit bridge/device tests. No new TestFlight build;
+latest owner-accepted build is still 1.0 (12.1). Native purchases remain disabled.
+No main merge, production change or App Store submission.
+
 ## Apple purchase persistence foundation — 2026-10-14
 
 Added `worker/apple-purchase-ledger.mjs` and staged schema
