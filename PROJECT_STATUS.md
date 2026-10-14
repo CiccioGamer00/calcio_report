@@ -1,8 +1,44 @@
 # Calcio Report — Project Status
 
-_Last updated: 2026-10-13_
+_Last updated: 2026-10-14_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
+
+## Apple purchase persistence foundation — 2026-10-14
+
+Added `worker/apple-purchase-ledger.mjs` and staged schema
+`worker/schema/apple-purchase-ledger.sql`. Neither is wired to the Worker or
+applied to any remote database. Account tokens are server-generated random UUIDs,
+unique per account/environment. Expired trials are eligible; missing, disabled
+or deleted accounts are not. Deletion retires tokens while retaining opaque
+ownership records, so re-registration with the same email cannot reclaim them.
+
+The internal record function consumes only trusted verifier output, runs the
+existing policy and rechecks account identity/status inside a D1 batch. The
+(environment, transactionId) key makes repeated delivery insert once; conflicting
+ownership or purchase facts fail closed. Separate purchases may share an original
+transaction ID. No email, bank details, tax identifiers or raw JWS are stored.
+
+`state: recorded` is NOT a grant or permission to finish a StoreKit transaction.
+No paid_until update, refund resolution, HTTP endpoint, Apple signature verifier
+or native payment flow is implemented here. Source-aware grants and refund events
+must be added before delivery can be acknowledged. Retention duration and deletion
+policy for the opaque ownership records must be finalized before deployment.
+
+Eight new tests use real in-memory SQLite with a transactional D1 API adapter:
+duplicates/interleaved requests, ownership conflicts, account deletion/recreation,
+account-change races, rollback/retry, payload rejection and environment separation.
+All 60 repository tests pass locally on Node 24.19.0. These tests do not
+substitute for remote D1 concurrency or Apple Sandbox testing.
+
+Owner reported completion of tax forms on 2026-10-13 ("only bank account missing"); final Apple acceptance and Paid Apps Agreement activation are not yet verified.
+Bank entry postponed until the evening of 2026-10-14. Owner plans to use their
+usual personal bank account rather than personal Revolut; account suitability
+and bank details are not verified. DSA completion is also not independently
+confirmed. Do not store any banking/tax identifiers in the repository.
+
+No new TestFlight build, remote schema change, main merge, production deploy or
+App Store submission. Native payment UI remains disabled.
 
 ## App Store product configured — 2026-10-13 19:05 Europe/Rome
 
