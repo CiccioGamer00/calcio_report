@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import { SecureStorage, KeychainAccess } from '@aparajita/capacitor-secure-storage';
 import { createSession, recoveryToken } from './session.mjs';
+import { installPurchases } from './purchase-ui.mjs';
 
 window.CRNativeRecoveryToken = recoveryToken;
 window.CRNativeStorageError = () => {
@@ -25,3 +26,11 @@ if (Capacitor.getPlatform() !== 'ios' || !Capacitor.isPluginAvailable('SecureSto
   }, window.localStorage);
 }
 window.CRSession.ready.catch(() => window.CRNativeStorageError());
+if (window.CRSession.save) {
+  const save = window.CRSession.save.bind(window.CRSession);
+  window.CRSession.save = async (...args) => {
+    await save(...args);
+    window.dispatchEvent(new Event('cr:session-changed'));
+  };
+}
+document.addEventListener('DOMContentLoaded', () => installPurchases(window.CRSession));

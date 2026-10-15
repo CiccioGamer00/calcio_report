@@ -4,6 +4,32 @@ _Last updated: 2026-10-15_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
 
+## Native StoreKit candidate — 2026-10-15 morning
+
+Added the local StoreKit 2 Capacitor bridge (mobile/native/CRStoreKit.swift),
+registered in the generated Xcode project by scripts/install-storekit.mjs.
+CI installs the bridge after cap add ios for simulator and signed archive checks.
+No automatic TestFlight upload is enabled by this change.
+
+The native flow loads Apple's localized price, purchases the fixed non-renewing
+product with the server-issued appAccountToken, handles pending/cancelled states,
+listens for transaction updates and retries unfinished purchases on login/resume.
+Explicit restore calls AppStore.sync and inspects transaction history. Foreign
+account transactions are never finished by the current account. JS acknowledges
+StoreKit only after backend state=applied for the exact transaction; session
+changes and interrupted delivery preserve retryability. Backend /apple/token must
+be enabled on the isolated test Worker before checkout can open.
+
+Added seven JS coordination tests. All 78 root tests pass locally; verifier suite
+previously 9/9. Mobile web packaging and repeatable native installation pass.
+Swift simulator/archive compilation is pending CI; no real StoreKit device or
+Apple Sandbox test has happened. Latest uploaded build remains 1.0 (12.1).
+
+Evening prerequisites: deploy the isolated verifier with an authorized server API
+key and dedicated secret/HTTPS hostname, apply staged test DB schemas, bundle and
+deploy apple-entry.mjs, configure Sandbox notifications/rate limits, then validate
+authorized TestFlight delivery. Existing production relay and payments unchanged.
+
 ## Sandbox purchase delivery candidate — 2026-10-15
 
 The source-aware entitlement ledger, fresh Apple transaction reconciliation,

@@ -4,6 +4,7 @@ on:
     paths:
       - 'mobile/**'
       - 'scripts/build-mobile.mjs'
+      - 'scripts/install-storekit.mjs'
       - '.github/workflows/ios-prototype.yml'
       - 'index.html'
       - 'app.js'
@@ -33,6 +34,7 @@ jobs:
         working-directory: mobile
       - run: npx cap add ios
         working-directory: mobile
+      - run: node scripts/install-storekit.mjs
       - name: Compile unsigned simulator app
         run: >-
           xcodebuild -project mobile/ios/App/App.xcodeproj

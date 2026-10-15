@@ -1,8 +1,8 @@
-// Prototype only: no StoreKit integration or production checkout.
+// Packaged iOS UI: StoreKit purchases require the isolated backend's opt-in.
 (() => {
-  window.goToPayment = () => window.showToast({
+  window.goToPayment = () => window.CRNativePurchase ? window.CRNativePurchase() : window.showToast({
     title: 'Acquisti non disponibili',
-    text: 'Questa versione di prova non permette acquisti. Il pagamento Apple sarà aggiunto in seguito.'
+    text: 'Gli acquisti Apple non sono ancora pronti in questa versione.'
   });
   const recovery = document.createElement('div');
   recovery.className = 'native-recovery';
