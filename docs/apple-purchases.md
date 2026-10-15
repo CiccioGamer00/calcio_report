@@ -20,8 +20,12 @@ be enabled on the isolated test Worker before checkout can open.
 
 Added seven JS coordination tests. All 78 root tests pass locally; verifier suite
 previously 9/9. Mobile web packaging and repeatable native installation pass.
-Swift simulator/archive compilation is pending CI; no real StoreKit device or
-Apple Sandbox test has happened. Latest uploaded build remains 1.0 (12.1).
+Swift simulator compilation passed on GitHub at bb378855 (run 38688777452).
+Signed archive/export and Apple validation also passed (run 38688772231).
+No TestFlight upload was requested. No real StoreKit device or Apple Sandbox test
+has happened. Latest uploaded build remains 1.0 (12.1).
+The test-only Worker bundler also passed locally; setup steps are recorded in
+docs/apple-sandbox-setup.md. Server access/configuration is required for deployment.
 
 Evening prerequisites: deploy the isolated verifier with an authorized server API
 key and dedicated secret/HTTPS hostname, apply staged test DB schemas, bundle and
