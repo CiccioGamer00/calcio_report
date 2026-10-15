@@ -1,8 +1,43 @@
 # Calcio Report — Project Status
 
-_Last updated: 2026-10-14_
+_Last updated: 2026-10-15_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
+
+## Sandbox purchase delivery candidate — 2026-10-15
+
+The source-aware entitlement ledger, fresh Apple transaction reconciliation,
+authenticated verification transport and test-only Worker routes are implemented.
+No new deployment or TestFlight upload has been performed; 12.1 remains latest.
+
+- pro-entitlements.mjs captures the existing non-Apple expiry once, records immutable
+  grant/status events and atomically updates paid_until using D1 batch + revision CAS.
+  Duplicate/reordered deliveries do not add time. Refunds remove the Apple grant
+  from chronological replay, preserving other sources' durations. A newer verified
+  active status can reverse a refund; a tied status favors revocation.
+- apple-pro-delivery.mjs first records immutable purchase ownership, then atomically
+  applies the grant and current status. Interrupted delivery can safely retry.
+- Node verifier reconciles each device/notification transaction with Apple's
+  getTransactionInfo and verifies the returned JWS. Dedicated HMAC authenticates
+  timestamp, method, path and body hash; no football-relay key reuse.
+- Separate worker/apple-entry.mjs adds authenticated GET /apple/token and POST
+  /apple/transaction, plus verified POST /apple/notifications. Expired trials may
+  buy. Deleted owners' notifications are acknowledged without granting a new account.
+- The entry is test/Sandbox-only and disabled by default. When enabled it blocks
+  legacy Stripe/redeem/admin expiry writes in this isolated deployment. Those
+  production writers still need migration (including admin negative adjustments).
+  An unexpected direct expiry write is detected and never silently overwritten.
+
+Validation: 71 repository tests + 9 verifier tests pass locally. Tests use actual
+SQLite transactions and real Apple-library rejection checks, with mocked Apple API
+responses for successful flows. Genuine Sandbox signatures, OCSP connectivity,
+remote D1 contention and device StoreKit behavior remain untested.
+
+Remaining: native StoreKit bridge/UI; service hosting + dedicated server API key,
+HTTPS hostname and secret; staged test DB schema application and test Worker bundle;
+notification URL/rate limiting and missed-notification reconciliation; retention
+policy and production payment-writer migration. These are not a ready-to-upload app.
+See services/apple-verifier/README.md for the prepared service interface.
 
 ## Apple verifier and administrative checkpoint — 2026-10-14 evening
 

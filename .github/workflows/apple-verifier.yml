@@ -2,9 +2,9 @@ name: Apple verifier checks
 on:
   push:
     branches: [mobile/ios-preparation]
-    paths: ['services/apple-verifier/**', '.github/workflows/apple-verifier.yml']
+    paths: ['services/apple-verifier/**', 'worker/**', 'tests/**', '.github/workflows/apple-verifier.yml']
   pull_request:
-    paths: ['services/apple-verifier/**', '.github/workflows/apple-verifier.yml']
+    paths: ['services/apple-verifier/**', 'worker/**', 'tests/**', '.github/workflows/apple-verifier.yml']
 permissions:
   contents: read
 jobs:
@@ -20,5 +20,6 @@ jobs:
           cache-dependency-path: services/apple-verifier/package-lock.json
       - run: npm ci
         working-directory: services/apple-verifier
+      - run: node --test tests/*.test.mjs
       - run: npm test
         working-directory: services/apple-verifier
