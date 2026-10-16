@@ -1,8 +1,38 @@
 # Calcio Report — Project Status
 
-_Last updated: 2026-10-15_
+_Last updated: 2026-10-16_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
+
+## Sandbox infrastructure handoff — 2026-10-16
+
+This section supersedes the infrastructure prerequisites in the older entries below.
+The owner completed the following remote setup on October 15; the assistant has
+not independently accessed the server or Cloudflare account:
+
+- Isolated Node 24 runtime and calcio-report-apple systemd service installed.
+  Dedicated Apple In-App Purchase key and verifier secret are protected on the
+  server. Existing football relay runtime/configuration was left unchanged.
+- HTTPS verifier at https://apple-test.calcioreport.com/health returned ok:true.
+  This proves liveness only, not Apple API authentication or real JWS verification.
+- Both staged schemas applied to calcio_users_test. Screenshot confirmed four
+  tables, five triggers and one index. Existing accounts remain in place.
+- On October 16 the owner reported entering the four requested Worker text
+  variables: APPLE_DEPLOYMENT=test, APPLE_ENVIRONMENT=Sandbox,
+  APPLE_VERIFIER_URL=https://apple-test.calcioreport.com,
+  APPLE_SANDBOX_ENABLED=0. Their saved values still need a dashboard check.
+
+Still pending: copy the existing dedicated verifier secret into the test Worker,
+deploy the generated Worker bundle preserving all bindings, configure edge limits
+and Sandbox notifications, then enable and test. Do not regenerate the server
+secret or repeat the server/database installation. No new TestFlight upload;
+latest confirmed uploaded baseline remains 1.0 (12.1).
+
+Local October 16 checks: 78 repository tests and 9 verifier tests passed. Worker
+bundle generation/syntax passed; bundle smoke checks confirmed disabled mode,
+production configuration rejection and OPTIONS handling. Mobile web packaging and
+StoreKit installation passed. These are not remote deployment or device tests.
+See docs/apple-sandbox-setup.md for the remaining evening sequence.
 
 ## Native StoreKit candidate — 2026-10-15 morning
 
