@@ -4,6 +4,10 @@ _Last updated: 2026-10-17_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
 
+## StoreKit device blocker — 2026-10-17
+
+Owner confirmed 16.1 installed and signed in; screenshot 1410.jpg reports native StoreKit unavailable. Root cause: pinned Capacitor 8.5.3 SceneDelegate creates CAPBridgeViewController directly, bypassing patched storyboard. Installer correction connects CRBridgeViewController at actual scene startup. Verified against actual SPM template twice; 79 root tests pass including scene wiring, idempotence and unknown-root rejection. Native account/restore buttons now follow dark theme with 44px targets. New internal build is being prepared; device acceptance remains pending. Backend, secrets, main and production unchanged.
+
 ## StoreKit 1.0 (16.1) uploaded — 2026-10-17 10:37 Europe/Rome
 
 Authorized internal TestFlight delivery completed from release commit
