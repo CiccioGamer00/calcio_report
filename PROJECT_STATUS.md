@@ -4,6 +4,23 @@ _Last updated: 2026-10-17_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
 
+## StoreKit candidate validated — 2026-10-17 10:16 Europe/Rome
+
+Owner requested proceeding with preparation after notification acceptance.
+Candidate source faf0aeb683500ec1f0d8fcb9a7b92195dfa42ca2:
+- 78 root tests passed locally and in signing CI.
+- Signing/archive/export succeeded in Actions 39016578833 (run number 14).
+- Apple validation log: VERIFY SUCCEEDED with no errors at 08:16:49 UTC.
+- Simulator compilation succeeded in 39016583107.
+- Apple verifier checks succeeded in 39016583105.
+- Device acceptance checklist: mobile/SANDBOX_CHECKLIST.md.
+
+The ordinary preparation commit did not request upload. Candidate has NOT been
+uploaded to TestFlight; installed baseline remains 1.0 (12.1). The owner's next
+decision is delivery to internal TestFlight for Sandbox device testing. Existing
+workflow/script require explicit upload dispatch or matching release request.
+Do not reuse the old keyboard-fix release message. No production/main change.
+
 ## Apple TEST notification delivery PASS — 2026-10-17
 
 Supersedes the pending activation items in the October 16 infrastructure handoff.
