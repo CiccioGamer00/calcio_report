@@ -29,11 +29,17 @@ Validation: focused server/client suite passes 3/3 locally, including signed bod
 manual redirect mode, rejection of 301/302/307/308/503 and ignored TEST response.
 These mocked transport checks are separate from the owner-run remote checks.
 
-NEXT: remove temporary diagnostic object (type/message/code/secretFormatOk/urlMatches)
-from the deployed test bundle's final catch; restore
-return json2({error:'APPLE_DELIVERY_UNAVAILABLE'},503).
-Repository apple-entry.mjs already returns the generic error. Cleanup deploy and
-post-cleanup notification check remain pending. Then continue Sandbox purchases.
+Cleanup completed by owner on October 17: removed temporary diagnostic object
+(type/message/code/secretFormatOk/urlMatches) from the deployed test bundle's final
+catch and deployed the generic json2 APPLE_DELIVERY_UNAVAILABLE response.
+At 10:08 Europe/Rome the owner replayed the signed TEST payload after deployment
+and reported HTTP 200 with {"ok":true,"ignored":true}. The notification incident
+and diagnostic cleanup are closed. The cleanup version ID was not captured.
+
+NEXT: prepare/validate the StoreKit-capable candidate for separately authorized
+TestFlight delivery, then perform Sandbox purchase/restore/refund device tests.
+The TEST notification alone does not validate authenticated /apple/token, purchase
+reconciliation or entitlement persistence.
 No production change, main merge or new TestFlight upload; baseline remains 1.0 (12.1).
 
 ## Sandbox infrastructure handoff — 2026-10-16
