@@ -4,6 +4,18 @@ _Last updated: 2026-10-17_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
 
+## Cross-account restore accepted on 21.1 — 2026-10-17
+
+Owner explicitly used Restore purchases with a separate Calcio Report account
+and the same Apple account. Screenshots IMG_4555.PNG and IMG_4556.PNG show
+Apple password authentication followed by the application message:
+"Gli acquisti trovati appartengono a un altro account Calcio Report."
+The current account remains TRIAL (7 days). Cross-account restore ownership
+protection passes: the existing purchase did not grant PRO to this other account.
+This was a restore flow, not an accidental purchase tap.
+No new build or production change. Fresh-purchase immediate panel unlock without
+logout remains a separate pending device acceptance check.
+
 ## Build 21.1 device checkpoint — 2026-10-17 18:19 Europe/Rome
 
 Owner updated to 21.1, logged out and back in: PRO persisted and Indicators are accessible.
