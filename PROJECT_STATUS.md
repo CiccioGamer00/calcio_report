@@ -4,6 +4,26 @@ _Last updated: 2026-10-17_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
 
+## StoreKit 1.0 (16.1) uploaded — 2026-10-17 10:37 Europe/Rome
+
+Authorized internal TestFlight delivery completed from release commit
+b2d74a59bb22bf87a2c862104579dff21f13463a, Actions 39017629802 (run 16, attempt 1).
+All 78 root tests, archive/sign/export and the Apple step passed.
+Job 117353458204 logs confirm UPLOAD_TESTFLIGHT=true,
+VERIFY SUCCEEDED with no errors at 08:36:44 UTC and
+UPLOAD SUCCEEDED with no errors at 08:37:50 UTC.
+Build number derives from run number/attempt: 16.1; marketing version 1.0.
+
+Latest uploaded build is now 1.0 (16.1), replacing 12.1 as the uploaded baseline.
+Apple processing, internal tester availability, installation and real StoreKit
+device acceptance have NOT yet been confirmed. Next owner step: open TestFlight,
+check whether Calcio Report 1.0 (16.1) is available and install it. Then sign in
+and inspect the localized PRO product price before the first Sandbox purchase.
+Follow mobile/SANDBOX_CHECKLIST.md one step at a time. No need to repeat OVH,
+database, secrets or the now-passing Apple TEST notification setup.
+
+Main and production unchanged. No App Review submission or new tester invitation.
+
 ## StoreKit TestFlight upload authorized — 2026-10-17 10:19 Europe/Rome
 
 Owner explicitly approved internal TestFlight delivery and autonomous continuation.
