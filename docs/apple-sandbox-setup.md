@@ -5,40 +5,27 @@ football relay must remain unchanged. TestFlight 12.1 remains the uploaded basel
 The StoreKit candidate requires the following backend setup before a purchase
 test can succeed. No new Apple build has been uploaded by these changes.
 
-## Resume here — October 16
+## Resume here — October 17
 
-Completed remotely by the owner on October 15: isolated verifier installation,
-protected Apple In-App Purchase key and shared secret, systemd service, HTTPS via
-Caddy, and both D1 schemas. Public /health returned ok:true. D1 inventory showed
-4 tables, 5 triggers and 1 index. On October 16 the owner reported the four text
-variables entered, with APPLE_SANDBOX_ENABLED requested as 0. Do not repeat setup.
+Infrastructure setup is complete. Do not repeat secret copying, schemas or server
+installation. Worker TEST is enabled with Sandbox settings; direct Apple TEST
+delivery returned SUCCESS. Signed TEST replay returned HTTP 200 with
+ok:true/ignored:true, including after the owner removed temporary error diagnostics
+and redeployed on October 17. The Cloudflare client uses redirect:manual and rejects
+non-2xx responses; the Node service is separate.
 
-Evening sequence (test environment only):
+The StoreKit candidate passed 78 root tests, simulator compile, signed archive and
+Apple validation (run 39016578833). Owner authorized internal TestFlight upload on
+October 17. Release run 39017629802 is in progress; see PROJECT_STATUS.md for its
+latest result. Installed baseline is still 12.1 until a replacement is confirmed.
 
-1. Check saved Worker text variables against the table below; keep the flag at 0.
-2. Copy the existing APPLE_VERIFIER_SECRET from the protected server environment
-   into a Cloudflare **Secret** of the same name. Do not create a different value,
-   paste it in chat, screenshot it, or copy the Apple private key into Cloudflare.
-3. Confirm DB points to calcio_users_test and preserve existing auth, email and
-   relay configuration. Deploy worker/dist/apple-test-worker.mjs, generated from
-   the current candidate. With the flag still 0, GET /apple/token must return
-   HTTP 503 with APPLE_PURCHASES_DISABLED. Confirm existing login still works.
-4. Configure appropriate edge limits for Apple routes. Set the flag to 1 only
-   once verifier transport, database and Worker configuration are ready. An
-   unauthenticated GET /apple/token should return 401; a signed-in test account
-   should receive its Sandbox account token. Never paste login tokens in chat.
-5. Configure the Sandbox notification URL, send Apple's TEST notification and
-   confirm acknowledgement. A TEST notification does not prove purchase delivery.
-6. After backend readiness, run the existing manual signing workflow with
-   upload_testflight=true for this branch. Wait for successful upload and Apple
-   processing before asking the owner to install. Run device checks below.
+Next: confirm successful upload/Apple processing, install the specified candidate,
+and follow mobile/SANDBOX_CHECKLIST.md one step at a time. Start by signing in and
+checking the Apple product price; that also exercises authenticated /apple/token.
+Actual purchase reconciliation, grants, restore and refund still need device tests.
 
-Local preparation was repeated October 16: 78 root tests + 9 verifier tests,
-Worker bundle/syntax and disabled/config/CORS smoke checks, mobile web build and
-StoreKit installer passed. The bundle is generated and ignored by Git; rebuild
-with the command below if this workspace is no longer available. Native signing
-was previously validated on GitHub; no new signed build or upload is claimed.
-Real Apple API authentication, OCSP and transaction delivery remain untested.
+The sections below describe the original setup for reference; they are not a list
+of tasks to repeat on the existing test environment.
 
 ## 1. Isolated verification service
 
