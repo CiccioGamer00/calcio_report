@@ -4,6 +4,12 @@ _Last updated: 2026-10-17_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
 
+## First Sandbox purchase accepted on device — 2026-10-17 17:05 Europe/Rome
+
+Owner screenshots IMG_4548(1), IMG_4549(2), IMG_4550(1), IMG_4551, IMG_4552 confirm Apple test purchase completion, backend verified purchase notice and PRO 30 days on build 18.1. Previous attempts returned to app without success; restore before successful purchase reported no purchases. Cancellation via X confirmed by owner. Successful purchase persisted across logout/login.
+
+Device bug: badge changed to PRO but existing panels retained pro-locked overlay until logout/login. Fixed in packaged-only patch-frontend.mjs: refreshTopAuthUI now applies locks from the same fetchMe response used by badge. Regression test verifies unlocking without login and relocking for trial/unauthenticated state; local packaging passes. Fix committed but NOT yet uploaded to TestFlight. Next manual test: restore the successful purchase once; verify PRO stays 30 days rather than adding another 30. Price mismatch ($8.99 preflight vs 9.99 EUR Apple sheet) remains open; do not hardcode a currency. Production/main unchanged.
+
 ## StoreKit fix 1.0 (18.1) uploaded — 2026-10-17 16:02 Europe/Rome
 
 Release commit 973325a0d36b8a7368e84f92aeacb8f55df2ae6b, signing run 39038673942 (18.1), job 117413581788. All 79 root tests, verifier checks, simulator compilation, signed archive/export and Apple delivery passed. Logs confirm UPLOAD_TESTFLIGHT=true, VERIFY SUCCEEDED at 14:01:10 UTC, UPLOAD SUCCEEDED at 14:02:29 UTC. Includes SceneDelegate StoreKit startup correction and dark native action buttons.
