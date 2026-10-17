@@ -1,0 +1,44 @@
+name: iOS prototype compile
+on:
+  pull_request:
+    paths:
+      - 'mobile/**'
+      - 'scripts/build-mobile.mjs'
+      - 'scripts/install-storekit.mjs'
+      - '.github/workflows/ios-prototype.yml'
+      - 'index.html'
+      - 'app.js'
+      - 'style.css'
+      - 'js/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ios-prototype-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  simulator:
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: node --test tests/*.test.mjs
+      - run: npm ci
+        working-directory: mobile
+      - run: npm run build:web
+        working-directory: mobile
+      - run: npx cap add ios
+        working-directory: mobile
+      - run: node scripts/install-storekit.mjs
+      - name: Compile unsigned simulator app
+        run: >-
+          xcodebuild -project mobile/ios/App/App.xcodeproj
+          -scheme App -configuration Debug -sdk iphonesimulator
+          -destination 'generic/platform=iOS Simulator'
+          -derivedDataPath "$RUNNER_TEMP/calcio-ios"
+          CODE_SIGNING_ALLOWED=NO build

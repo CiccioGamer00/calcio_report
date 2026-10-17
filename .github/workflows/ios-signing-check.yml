@@ -1,0 +1,67 @@
+name: iOS signing check
+on:
+  push:
+    branches: [mobile/ios-preparation]
+    paths:
+      - '.github/workflows/ios-signing-check.yml'
+      - 'scripts/check-ios-signing.sh'
+      - 'scripts/apple-testflight.sh'
+      - 'scripts/build-mobile.mjs'
+      - 'scripts/install-storekit.mjs'
+      - 'mobile/**'
+  workflow_dispatch:
+    inputs:
+      upload_testflight:
+        description: 'Upload this test build to internal TestFlight (no App Store submission)'
+        type: boolean
+        required: false
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: ios-signing-check
+  cancel-in-progress: false
+jobs:
+  archive:
+    if: github.repository == 'CiccioGamer00/calcio_report' && github.ref == 'refs/heads/mobile/ios-preparation'
+    runs-on: macos-26
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - run: node --test tests/*.test.mjs
+      - run: npm ci
+        working-directory: mobile
+      - run: npm run build:web && npx cap add ios
+        working-directory: mobile
+      - run: node scripts/install-storekit.mjs
+      - name: Archive and export test IPA (no Apple upload)
+        env:
+          IOS_DISTRIBUTION_P12_BASE64: ${{ secrets.IOS_DISTRIBUTION_P12_BASE64 }}
+          IOS_DISTRIBUTION_P12_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_P12_PASSWORD }}
+          IOS_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}
+        run: bash scripts/check-ios-signing.sh
+      - name: Keep test IPA for review (one day)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: calcio-report-test-ipa-${{ github.run_number }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/calcio-ipa/
+          if-no-files-found: error
+          retention-days: 1
+      - name: Validate with Apple and process explicit upload request
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+          UPLOAD_TESTFLIGHT: >-
+            ${{ ((github.event_name == 'workflow_dispatch' && inputs.upload_testflight) || (github.event_name == 'push' && github.event.head_commit.message == 'release: upload internal TestFlight StoreKit sandbox 2026-10-17' && github.run_attempt == 1)) && 'true' || 'false' }}
+        run: |
+          if [[ "$UPLOAD_TESTFLIGHT" == true ]]; then
+            bash scripts/apple-testflight.sh upload
+          else
+            bash scripts/apple-testflight.sh validate
+          fi

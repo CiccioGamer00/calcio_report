@@ -1,0 +1,21 @@
+{
+  "name": "calcio-report-ios-prototype",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build:web": "node ../scripts/build-mobile.mjs",
+    "ios:create": "cap add ios"
+  },
+  "dependencies": {
+    "@aparajita/capacitor-secure-storage": "8.0.1",
+    "@capacitor/core": "8.5.3",
+    "@capacitor/ios": "8.5.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.3",
+    "esbuild": "0.28.2"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

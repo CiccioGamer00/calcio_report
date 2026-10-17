@@ -1,8 +1,495 @@
 # Calcio Report — Project Status
 
-_Last updated: 2026-10-10_
+_Last updated: 2026-10-17_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
+
+## Build 21.1 device checkpoint — 2026-10-17 18:19 Europe/Rome
+
+Owner updated to 21.1, logged out and back in: PRO persisted and Indicators are accessible.
+This confirms update/login persistence and panel access, but does not yet demonstrate
+immediate overlay removal after a fresh purchase without logout. Previous purchase
+and restore-without-extra-duration acceptance on 18.1 remain valid. Next device check:
+use a separate Calcio Report test account with the same Apple account and restore;
+original purchase must not grant PRO to the other account. Do not delete or alter
+the owner's existing account. No new build or production change needed for this check.
+
+## Post-purchase UI build 1.0 (21.1) uploaded — 2026-10-17
+
+Release 616daebba49727c5ac5d8705e87a0a7059f3834b, signing run 39045013906,
+job 117432444269: all checks completed successfully; job logs confirm explicit
+UPLOAD_TESTFLIGHT=true, VERIFY SUCCEEDED and UPLOAD SUCCEEDED with no errors.
+Simulator compilation also passed (39045015930). 80 root tests pass.
+Includes automatic PRO overlay refresh, price shown only in Apple confirmation
+sheet, and explicit cancelled-purchase notice. Apple processing and installation
+of 21.1 not yet confirmed. Next owner step: make available internally if needed,
+update iPhone, confirm existing PRO persists and panels open. No new purchase
+needed for this first update check; fresh-purchase unlock acceptance still pending.
+Main and production remain unchanged.
+
+## Post-purchase UI candidate — 2026-10-17
+
+Preparing internal delivery with automatic PRO overlay refresh, a preliminary dialog
+that delegates price display to Apple's final confirmation sheet, and explicit
+cancelled-purchase feedback. No currency conversion or fixed price introduced.
+80 root tests pass locally; native packaging passes; focused tests cover cancelled,
+pending, interrupted, duplicate and other-account delivery plus panel unlock.
+Installed 18.1 remains the last device-accepted purchase/restore baseline until the
+new delivery is confirmed. Next checks: existing PRO persists, panels open and restore
+does not extend duration. New-account purchase unlock and advanced device scenarios
+remain pending. No main/production changes.
+
+## Sandbox restore accepted — 2026-10-17 17:21 Europe/Rome
+
+Owner confirms restore verified the successful purchase and did not add another 30 days. Device purchase, persistence after login and restore without duplicate visible duration now pass on 18.1. Native overlay fix remains committed but not uploaded. Support linkage exists in apple_account_tokens and apple_purchase_ledger (account_id, app_account_token, transaction_id, original_transaction_id); no dedicated support dashboard has been implemented.
+
+## First Sandbox purchase accepted on device — 2026-10-17 17:05 Europe/Rome
+
+Owner screenshots IMG_4548(1), IMG_4549(2), IMG_4550(1), IMG_4551, IMG_4552 confirm Apple test purchase completion, backend verified purchase notice and PRO 30 days on build 18.1. Previous attempts returned to app without success; restore before successful purchase reported no purchases. Cancellation via X confirmed by owner. Successful purchase persisted across logout/login.
+
+Device bug: badge changed to PRO but existing panels retained pro-locked overlay until logout/login. Fixed in packaged-only patch-frontend.mjs: refreshTopAuthUI now applies locks from the same fetchMe response used by badge. Regression test verifies unlocking without login and relocking for trial/unauthenticated state; local packaging passes. Fix committed but NOT yet uploaded to TestFlight. Next manual test: restore the successful purchase once; verify PRO stays 30 days rather than adding another 30. Price mismatch ($8.99 preflight vs 9.99 EUR Apple sheet) remains open; do not hardcode a currency. Production/main unchanged.
+
+## StoreKit fix 1.0 (18.1) uploaded — 2026-10-17 16:02 Europe/Rome
+
+Release commit 973325a0d36b8a7368e84f92aeacb8f55df2ae6b, signing run 39038673942 (18.1), job 117413581788. All 79 root tests, verifier checks, simulator compilation, signed archive/export and Apple delivery passed. Logs confirm UPLOAD_TESTFLIGHT=true, VERIFY SUCCEEDED at 14:01:10 UTC, UPLOAD SUCCEEDED at 14:02:29 UTC. Includes SceneDelegate StoreKit startup correction and dark native action buttons.
+
+Latest uploaded build: 1.0 (18.1). Apple processing/tester availability and device acceptance remain unconfirmed. Owner next step: make 18.1 available to internal testers in App Store Connect if needed, update iPhone, tap Passa a PRO and inspect localized price before purchasing. Build 16.1 was installed successfully but blocked on missing native plugin, as documented below. Production and main untouched.
+
+## StoreKit device blocker — 2026-10-17
+
+Owner confirmed 16.1 installed and signed in; screenshot 1410.jpg reports native StoreKit unavailable. Root cause: pinned Capacitor 8.5.3 SceneDelegate creates CAPBridgeViewController directly, bypassing patched storyboard. Installer correction connects CRBridgeViewController at actual scene startup. Verified against actual SPM template twice; 79 root tests pass including scene wiring, idempotence and unknown-root rejection. Native account/restore buttons now follow dark theme with 44px targets. New internal build is being prepared; device acceptance remains pending. Backend, secrets, main and production unchanged.
+
+## StoreKit 1.0 (16.1) uploaded — 2026-10-17 10:37 Europe/Rome
+
+Authorized internal TestFlight delivery completed from release commit
+b2d74a59bb22bf87a2c862104579dff21f13463a, Actions 39017629802 (run 16, attempt 1).
+All 78 root tests, archive/sign/export and the Apple step passed.
+Job 117353458204 logs confirm UPLOAD_TESTFLIGHT=true,
+VERIFY SUCCEEDED with no errors at 08:36:44 UTC and
+UPLOAD SUCCEEDED with no errors at 08:37:50 UTC.
+Build number derives from run number/attempt: 16.1; marketing version 1.0.
+
+Latest uploaded build is now 1.0 (16.1), replacing 12.1 as the uploaded baseline.
+Apple processing, internal tester availability, installation and real StoreKit
+device acceptance have NOT yet been confirmed. Next owner step: open TestFlight,
+check whether Calcio Report 1.0 (16.1) is available and install it. Then sign in
+and inspect the localized PRO product price before the first Sandbox purchase.
+Follow mobile/SANDBOX_CHECKLIST.md one step at a time. No need to repeat OVH,
+database, secrets or the now-passing Apple TEST notification setup.
+
+Main and production unchanged. No App Review submission or new tester invitation.
+
+## StoreKit TestFlight upload authorized — 2026-10-17 10:19 Europe/Rome
+
+Owner explicitly approved internal TestFlight delivery and autonomous continuation.
+The existing release gate now names the October 17 StoreKit Sandbox delivery;
+branch/repository/SHA and first-attempt protections are preserved. Six focused
+gate checks passed (authorized request, ordinary commit, old release, wrong SHA,
+rerun and main branch). No app runtime code changed since validated candidate.
+
+Release commit b2d74a59bb22bf87a2c862104579dff21f13463a starts signing workflow
+39017629802 (run number 16), including validation then authorized Apple upload.
+It is queued behind validation-only run 39017627924. Upload is not yet confirmed.
+No production/main change or App Review submission. Await upload outcome before
+asking the owner to install the new build.
+
+## StoreKit candidate validated — 2026-10-17 10:16 Europe/Rome
+
+Owner requested proceeding with preparation after notification acceptance.
+Candidate source faf0aeb683500ec1f0d8fcb9a7b92195dfa42ca2:
+- 78 root tests passed locally and in signing CI.
+- Signing/archive/export succeeded in Actions 39016578833 (run number 14).
+- Apple validation log: VERIFY SUCCEEDED with no errors at 08:16:49 UTC.
+- Simulator compilation succeeded in 39016583107.
+- Apple verifier checks succeeded in 39016583105.
+- Device acceptance checklist: mobile/SANDBOX_CHECKLIST.md.
+
+The ordinary preparation commit did not request upload. Candidate has NOT been
+uploaded to TestFlight; installed baseline remains 1.0 (12.1). The owner's next
+decision is delivery to internal TestFlight for Sandbox device testing. Existing
+workflow/script require explicit upload dispatch or matching release request.
+Do not reuse the old keyboard-fix release message. No production/main change.
+
+## Apple TEST notification delivery PASS — 2026-10-17
+
+Supersedes the pending activation items in the October 16 infrastructure handoff.
+Owner confirmed APPLE_DEPLOYMENT=test, APPLE_ENVIRONMENT=Sandbox and
+APPLE_SANDBOX_ENABLED=1; dedicated verifier secret and URL were already checked.
+Do not repeat secret copying or server/database setup without new evidence.
+
+Cloudflare dashboard screenshots identify test Worker calcio-report-test active
+version b338f284. The owner-exported bundle contains a single redirect option,
+manual, in fetchReconciledAppleTransaction, followed by the response.ok guard.
+The earlier HTTP 503 diagnostic identified unsupported redirect:error in the
+Cloudflare runtime. Repository client now uses manual; 3xx responses remain rejected.
+The separate Node verifier redirect:error is unchanged.
+
+On October 16 the owner replayed Apple's signed TEST payload to
+https://calcio-report-test.stemoro84.workers.dev/apple/notifications and supplied
+a screenshot showing HTTP 200 with {"ok":true,"ignored":true}.
+A fresh TEST was then requested via Apple's Sandbox API. On October 17 the owner
+reported SUCCESS from getTestNotificationStatus sendAttempts. This confirms the
+reported direct Apple delivery test, not a purchase or entitlement grant.
+
+Validation: focused server/client suite passes 3/3 locally, including signed body,
+manual redirect mode, rejection of 301/302/307/308/503 and ignored TEST response.
+These mocked transport checks are separate from the owner-run remote checks.
+
+Cleanup completed by owner on October 17: removed temporary diagnostic object
+(type/message/code/secretFormatOk/urlMatches) from the deployed test bundle's final
+catch and deployed the generic json2 APPLE_DELIVERY_UNAVAILABLE response.
+At 10:08 Europe/Rome the owner replayed the signed TEST payload after deployment
+and reported HTTP 200 with {"ok":true,"ignored":true}. The notification incident
+and diagnostic cleanup are closed. The cleanup version ID was not captured.
+
+NEXT: prepare/validate the StoreKit-capable candidate for separately authorized
+TestFlight delivery, then perform Sandbox purchase/restore/refund device tests.
+The TEST notification alone does not validate authenticated /apple/token, purchase
+reconciliation or entitlement persistence.
+No production change, main merge or new TestFlight upload; baseline remains 1.0 (12.1).
+
+## Sandbox infrastructure handoff — 2026-10-16
+
+This section supersedes the infrastructure prerequisites in the older entries below.
+The owner completed the following remote setup on October 15; the assistant has
+not independently accessed the server or Cloudflare account:
+
+- Isolated Node 24 runtime and calcio-report-apple systemd service installed.
+  Dedicated Apple In-App Purchase key and verifier secret are protected on the
+  server. Existing football relay runtime/configuration was left unchanged.
+- HTTPS verifier at https://apple-test.calcioreport.com/health returned ok:true.
+  This proves liveness only, not Apple API authentication or real JWS verification.
+- Both staged schemas applied to calcio_users_test. Screenshot confirmed four
+  tables, five triggers and one index. Existing accounts remain in place.
+- On October 16 the owner reported entering the four requested Worker text
+  variables: APPLE_DEPLOYMENT=test, APPLE_ENVIRONMENT=Sandbox,
+  APPLE_VERIFIER_URL=https://apple-test.calcioreport.com,
+  APPLE_SANDBOX_ENABLED=0. Their saved values still need a dashboard check.
+
+Still pending: copy the existing dedicated verifier secret into the test Worker,
+deploy the generated Worker bundle preserving all bindings, configure edge limits
+and Sandbox notifications, then enable and test. Do not regenerate the server
+secret or repeat the server/database installation. No new TestFlight upload;
+latest confirmed uploaded baseline remains 1.0 (12.1).
+
+Local October 16 checks: 78 repository tests and 9 verifier tests passed. Worker
+bundle generation/syntax passed; bundle smoke checks confirmed disabled mode,
+production configuration rejection and OPTIONS handling. Mobile web packaging and
+StoreKit installation passed. These are not remote deployment or device tests.
+See docs/apple-sandbox-setup.md for the remaining evening sequence.
+
+## Native StoreKit candidate — 2026-10-15 morning
+
+Added the local StoreKit 2 Capacitor bridge (mobile/native/CRStoreKit.swift),
+registered in the generated Xcode project by scripts/install-storekit.mjs.
+CI installs the bridge after cap add ios for simulator and signed archive checks.
+No automatic TestFlight upload is enabled by this change.
+
+The native flow loads Apple's localized price, purchases the fixed non-renewing
+product with the server-issued appAccountToken, handles pending/cancelled states,
+listens for transaction updates and retries unfinished purchases on login/resume.
+Explicit restore calls AppStore.sync and inspects transaction history. Foreign
+account transactions are never finished by the current account. JS acknowledges
+StoreKit only after backend state=applied for the exact transaction; session
+changes and interrupted delivery preserve retryability. Backend /apple/token must
+be enabled on the isolated test Worker before checkout can open.
+
+Added seven JS coordination tests. All 78 root tests pass locally; verifier suite
+previously 9/9. Mobile web packaging and repeatable native installation pass.
+Swift simulator compilation passed on GitHub at bb378855 (run 38688777452).
+Signed archive/export and Apple validation also passed (run 38688772231).
+No TestFlight upload was requested. No real StoreKit device or Apple Sandbox test
+has happened. Latest uploaded build remains 1.0 (12.1).
+The test-only Worker bundler also passed locally; setup steps are recorded in
+docs/apple-sandbox-setup.md. Server access/configuration is required for deployment.
+
+Evening prerequisites: deploy the isolated verifier with an authorized server API
+key and dedicated secret/HTTPS hostname, apply staged test DB schemas, bundle and
+deploy apple-entry.mjs, configure Sandbox notifications/rate limits, then validate
+authorized TestFlight delivery. Existing production relay and payments unchanged.
+
+## Sandbox purchase delivery candidate — 2026-10-15
+
+The source-aware entitlement ledger, fresh Apple transaction reconciliation,
+authenticated verification transport and test-only Worker routes are implemented.
+No new deployment or TestFlight upload has been performed; 12.1 remains latest.
+
+- pro-entitlements.mjs captures the existing non-Apple expiry once, records immutable
+  grant/status events and atomically updates paid_until using D1 batch + revision CAS.
+  Duplicate/reordered deliveries do not add time. Refunds remove the Apple grant
+  from chronological replay, preserving other sources' durations. A newer verified
+  active status can reverse a refund; a tied status favors revocation.
+- apple-pro-delivery.mjs first records immutable purchase ownership, then atomically
+  applies the grant and current status. Interrupted delivery can safely retry.
+- Node verifier reconciles each device/notification transaction with Apple's
+  getTransactionInfo and verifies the returned JWS. Dedicated HMAC authenticates
+  timestamp, method, path and body hash; no football-relay key reuse.
+- Separate worker/apple-entry.mjs adds authenticated GET /apple/token and POST
+  /apple/transaction, plus verified POST /apple/notifications. Expired trials may
+  buy. Deleted owners' notifications are acknowledged without granting a new account.
+- The entry is test/Sandbox-only and disabled by default. When enabled it blocks
+  legacy Stripe/redeem/admin expiry writes in this isolated deployment. Those
+  production writers still need migration (including admin negative adjustments).
+  An unexpected direct expiry write is detected and never silently overwritten.
+
+Validation: 71 repository tests + 9 verifier tests pass locally. Tests use actual
+SQLite transactions and real Apple-library rejection checks, with mocked Apple API
+responses for successful flows. Genuine Sandbox signatures, OCSP connectivity,
+remote D1 contention and device StoreKit behavior remain untested.
+
+Remaining: native StoreKit bridge/UI; service hosting + dedicated server API key,
+HTTPS hostname and secret; staged test DB schema application and test Worker bundle;
+notification URL/rate limiting and missed-notification reconciliation; retention
+policy and production payment-writer migration. These are not a ready-to-upload app.
+See services/apple-verifier/README.md for the prepared service interface.
+
+## Apple verifier and administrative checkpoint — 2026-10-14 evening
+
+Screenshot confirms Paid Apps and Free Apps agreements ACTIVE, bank account ACTIVE,
+and a green DSA requirements-satisfied banner. Owner reports selecting non-trader;
+this records the UI state, not a legal/tax determination. No further bank-processing
+wait is needed. Tax-form rows were below the screenshot and are not individually verified.
+
+Added isolated services/apple-verifier Node module using the official Apple library
+3.1.0, pinned dependencies and Apple Root CA G3. Online certificate checks are
+mandatory; deployment/environment mismatches fail closed. Transactions and nested
+notification transactions are signature-verified. No HTTP route or deployment yet.
+Four real-library rejection tests pass; existing repository suite remains 60/60.
+Valid Apple Sandbox delivery and online OCSP acceptance remain untested.
+
+Next: authenticated verification transport, current refund reconciliation and atomic
+source-aware PRO grants, then StoreKit bridge/device tests. No new TestFlight build;
+latest owner-accepted build is still 1.0 (12.1). Native purchases remain disabled.
+No main merge, production change or App Store submission.
+
+## Apple purchase persistence foundation — 2026-10-14
+
+Added `worker/apple-purchase-ledger.mjs` and staged schema
+`worker/schema/apple-purchase-ledger.sql`. Neither is wired to the Worker or
+applied to any remote database. Account tokens are server-generated random UUIDs,
+unique per account/environment. Expired trials are eligible; missing, disabled
+or deleted accounts are not. Deletion retires tokens while retaining opaque
+ownership records, so re-registration with the same email cannot reclaim them.
+
+The internal record function consumes only trusted verifier output, runs the
+existing policy and rechecks account identity/status inside a D1 batch. The
+(environment, transactionId) key makes repeated delivery insert once; conflicting
+ownership or purchase facts fail closed. Separate purchases may share an original
+transaction ID. No email, bank details, tax identifiers or raw JWS are stored.
+
+`state: recorded` is NOT a grant or permission to finish a StoreKit transaction.
+No paid_until update, refund resolution, HTTP endpoint, Apple signature verifier
+or native payment flow is implemented here. Source-aware grants and refund events
+must be added before delivery can be acknowledged. Retention duration and deletion
+policy for the opaque ownership records must be finalized before deployment.
+
+Eight new tests use real in-memory SQLite with a transactional D1 API adapter:
+duplicates/interleaved requests, ownership conflicts, account deletion/recreation,
+account-change races, rollback/retry, payload rejection and environment separation.
+All 60 repository tests pass locally on Node 24.19.0. These tests do not
+substitute for remote D1 concurrency or Apple Sandbox testing.
+
+Owner reported completion of tax forms on 2026-10-13 ("only bank account missing"); final Apple acceptance and Paid Apps Agreement activation are not yet verified.
+Bank entry postponed until the evening of 2026-10-14. Owner plans to use their
+usual personal bank account rather than personal Revolut; account suitability
+and bank details are not verified. DSA completion is also not independently
+confirmed. Do not store any banking/tax identifiers in the repository.
+
+No new TestFlight build, remote schema change, main merge, production deploy or
+App Store submission. Native payment UI remains disabled.
+
+## App Store product configured — 2026-10-13 19:05 Europe/Rome
+
+Owner screenshots confirm creation of non-renewing PRO 30 giorni,
+product ID com.calcioreport.app.pro30, Apple product ID 6822393280.
+Italy EUR 9.99 was shown in the pricing wizard and the resulting price schedule
+appears on the product page. Owner confirmed saving the Italian localization:
+PRO 30 giorni / PRO per 30 giorni, senza rinnovo automatico.
+The earlier suggested description exceeded Apple's displayed character limit;
+use this shorter version. Owner also confirmed saving Italy-only availability
+and disabling automatic availability in future territories. Availability scope
+is owner-reported, not independently queried through Apple APIs.
+
+Paid Apps Agreement/banking/tax status remains unverified; next owner step is
+to inspect Business > Agreements. Review screenshot and submission are pending.
+The product is not evidence of working purchases: signature verification, ledger,
+StoreKit bridge and sandbox device tests remain outstanding. No app review
+submission, production change or new TestFlight upload in this checkpoint.
+
+## Apple launch price approved — 2026-10-13 18:53 Europe/Rome
+
+Owner accepted EUR 9.99 for 30 days of iPhone PRO, without automatic renewal,
+keeping the existing seven-day trial. Selected product ID:
+com.calcioreport.app.pro30, Non-Renewing Subscription. Product entry values and
+Italian localization are prepared in docs/apple-purchases.md. App Store Connect
+product creation/pricing are not yet verified; no store change, purchase activation
+or release has been performed. Next owner step: create the non-renewing product
+in App Store Connect. Server verification, atomic ledger and StoreKit integration
+remain outstanding as documented in the preceding implementation checkpoint.
+
+## Apple purchase policy foundation — 2026-10-13
+
+Owner authorized proceeding with Apple purchases after successful iPhone 12.1
+acceptance. Added an isolated server-side post-verification policy module and
+seven boundary tests; all 52 repository tests pass locally. Checks include
+Sandbox/Production separation, product and account identity, immutable string
+transaction IDs, timestamps and revoked-purchase rejection. No runtime integration,
+Apple signature verifier, D1 ledger or StoreKit bridge has been enabled yet.
+Duplicate prevention and refunds still require the atomic, source-aware ledger.
+See docs/apple-purchases.md for the concrete implementation sequence and gaps.
+
+Proposed product ID: com.calcioreport.app.pro30, Non-Renewing Subscription,
+30 days, no automatic renewal. Price approved later at 18:53 (see above);
+product creation remains unverified.
+Native payment button remains disabled. No new TestFlight build, database change,
+main merge or production deployment performed for this checkpoint.
+
+## Native modal acceptance CLOSED — 2026-10-13 17:34 Europe/Rome
+
+Owner installed the replacement TestFlight build 1.0 (12.1) and reported the
+requested deletion-modal keyboard/scroll test successful on iPhone 16 Pro Max.
+Login spacing and recovery-button reachability were already confirmed on 10.1.
+The reported login overlap and deletion-modal scrolling/button visibility bugs
+are now closed by owner device acceptance. This does not imply unreported
+negative auth cases, purchase testing or App Store readiness.
+
+Build source 3cb9dbc, Actions 38417873754: tests, signed archive/export and Apple
+validation/upload step all succeeded. Main and production unchanged; PR #14
+remains draft. Next product work: Apple purchases with server verification,
+store icon/support/privacy materials, and remaining release checklist items.
+
+## iPhone 10.1 acceptance and deletion follow-up — 2026-10-13
+
+Owner installed 10.1 after completing Apple encryption declaration and group
+assignment. Login spacing and scrolling to the recovery button with keyboard
+open are confirmed PASS. Deletion layout FAILED: background page scrolls while
+the form stays oversized and its action buttons are obscured by the keyboard.
+Photo shows title also entering the status-bar area.
+
+Root cause: #deleteAccountForm max-height: calc(100dvh - 24px) overrides the
+lower-specificity native .modal-content constraint. Native CSS now explicitly
+includes #deleteAccountForm with max-height: 100% inside the visual-viewport
+modal. Native JS fixes the background body while any modal is open and restores
+its saved scroll position once all modals close. Web and API behavior unchanged.
+45 tests, mobile packaging and focused scroll-lock lifecycle mock passed.
+Replacement build 12.1 delivered and deletion keyboard/scroll retest confirmed
+successful by the owner at 17:34 Europe/Rome; see the current checkpoint above.
+
+## Keyboard fix delivered to TestFlight — 2026-10-13
+
+Owner authorized autonomous continuation and evening iPhone tests. Build 1.0
+(10.1), source 88b44ea, Actions 38351540078: 45 tests, signed archive/export,
+Apple VERIFY SUCCEEDED (07:31 Europe/Rome) and UPLOAD SUCCEEDED with no errors
+(07:32 Europe/Rome). Simulator compile also passed (38351541394).
+The explicit release gate was updated only for this requested delivery; ordinary
+push, wrong SHA/branch and rerun rejection checks passed. Test backend and disabled
+payments preserved. No main merge or production deploy. Apple processing/group
+availability and real-device keyboard acceptance remain unverified.
+Evening checklist: docs/iphone-testflight-checklist.md. Confirm build 10.1 before
+checking keyboard-open login/reset/delete modals and scroll reachability.
+
+## iPhone acceptance and keyboard layout fix — 2026-10-13
+
+Owner confirmed on iPhone 16 Pro Max / TestFlight 1.0 (6.1): installation,
+login, Milan fixture loading, session retained after closing/reopening, password
+recovery via pasted email link followed by login with the new password, and
+account deletion. These are owner-reported passes, not automated device tests;
+individual negative cases from the checklist are not separately confirmed.
+
+Screenshots reproduced the visible defect: with the keyboard open, the auth
+message overlaps Email and the bottom recovery button is clipped. The native-only
+CSS constrained the flex container height but allowed children to shrink.
+The fix prevents direct modal children shrinking, spaces the login/reset/recovery
+fields, wraps action buttons and includes safe-area padding in the viewport-bound
+scrollable modal. native.js gives the recovery block an explicit CSS class.
+Only packaged assets change; web production, Worker and API request count are
+unchanged. 45 existing tests and mobile web packaging pass. Native keyboard and
+safe-area acceptance on the corrected TestFlight build remains pending.
+
+## Evening test environment verified — 2026-10-12
+
+Owner recovered the existing relay secret over SSH and added it only to the test
+Worker. Screenshot confirms CR_RELAY_URL, CR_RELAY_SECRET, AUTH_PASSWORD_V2=1,
+RESEND_API_KEY and independent LICENSE_SECRET. Live bounded smoke succeeded:
+disposable account registration, authenticated /teams?id=489 -> HTTP 200, one
+AC Milan result, no provider errors; account deletion -> HTTP 200 / ok true.
+No secret value was provided in chat or committed. Windows checkout was confirmed
+clean and aligned with mobile/ios-preparation at the morning checkpoint.
+
+Internal TestFlight delivery now uses an explicit release-commit trigger on the
+trusted branch, avoiding a main merge merely to expose workflow_dispatch. Only the
+exact release message on the first run attempt enables upload; the script also
+checks event SHA/repository/branch. Normal pushes validate only. Mock gate checks
+passed. An initial workflow YAML syntax failure prevented execution and was fixed
+before upload. Build 1.0 (6.1) UPLOADED successfully at b152696, Actions 38268628004,
+2026-10-12 17:17 Europe/Rome. Apple reported VERIFY SUCCEEDED and UPLOAD SUCCEEDED
+with no errors. 45 tests passed; processing/internal tester assignment and iPhone
+runtime are still unverified. No main merge, production deploy or App Store review
+submission was performed.
+
+## TestFlight preparation — 2026-10-12
+
+Owner requested autonomous preparation while at work; evening PC/iPhone checks.
+On 2026-10-11 owner added a dedicated RESEND_API_KEY to the test Worker and
+confirmed password-recovery email delivery at 21:44 Europe/Rome (landed in spam).
+Delivery is verified; native password-reset completion is not yet tested.
+Screenshots show missing CR_RELAY_URL/CR_RELAY_SECRET and AUTH_PASSWORD_V2 in test.
+The current Worker requires both relay variables for football requests; do not
+copy the production LICENSE_SECRET. Test DB remains calcio_users_test.
+
+Commit b14af28 adds Apple IPA validation with existing GitHub API-key secrets,
+artifact provenance/hash checks, ephemeral P8 cleanup, and an opt-in manual upload
+path. Push events perform validation only. Local mock smoke passed for validation
+routing, artifact tamper rejection and key-file cleanup. Simulator compile passed
+(Actions 38209415495); 45 tests and signed IPA export passed in 38209412616.
+Apple validation PASSED in Actions 38209412616: API credentials and IPA accepted.
+No TestFlight upload, main merge or production deploy.
+Evening handoff: docs/iphone-testflight-checklist.md.
+
+## iOS IPA export checkpoint — 2026-10-11 evening
+
+PR #14 remains draft; main/production unchanged. Commit `fcf2006` passed 45 tests,
+signed device archive and IPA export (Actions `38164705461`). Export uses manual
+signing, internal-TestFlight-only option and a unique run/attempt build number.
+IPA checks verify the bundle ID, test API and empty payment URLs. GitHub artifact
+retention is one day; no Apple upload/distribution has been performed.
+Native-origin preflight against the test Worker returned 204 with compatible CORS
+using a browser user agent; Python's default agent was rejected by Cloudflare 1010.
+This is not a real-device runtime test. Next: verify test email configuration,
+prepare TestFlight upload and collaudate on iPhone. Store assets, purchase support
+and production release remain separate gates.
+
+## Native session candidate — 2026-10-11
+
+PR #14 adds packaged-only iOS Keychain session storage and pasted-email-link
+password recovery. Production web/Worker unchanged. 45 local tests passed;
+new plugin simulator/device signing CI PASSED at 18a01d2 (runs 38145418576 / 38145414073). Real iPhone checks and test
+email configuration remain outstanding. No TestFlight upload.
+
+## iOS signing setup — 2026-10-11
+
+PR #14 remains draft on `mobile/ios-preparation`. Latest unsigned iOS compile
+passed at e7ef13e. Owner completed Apple API key, Windows certificate/P12 and
+App Store profile setup in GitHub secrets. Branch-only signed archive check
+PASSED at 945a1da (Actions 38144848197): profile/identity validation, device
+archive and codesign verification all succeeded. No TestFlight upload or production change.
+See `docs/ios-preparation.md` for validation and remaining runtime gates.
+
+## Current release — 2026-10-11
+
+PR #13 released with explicit owner approval (2026-10-10, resumed 2026-10-11).
+Merge: `6b6953c0a21e6fe15798719de2883fbe67fe806c`. Production Worker updated by owner;
+GitHub Pages deployment succeeded and public assets `20261010r3` were verified.
+`ACCOUNT_DELETION_ENABLED=1` is active. Unsigned deletion is rejected with 401;
+direct production workers.dev remains 404. Owner confirmed production registration,
+opening deletion, password + ELIMINA, successful deletion/logout and rejected login
+at 09:31 Europe/Rome. Release complete; 38 automated tests previously passed.
+Real Stripe payment/PRO activation is not newly tested. Email verification remains
+proposal only. Older NOT RELEASED notes below are historical and superseded here.
+
+Next branch: `mobile/ios-preparation`. See `docs/ios-preparation.md` for proposed
+Apple payments, retained UI and implementation sequence. No iOS build or store
+submission yet; new production releases still require approval.
 
 ## Account deletion candidate — 2026-10-10 (NOT RELEASED)
 
