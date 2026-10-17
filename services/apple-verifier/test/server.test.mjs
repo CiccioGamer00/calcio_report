@@ -35,7 +35,7 @@ test('Worker client signs exact request body compatibly and forbids redirects/co
   t.after(()=>globalThis.fetch=original);
   globalThis.fetch=async(url,options)=> {
     assert.equal(String(url),'https://verifier.example/v1/transaction');
-    assert.equal(options.redirect,'error');
+    assert.equal(options.redirect,'manual');
     const hash=createHash('sha256').update(options.body).digest('hex');
     const expected=createHmac('sha256',secret).update(`${options.headers['x-cr-timestamp']}\nPOST\n/v1/transaction\n${hash}`).digest('hex');
     assert.equal(options.headers['x-cr-signature'],expected);
@@ -43,6 +43,12 @@ test('Worker client signs exact request body compatibly and forbids redirects/co
   };
   assert.deepEqual(await fetchReconciledAppleTransaction({url:'https://verifier.example',secret},'a.b.c'),{transactionId:'123'});
   await assert.rejects(fetchReconciledAppleTransaction({url:'http://verifier.example',secret},'a.b.c'),/CONFIG_INVALID/);
+  for (const status of [301,302,307,308,503]) {
+    globalThis.fetch=async()=>new Response(null,{status,headers:{location:'https://other.example'}});
+    await assert.rejects(fetchReconciledAppleTransaction({url:'https://verifier.example',secret},'a.b.c'),/VERIFICATION_UNAVAILABLE/);
+  }
+  globalThis.fetch=async()=>Response.json({ignored:true,transaction:null});
+  assert.equal(await fetchReconciledAppleTransaction({url:'https://verifier.example',secret},'a.b.c','notification'),null);
   globalThis.fetch=async()=>new Response('x'.repeat(140000));
   await assert.rejects(fetchReconciledAppleTransaction({url:'https://verifier.example',secret},'a.b.c'),/RESPONSE_INVALID/);
 });
