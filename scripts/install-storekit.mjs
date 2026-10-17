@@ -18,4 +18,13 @@ const replacement = 'customClass="CRBridgeViewController" customModule="App" cus
 if (storyboard.includes(original)) storyboard = storyboard.replace(original, replacement);
 else if (!storyboard.includes(replacement)) throw Error('Unexpected bridge storyboard');
 await writeFile(storyboardPath, storyboard);
+// Capacitor 8 starts its window from SceneDelegate, bypassing Main.storyboard.
+// Patch the actual root controller too; fail closed on template changes.
+const scenePath = new URL('SceneDelegate.swift', app);
+let scene = await readFile(scenePath, 'utf8');
+const oldRoot = 'window?.rootViewController = CAPBridgeViewController()';
+const newRoot = 'window?.rootViewController = CRBridgeViewController()';
+if (scene.split(oldRoot).length === 2) scene = scene.replace(oldRoot, newRoot);
+else if (scene.split(newRoot).length !== 2) throw Error('Unexpected SceneDelegate root controller');
+await writeFile(scenePath, scene);
 console.log('StoreKit bridge installed in generated iOS project.');
