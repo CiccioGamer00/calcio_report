@@ -4,6 +4,18 @@ _Last updated: 2026-10-17_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
 
+## Post-purchase UI candidate — 2026-10-17
+
+Preparing internal delivery with automatic PRO overlay refresh, a preliminary dialog
+that delegates price display to Apple's final confirmation sheet, and explicit
+cancelled-purchase feedback. No currency conversion or fixed price introduced.
+80 root tests pass locally; native packaging passes; focused tests cover cancelled,
+pending, interrupted, duplicate and other-account delivery plus panel unlock.
+Installed 18.1 remains the last device-accepted purchase/restore baseline until the
+new delivery is confirmed. Next checks: existing PRO persists, panels open and restore
+does not extend duration. New-account purchase unlock and advanced device scenarios
+remain pending. No main/production changes.
+
 ## Sandbox restore accepted — 2026-10-17 17:21 Europe/Rome
 
 Owner confirms restore verified the successful purchase and did not add another 30 days. Device purchase, persistence after login and restore without duplicate visible duration now pass on 18.1. Native overlay fix remains committed but not uploaded. Support linkage exists in apple_account_tokens and apple_purchase_ledger (account_id, app_account_token, transaction_id, original_transaction_id); no dedicated support dashboard has been implemented.
