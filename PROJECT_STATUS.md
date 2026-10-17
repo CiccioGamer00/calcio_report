@@ -4,6 +4,12 @@ _Last updated: 2026-10-17_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
 
+## StoreKit fix 1.0 (18.1) uploaded — 2026-10-17 16:02 Europe/Rome
+
+Release commit 973325a0d36b8a7368e84f92aeacb8f55df2ae6b, signing run 39038673942 (18.1), job 117413581788. All 79 root tests, verifier checks, simulator compilation, signed archive/export and Apple delivery passed. Logs confirm UPLOAD_TESTFLIGHT=true, VERIFY SUCCEEDED at 14:01:10 UTC, UPLOAD SUCCEEDED at 14:02:29 UTC. Includes SceneDelegate StoreKit startup correction and dark native action buttons.
+
+Latest uploaded build: 1.0 (18.1). Apple processing/tester availability and device acceptance remain unconfirmed. Owner next step: make 18.1 available to internal testers in App Store Connect if needed, update iPhone, tap Passa a PRO and inspect localized price before purchasing. Build 16.1 was installed successfully but blocked on missing native plugin, as documented below. Production and main untouched.
+
 ## StoreKit device blocker — 2026-10-17
 
 Owner confirmed 16.1 installed and signed in; screenshot 1410.jpg reports native StoreKit unavailable. Root cause: pinned Capacitor 8.5.3 SceneDelegate creates CAPBridgeViewController directly, bypassing patched storyboard. Installer correction connects CRBridgeViewController at actual scene startup. Verified against actual SPM template twice; 79 root tests pass including scene wiring, idempotence and unknown-root rejection. Native account/restore buttons now follow dark theme with 44px targets. New internal build is being prepared; device acceptance remains pending. Backend, secrets, main and production unchanged.
