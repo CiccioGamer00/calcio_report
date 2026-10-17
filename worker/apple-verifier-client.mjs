@@ -16,7 +16,9 @@ export async function fetchReconciledAppleTransaction(config, signedPayload, kin
   const digest=hex(await crypto.subtle.digest('SHA-256',encode(body)));
   const key=await crypto.subtle.importKey('raw',encode(config.secret),{name:'HMAC',hash:'SHA-256'},false,['sign']);
   const signature=hex(await crypto.subtle.sign('HMAC',key,encode(`${timestamp}\nPOST\n${path}\n${digest}`)));
-  const response=await fetch(new URL(path,url),{method:'POST',redirect:'error',
+  // Cloudflare supports manual/follow only. Manual keeps signed requests from
+  // following redirects; the response.ok guard below rejects every 3xx.
+  const response=await fetch(new URL(path,url),{method:'POST',redirect:'manual',
     headers:{'content-type':'application/json','x-cr-timestamp':timestamp,'x-cr-signature':signature},
     body,signal:AbortSignal.timeout(15000)});
   if (!response.ok) throw Error('APPLE_VERIFICATION_UNAVAILABLE');
