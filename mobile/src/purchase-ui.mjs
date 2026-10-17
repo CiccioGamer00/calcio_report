@@ -28,11 +28,14 @@ export function installPurchases(session) {
     try {
       if (!session.token) { window.openAuthModal?.('Accedi per acquistare PRO.'); return; }
       if (!Capacitor.isPluginAvailable('CRStoreKit')) { notice('Acquisti Apple non disponibili in questa build.'); return; }
-      const product = await manager.product();
-      if (!window.confirm(`PRO per 30 giorni: ${product.displayPrice}. Nessun rinnovo automatico.\n\nContinuare con Apple?`)) return;
+      await manager.product();
+      // The Apple confirmation sheet shows the price for the purchasing account.
+      // A pre-authentication StoreKit storefront can return a different currency.
+      if (!window.confirm('PRO per 30 giorni, senza rinnovo automatico.\n\nApple mostrerà il prezzo prima della conferma dell’acquisto. Continuare?')) return;
       const result = await manager.purchase();
       if (result.state === 'pending') notice('Acquisto in attesa di approvazione Apple. Non serve ripeterlo.');
       else if (result.state === 'applied') notice('Acquisto verificato. Il tuo stato PRO è stato aggiornato.');
+      else if (result.state === 'cancelled') notice('Acquisto annullato. Il tuo accesso non è stato modificato.');
     } catch (error) { notice(errorText(error)); }
     finally { opening = false; }
   };
