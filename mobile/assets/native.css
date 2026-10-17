@@ -50,3 +50,31 @@ body.native-modal-open {
 .modal-content input { box-sizing: border-box; width: 100%; min-width: 0; }
 .modal-content .auth-buttons { flex-wrap: wrap; }
 input, select, textarea { font-size: 16px; }
+
+/* Avoid unstyled white UIKit controls on the packaged dark interface. */
+#btnOpenAuth, #nativeRestorePurchases, #btnOpenDeleteAccount,
+.native-recovery button {
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 14px;
+  background: #1b2633;
+  color: #eef4f7;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+#nativeRestorePurchases {
+  border-color: #458e7c;
+  background: #183b38;
+}
+#btnOpenDeleteAccount { color: #ffb8b8; }
+.footer { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+#btnOpenAuth:focus-visible, .footer button:focus-visible, .native-recovery button:focus-visible {
+  outline: 2px solid #70dbbe;
+  outline-offset: 3px;
+}
+#nativeRestorePurchases:disabled { opacity: .55; cursor: wait; }
