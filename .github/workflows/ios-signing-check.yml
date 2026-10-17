@@ -58,7 +58,7 @@ jobs:
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
           UPLOAD_TESTFLIGHT: >-
-            ${{ ((github.event_name == 'workflow_dispatch' && inputs.upload_testflight) || (github.event_name == 'push' && github.event.head_commit.message == 'release: upload internal TestFlight keyboard fix 2026-10-13' && github.run_attempt == 1)) && 'true' || 'false' }}
+            ${{ ((github.event_name == 'workflow_dispatch' && inputs.upload_testflight) || (github.event_name == 'push' && github.event.head_commit.message == 'release: upload internal TestFlight StoreKit sandbox 2026-10-17' && github.run_attempt == 1)) && 'true' || 'false' }}
         run: |
           if [[ "$UPLOAD_TESTFLIGHT" == true ]]; then
             bash scripts/apple-testflight.sh upload
