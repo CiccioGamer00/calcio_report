@@ -1,8 +1,40 @@
 # Calcio Report — Project Status
 
-_Last updated: 2026-10-16_
+_Last updated: 2026-10-17_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
+
+## Apple TEST notification delivery PASS — 2026-10-17
+
+Supersedes the pending activation items in the October 16 infrastructure handoff.
+Owner confirmed APPLE_DEPLOYMENT=test, APPLE_ENVIRONMENT=Sandbox and
+APPLE_SANDBOX_ENABLED=1; dedicated verifier secret and URL were already checked.
+Do not repeat secret copying or server/database setup without new evidence.
+
+Cloudflare dashboard screenshots identify test Worker calcio-report-test active
+version b338f284. The owner-exported bundle contains a single redirect option,
+manual, in fetchReconciledAppleTransaction, followed by the response.ok guard.
+The earlier HTTP 503 diagnostic identified unsupported redirect:error in the
+Cloudflare runtime. Repository client now uses manual; 3xx responses remain rejected.
+The separate Node verifier redirect:error is unchanged.
+
+On October 16 the owner replayed Apple's signed TEST payload to
+https://calcio-report-test.stemoro84.workers.dev/apple/notifications and supplied
+a screenshot showing HTTP 200 with {"ok":true,"ignored":true}.
+A fresh TEST was then requested via Apple's Sandbox API. On October 17 the owner
+reported SUCCESS from getTestNotificationStatus sendAttempts. This confirms the
+reported direct Apple delivery test, not a purchase or entitlement grant.
+
+Validation: focused server/client suite passes 3/3 locally, including signed body,
+manual redirect mode, rejection of 301/302/307/308/503 and ignored TEST response.
+These mocked transport checks are separate from the owner-run remote checks.
+
+NEXT: remove temporary diagnostic object (type/message/code/secretFormatOk/urlMatches)
+from the deployed test bundle's final catch; restore
+return json2({error:'APPLE_DELIVERY_UNAVAILABLE'},503).
+Repository apple-entry.mjs already returns the generic error. Cleanup deploy and
+post-cleanup notification check remain pending. Then continue Sandbox purchases.
+No production change, main merge or new TestFlight upload; baseline remains 1.0 (12.1).
 
 ## Sandbox infrastructure handoff — 2026-10-16
 
