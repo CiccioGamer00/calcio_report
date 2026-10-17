@@ -4,6 +4,10 @@ _Last updated: 2026-10-17_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
 
+## Sandbox restore accepted — 2026-10-17 17:21 Europe/Rome
+
+Owner confirms restore verified the successful purchase and did not add another 30 days. Device purchase, persistence after login and restore without duplicate visible duration now pass on 18.1. Native overlay fix remains committed but not uploaded. Support linkage exists in apple_account_tokens and apple_purchase_ledger (account_id, app_account_token, transaction_id, original_transaction_id); no dedicated support dashboard has been implemented.
+
 ## First Sandbox purchase accepted on device — 2026-10-17 17:05 Europe/Rome
 
 Owner screenshots IMG_4548(1), IMG_4549(2), IMG_4550(1), IMG_4551, IMG_4552 confirm Apple test purchase completion, backend verified purchase notice and PRO 30 days on build 18.1. Previous attempts returned to app without success; restore before successful purchase reported no purchases. Cancellation via X confirmed by owner. Successful purchase persisted across logout/login.
