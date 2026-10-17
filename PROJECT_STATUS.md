@@ -4,6 +4,19 @@ _Last updated: 2026-10-17_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
 
+## Post-purchase UI build 1.0 (21.1) uploaded — 2026-10-17
+
+Release 616daebba49727c5ac5d8705e87a0a7059f3834b, signing run 39045013906,
+job 117432444269: all checks completed successfully; job logs confirm explicit
+UPLOAD_TESTFLIGHT=true, VERIFY SUCCEEDED and UPLOAD SUCCEEDED with no errors.
+Simulator compilation also passed (39045015930). 80 root tests pass.
+Includes automatic PRO overlay refresh, price shown only in Apple confirmation
+sheet, and explicit cancelled-purchase notice. Apple processing and installation
+of 21.1 not yet confirmed. Next owner step: make available internally if needed,
+update iPhone, confirm existing PRO persists and panels open. No new purchase
+needed for this first update check; fresh-purchase unlock acceptance still pending.
+Main and production remain unchanged.
+
 ## Post-purchase UI candidate — 2026-10-17
 
 Preparing internal delivery with automatic PRO overlay refresh, a preliminary dialog
