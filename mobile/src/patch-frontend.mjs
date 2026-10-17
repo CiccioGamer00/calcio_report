@@ -5,6 +5,10 @@ export function patchApp(source) {
     if (actual !== count) throw new Error(`Native patch expected ${count}, got ${actual}: ${before.slice(0, 60)}`);
     source = source.split(before).join(after);
   };
+  // Purchases/restores refresh the header without going through login handlers.
+  // Use that same authoritative response to update every existing PRO overlay.
+  replace('const { json } = await fetchMe();',
+    'const { json } = await fetchMe();\n  applyProLocks(json?.ok ? json : null);');
   replace('return localStorage.getItem(LS_TOKEN) || "";', 'return window.CRSession.token;');
   replace('Number(localStorage.getItem(LS_LOGIN_TS) || 0)', 'window.CRSession.timestamp');
   const newline = source.includes('\r\n') ? '\r\n' : '\n';
