@@ -4,6 +4,16 @@ _Last updated: 2026-10-17_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
 
+## Build 21.1 device checkpoint — 2026-10-17 18:19 Europe/Rome
+
+Owner updated to 21.1, logged out and back in: PRO persisted and Indicators are accessible.
+This confirms update/login persistence and panel access, but does not yet demonstrate
+immediate overlay removal after a fresh purchase without logout. Previous purchase
+and restore-without-extra-duration acceptance on 18.1 remain valid. Next device check:
+use a separate Calcio Report test account with the same Apple account and restore;
+original purchase must not grant PRO to the other account. Do not delete or alter
+the owner's existing account. No new build or production change needed for this check.
+
 ## Post-purchase UI build 1.0 (21.1) uploaded — 2026-10-17
 
 Release 616daebba49727c5ac5d8705e87a0a7059f3834b, signing run 39045013906,
