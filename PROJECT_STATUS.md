@@ -4,6 +4,20 @@ _Last updated: 2026-10-17_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
 
+## StoreKit TestFlight upload authorized — 2026-10-17 10:19 Europe/Rome
+
+Owner explicitly approved internal TestFlight delivery and autonomous continuation.
+The existing release gate now names the October 17 StoreKit Sandbox delivery;
+branch/repository/SHA and first-attempt protections are preserved. Six focused
+gate checks passed (authorized request, ordinary commit, old release, wrong SHA,
+rerun and main branch). No app runtime code changed since validated candidate.
+
+Release commit b2d74a59bb22bf87a2c862104579dff21f13463a starts signing workflow
+39017629802 (run number 16), including validation then authorized Apple upload.
+It is queued behind validation-only run 39017627924. Upload is not yet confirmed.
+No production/main change or App Review submission. Await upload outcome before
+asking the owner to install the new build.
+
 ## StoreKit candidate validated — 2026-10-17 10:16 Europe/Rome
 
 Owner requested proceeding with preparation after notification acceptance.
