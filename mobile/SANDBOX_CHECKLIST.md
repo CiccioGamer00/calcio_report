@@ -11,13 +11,20 @@ with ok:true and ignored:true. Owner removed the temporary error diagnostic and
 confirmed the same response after redeploying. This proves notification transport
 and TEST acknowledgement, not purchase reconciliation or entitlement persistence.
 
-## Candidate delivery
+## Device acceptance checkpoint — 17 October 2026
 
-TestFlight 1.0 (12.1) predates the StoreKit bridge. This checkpoint requests a fresh
-signed archive and Apple validation through the existing path-filtered workflow.
-Its ordinary commit message does not authorize or trigger a TestFlight upload.
-Record the resulting run, source SHA and build number in PROJECT_STATUS.md.
-Only upload after the owner approves the concrete validated candidate.
+Build 18.1: installed and signed in; cancellation confirmed; first Sandbox purchase
+completed with Apple success alert, backend verified notice and PRO 30 days.
+Owner confirmed persistence across logout/login and restore without another 30 days.
+Existing panels stayed visually locked after purchase until login: fixed in source,
+awaiting next internal build acceptance. Preflight price disagreed with Apple sheet:
+next build leaves price presentation to Apple's confirmation sheet and adds explicit
+feedback when StoreKit returns cancellation. Never hardcode a replacement price.
+
+Next build: confirm installed PRO remains, panels open, restore retains duration.
+A fresh-purchase unlock needs a separate disposable test account and remains pending.
+Interrupted delivery, ownership and refund checks remain device-test work, despite
+passing automated coverage. Do not delete the owner's working account.
 
 ## First device session — one step at a time
 
