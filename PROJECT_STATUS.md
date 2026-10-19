@@ -4,6 +4,37 @@ _Last updated: 2026-10-19_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
 
+## Unified web/Apple entitlement writers — 2026-10-19 afternoon
+
+PR #15 now includes opt-in source-aware adapters for Stripe, redeem and admin
+(grant/positive/negative adjustments). Existing authentication/signature guards
+run first. Production activation and the accepted Sandbox deployment are unchanged.
+
+- Added staged pro-payment-operations.sql: immutable operation identities, ownership,
+  first-delivery time and stable same-millisecond order. Retries survive interrupted
+  accounting without adding days or resetting the original grant time.
+- Stripe requires paid/payment, environment match and an allowlisted PRO Payment
+  Link. Completed and async-success notifications share the Checkout Session ID.
+- Version-2 signed redeem codes bind account ID and unique code ID and redeem once.
+  Old email-only codes require manual reissue, not blind migration.
+- Admin accepts requestId/Idempotency-Key for retry protection; omitted ID creates
+  a fresh action and returns operationId. Negative adjustments replay with other
+  events and keep same-millisecond application order. Activation timestamp is
+  updated atomically when access becomes active.
+- Explicit PRO_LEDGER_ENABLED plus a valid cutover timestamp selects the adapter
+  inside the bundled wrapper. Legacy writes outside the wrapper remain unchanged.
+- 99 root tests pass, including 10 new real-SQLite and HTTP route tests. Both Worker
+  bundles build. No remote D1 migration, Worker deploy or new iOS upload performed.
+
+Owner's next step: add ONLY worker/schema/pro-payment-operations.sql to existing
+calcio_users_test. Then guide test bundle/flags separately. No repeated purchase
+acceptance test. See docs/pro-payment-migration.md for cutover, Stripe plink ID and
+old-code handling. Pre-cutover Stripe checkouts require reconciliation because the
+old system cannot prove prior delivery. Stripe refund automation is not added.
+
+Remaining software release blocker: isolated App Review/Sandbox access in the
+public candidate. Production Apple source gate remains intentionally closed.
+
 ## Production preparation foundation — 2026-10-19
 
 Branch: release/apple-production-preparation, based on accepted mobile baseline

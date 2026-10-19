@@ -41,6 +41,14 @@ impostare `$env:CR_MOBILE_PROFILE = 'production'`. La compilazione degli asset N
 certifica che il backend sia pronto. I workflow esistenti mantengono il default
 Sandbox e non sono stati abilitati a caricare questa preparazione.
 
+## Aggiornamento del pomeriggio
+
+Il punto 1 è ora implementato come candidato opt-in, con 99 test passati.
+Vedere docs/pro-payment-migration.md: prima aggiungere la sola nuova tabella al
+DB di test, poi collaudo mirato e riconciliazione dei pagamenti precedenti al
+cutover. Nessuna migrazione in produzione è stata eseguita. Il punto 2 rimane
+lavoro software aperto; il gate Apple pubblico resta chiuso.
+
 ## Lavoro necessario prima di un deploy utile
 
 1. **Unificare le scadenze dei pagamenti.** Migrare i percorsi che scrivono
@@ -73,7 +81,8 @@ non sulla ripetizione dei casi già superati.
 ## Cosa chiedere al proprietario quando torna a casa
 
 Non far incollare il bundle production-candidate: risponderebbe con acquisti non
-pronti. Prima completare i punti software 1–2. Alla preparazione infrastrutturale,
+pronti. Il primo passo utile è ora la tabella aggiuntiva nel solo database di test,
+come indicato in docs/pro-payment-migration.md. Completare ancora il punto 2. Alla preparazione infrastrutturale,
 il primo controllo sarà identificare il database live e le configurazioni già
 presenti senza esporre segreti. Dare poi un solo passaggio operativo alla volta.
 

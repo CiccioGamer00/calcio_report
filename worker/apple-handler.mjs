@@ -1,3 +1,4 @@
+import { createLegacyPayments } from './legacy-pro-delivery.mjs';
 import { ensureAppleAccountToken } from './apple-purchase-ledger.mjs';
 import { fetchReconciledAppleTransaction } from './apple-verifier-client.mjs';
 import { deliverReconciledApplePurchase } from './apple-pro-delivery.mjs';
@@ -38,8 +39,16 @@ export function createAppleHandler(core, deployment, dependencies = {}) {
     if(!path.startsWith('/apple/')) {
       // The sandbox accounting candidate cannot coexist with legacy direct
       // paid_until writers. Production migration of those writers is pending.
-      if(!production && env[enabledKey]==='1' && ['/stripe/webhook','/license/redeem','/admin/grant','/admin/adjust'].includes(path)) {
+      if(!production && env.PRO_LEDGER_ENABLED!=='1' && env[enabledKey]==='1' && ['/stripe/webhook','/license/redeem','/admin/grant','/admin/adjust'].includes(path)) {
         return json({error:'SANDBOX_LEGACY_PAYMENT_DISABLED'},503);
+      }
+      if (env.PRO_LEDGER_ENABLED === '1') {
+        try {
+          const payments = createLegacyPayments(env.DB,config,{
+            cutover:Number(env.PRO_LEDGER_CUTOVER_MS),stripePaymentLink:env.STRIPE_PRO_PAYMENT_LINK_ID,
+          });
+          return core.fetch(request,{...env,PRO_PAYMENTS:payments},ctx);
+        } catch { return json({error:'PRO_PAYMENT_CONFIG_INVALID'},503); }
       }
       return core.fetch(request,env,ctx);
     }
