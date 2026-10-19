@@ -1,4 +1,4 @@
-# StoreKit Sandbox candidate — 17 October 2026
+# StoreKit Sandbox acceptance — updated 19 October 2026
 
 This candidate targets only calcio-report-test.stemoro84.workers.dev and
 calcio_users_test. Production payment links remain empty. StoreKit checkout is
@@ -22,27 +22,23 @@ Latest installed build: **1.0 (21.1)**. Owner confirmed on October 17:
   account reported that purchases belong to another account; it remained TRIAL.
 
 Do not repeat those checks as if they had never passed. No newer build delivered.
-The fresh-purchase overlay fix is included in 21.1 but is not yet device-accepted
-without logout/login. Price now appears in Apple's final confirmation sheet;
-explicit cancellation feedback was added. The owner has not run the next checks.
+On October 19 at 13:31 Europe/Rome the owner confirmed a NEW purchase on the
+second TRIAL account with the same Apple account. Despite Apple's extension
+prompt, the account became PRO and both Indicators and Prediction unlocked
+immediately without logout/login. This check PASSES. Price now appears in Apple's final confirmation sheet;
+explicit cancellation feedback was added. The remaining advanced checks below have not been confirmed.
 
 ## Remaining checks, in order
 
-1. On a disposable Calcio Report test account, complete one NEW Sandbox purchase
-   in 21.1. Immediately open Indicators without logout/login or restarting.
-   Expected: PRO badge and unlocked panel in the same session. A restore of an
-   existing purchase is not evidence for this fresh-purchase check. If Apple
-   returns a purchase owned by another account, record that result and stop;
-   do not repeatedly purchase or change ownership to force this scenario.
-2. Cancel Apple's sheet and confirm the explicit cancellation message and
+1. Cancel Apple's sheet and confirm the explicit cancellation message and
    unchanged access/expiry. Cancellation itself passed on 18.1; this checks the
    new 21.1 feedback.
-3. Interrupted delivery/reconnect on a disposable account: after Apple success,
+2. Interrupted delivery/reconnect on a disposable account: after Apple success,
    a temporary verification failure must recover via resume/restore with only
    one grant. Do not buy again to recover an already-confirmed purchase.
-4. Refund/revocation and stale replay: verify the real Apple Sandbox path removes
+3. Refund/revocation and stale replay: verify the real Apple Sandbox path removes
    only the affected grant and restore cannot revive a refunded transaction.
-5. Deleted-account/re-registration isolation, using explicitly disposable
+4. Deleted-account/re-registration isolation, using explicitly disposable
    accounts only. Never delete the owner's working account.
 
 Automated recovery tests are separate from these device acceptance checks.
