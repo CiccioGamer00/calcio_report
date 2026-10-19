@@ -4,6 +4,25 @@ _Last updated: 2026-10-19_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
 
+## Fresh purchase immediate unlock accepted — 2026-10-19 13:31 Europe/Rome
+
+Owner confirms a new purchase from the second TRIAL Calcio Report account using
+the same Apple account on build 21.1. Apple offered to extend the purchase; after
+confirmation the current account became PRO and both Indicators and Prediction
+were immediately accessible without logout/login. Fresh-purchase panel unlock
+acceptance PASSES. This is distinct from the previously rejected cross-account
+restore: do not mark restore ownership protection as failing or repeat this test.
+No transaction IDs or backend ledger inspection were supplied in this report.
+
+Next release work: prepare the production purchase integration. Current
+worker/apple-entry.mjs is explicitly test/Sandbox-only, mobile/src/purchase-ui.mjs
+targets the test Worker, and mobile/src/purchases.mjs accepts only Sandbox.
+Production payment writers still require source-aware ledger integration.
+The current 21.1 is therefore a validated Sandbox purchase baseline, not a
+production-ready App Store build. No production deployment or submission today.
+Advanced real-device refund/interruption/deletion checks remain unverified;
+do not describe them as passed or reopen the now-completed unlock test.
+
 ## Autonomous verification and support handoff — 2026-10-19
 
 Owner has not run further device tests and requested autonomous continuation.
