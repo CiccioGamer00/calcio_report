@@ -1,2 +1,9 @@
 # Prediction Lab code, private datasets and reports live on the experiment branch.
 prediction-lab/
+
+# Generated mobile prototype and dependencies
+mobile/node_modules/
+mobile/www/
+mobile/ios/
+services/apple-verifier/node_modules/
+worker/dist/

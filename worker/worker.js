@@ -1,4 +1,18 @@
 export default {
+  // Internal adapter used only by the separate Apple test entry point.
+  // This does not expose a route or bypass expired-session/password checks.
+  async authenticatePurchaseAccount(request, env) {
+    const token = readBearer(request);
+    if (!token) return null;
+    const sess = await verifySignedToken(env, token);
+    if (!sess?.email) return null;
+    const u = await env.DB.prepare(
+      "SELECT id, created_at, pass_hash, COALESCE(disabled,0) as disabled FROM users WHERE email = ?",
+    ).bind(sess.email).first();
+    if (!u || Number(u.disabled) !== 0 || !sessionBelongsToAccount(sess, u) ||
+        !(await sessionPasswordVersionMatches(env, sess, u.pass_hash))) return null;
+    return { id: u.id, createdAt: u.created_at };
+  },
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
