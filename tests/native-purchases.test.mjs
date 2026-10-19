@@ -69,3 +69,43 @@ test('disabled backend and missing session cannot open Apple checkout',async()=>
   assert.ok(!h.calls.includes('purchase'));
   h.session.token='';await assert.rejects(h.manager.purchase(),/LOGIN_REQUIRED/);
 });
+
+test('lost backend response retries on resume without finishing the first attempt', async () => {
+  const h = harness();
+  let attempts = 0;
+  h.setResponse(async path => {
+    if (path === '/apple/token') return {
+      environment: 'Sandbox', productId: 'com.calcioreport.app.pro30', appAccountToken: accountToken,
+    };
+    attempts++;
+    // The grant may already be durable when the response is lost. The retry
+    // returns the same expiry; ledger idempotency is covered separately.
+    if (attempts === 1) throw Error('response lost');
+    return {ok: true, state: 'applied', transactionId: tx.transactionId, paidUntil: 12345};
+  });
+  await assert.rejects(h.manager.purchase(), /response lost/);
+  assert.ok(!h.calls.includes('finish'));
+  assert.ok(!h.calls.includes('refresh'));
+  assert.deepEqual(await h.manager.resume(), {applied: 1, failed: 0, otherAccount: 0});
+  assert.equal(attempts, 2);
+  assert.equal(h.calls.filter(x => x === 'purchase').length, 1);
+  assert.equal(h.calls.filter(x => x === 'finish').length, 1);
+  assert.equal(h.calls.filter(x => x === 'refresh').length, 1);
+});
+
+test('native finish interruption remains recoverable without a second checkout', async () => {
+  const h = harness();
+  let finishAttempts = 0;
+  h.native.finish = async () => {
+    finishAttempts++;
+    if (finishAttempts === 1) throw Error('native interrupted');
+    h.calls.push('finish');
+  };
+  await assert.rejects(h.manager.purchase(), /native interrupted/);
+  assert.ok(!h.calls.includes('refresh'));
+  assert.deepEqual(await h.manager.resume(), {applied: 1, failed: 0, otherAccount: 0});
+  assert.equal(finishAttempts, 2);
+  assert.equal(h.calls.filter(x => x === 'purchase').length, 1);
+  assert.equal(h.calls.filter(x => x === '/apple/transaction').length, 2);
+  assert.equal(h.calls.filter(x => x === 'refresh').length, 1);
+});
