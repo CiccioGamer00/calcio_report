@@ -1,8 +1,34 @@
 # Calcio Report — Project Status
 
-_Last updated: 2026-10-17_
+_Last updated: 2026-10-19_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
+
+## Autonomous verification and support handoff — 2026-10-19
+
+Owner has not run further device tests and requested autonomous continuation.
+Latest installed/accepted baseline remains 1.0 (21.1); no new TestFlight upload,
+production deployment, main merge or device acceptance is claimed today.
+
+- Re-ran the 80 existing root tests successfully, then added two focused recovery
+  regressions: lost backend response and interrupted native finish. Both recover
+  via resume without a second checkout. The full suite now passes 82/82 locally.
+  These mocked coordination tests do not replace real StoreKit/device testing;
+  durable grant idempotency remains covered by the separate ledger tests.
+- Updated mobile/SANDBOX_CHECKLIST.md to preserve the completed purchase, restore,
+  persistence and cross-account acceptance and isolate remaining checks.
+- Added docs/apple-support.md with read-only account/transaction/event queries.
+  All three queries were executed successfully against an empty SQLite database
+  built from the repository schemas. No real customer data or remote DB queried.
+  Lookup follows Calcio Report account → token → Apple transaction, not Apple
+  email. No support dashboard, ownership transfer or entitlement write added.
+- Application, Worker, verifier and native runtime code are unchanged.
+
+Next owner step when available: on a disposable test account, one fresh Sandbox
+purchase in 21.1, then open Indicators immediately without logout or restart.
+If Apple returns another account's purchase, record and stop rather than forcing
+ownership or repeating checkout. Refund, interrupted-delivery and deletion device
+scenarios remain pending. Existing account must not be deleted for testing.
 
 ## Cross-account restore accepted on 21.1 — 2026-10-17
 
