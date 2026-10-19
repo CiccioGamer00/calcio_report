@@ -11,20 +11,42 @@ with ok:true and ignored:true. Owner removed the temporary error diagnostic and
 confirmed the same response after redeploying. This proves notification transport
 and TEST acknowledgement, not purchase reconciliation or entitlement persistence.
 
-## Device acceptance checkpoint — 17 October 2026
+## Current device acceptance — 19 October 2026
 
-Build 18.1: installed and signed in; cancellation confirmed; first Sandbox purchase
-completed with Apple success alert, backend verified notice and PRO 30 days.
-Owner confirmed persistence across logout/login and restore without another 30 days.
-Existing panels stayed visually locked after purchase until login: fixed in source,
-awaiting next internal build acceptance. Preflight price disagreed with Apple sheet:
-next build leaves price presentation to Apple's confirmation sheet and adds explicit
-feedback when StoreKit returns cancellation. Never hardcode a replacement price.
+Latest installed build: **1.0 (21.1)**. Owner confirmed on October 17:
 
-Next build: confirm installed PRO remains, panels open, restore retains duration.
-A fresh-purchase unlock needs a separate disposable test account and remains pending.
-Interrupted delivery, ownership and refund checks remain device-test work, despite
-passing automated coverage. Do not delete the owner's working account.
+- First successful Sandbox purchase on 18.1 granted PRO for 30 days.
+- Logout/login preserved the purchase; restore did not add another 30 days.
+- After updating to 21.1 and logout/login, PRO persisted and Indicators opened.
+- Explicit restore on a different Calcio Report account with the same Apple
+  account reported that purchases belong to another account; it remained TRIAL.
+
+Do not repeat those checks as if they had never passed. No newer build delivered.
+The fresh-purchase overlay fix is included in 21.1 but is not yet device-accepted
+without logout/login. Price now appears in Apple's final confirmation sheet;
+explicit cancellation feedback was added. The owner has not run the next checks.
+
+## Remaining checks, in order
+
+1. On a disposable Calcio Report test account, complete one NEW Sandbox purchase
+   in 21.1. Immediately open Indicators without logout/login or restarting.
+   Expected: PRO badge and unlocked panel in the same session. A restore of an
+   existing purchase is not evidence for this fresh-purchase check. If Apple
+   returns a purchase owned by another account, record that result and stop;
+   do not repeatedly purchase or change ownership to force this scenario.
+2. Cancel Apple's sheet and confirm the explicit cancellation message and
+   unchanged access/expiry. Cancellation itself passed on 18.1; this checks the
+   new 21.1 feedback.
+3. Interrupted delivery/reconnect on a disposable account: after Apple success,
+   a temporary verification failure must recover via resume/restore with only
+   one grant. Do not buy again to recover an already-confirmed purchase.
+4. Refund/revocation and stale replay: verify the real Apple Sandbox path removes
+   only the affected grant and restore cannot revive a refunded transaction.
+5. Deleted-account/re-registration isolation, using explicitly disposable
+   accounts only. Never delete the owner's working account.
+
+Automated recovery tests are separate from these device acceptance checks.
+Support lookup procedure: `docs/apple-support.md` (read-only, test database only).
 
 ## First device session — one step at a time
 
