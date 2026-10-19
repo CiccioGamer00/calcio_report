@@ -4,6 +4,31 @@ _Last updated: 2026-10-19_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
 
+## Production preparation foundation — 2026-10-19
+
+Branch: release/apple-production-preparation, based on accepted mobile baseline
+6ab0662d34ccf386f46a8d3e24bf6827066a489d. No main merge, remote deployment,
+TestFlight upload or App Review submission.
+
+- Build-time Sandbox/production profiles now select one shared backend for
+  auth/data and Apple requests. Sandbox remains the CI default.
+- Keychain session namespaces are isolated, preserving the current Sandbox keys.
+  Public build requires fresh login rather than sending Sandbox credentials live.
+- Purchase coordinator checks the expected environment; wrong context fails
+  before opening checkout.
+- Extracted test handler and added a production entry point with an unconditional
+  source gate until payment-writer migration is complete. Production flags cannot
+  enable incomplete Apple purchases or interrupt existing legacy payment routes.
+- 89 root tests pass, including seven new environment/session isolation checks.
+  Both web profiles and both Worker bundles build locally. No Xcode build claimed.
+
+This is preparation, NOT deploy-ready. Blocking work is now explicit in
+`docs/app-store-release-handoff.md`: migrate Stripe/redeem/admin expiry writers,
+implement isolated review access (Apple reviews IAP in Sandbox), then prepare
+production verifier/schema/notifications and the final signed candidate/Store data.
+Do not hand the owner an incomplete production Worker to deploy. Do not re-run
+fresh-purchase unlock acceptance: it passed on 21.1 today.
+
 ## Fresh purchase immediate unlock accepted — 2026-10-19 13:31 Europe/Rome
 
 Owner confirms a new purchase from the second TRIAL Calcio Report account using
