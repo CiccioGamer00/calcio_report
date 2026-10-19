@@ -3,7 +3,7 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Native bridge and backend are injected for deterministic interrupted-delivery
 // tests. Never persist JWS or credentials in localStorage or logs.
-export function createPurchases({ native, session, request, onApplied = async () => {}, environment = 'Sandbox' }) {
+export function createPurchases({ native, session, request, onApplied = async () => {}, environment = 'Sandbox', allowAppReview = false }) {
   if (!['Sandbox', 'Production'].includes(environment)) throw Error('PURCHASES_UNAVAILABLE');
   let busy = false;
   const delivering = new Map();
@@ -13,7 +13,9 @@ export function createPurchases({ native, session, request, onApplied = async ()
     const token = session.token; assertSession(token);
     const account = await request('/apple/token', token);
     assertSession(token);
-    if (account.environment !== environment || account.productId !== productId ||
+    const review = allowAppReview && environment === 'Production' &&
+      account.environment === 'Sandbox' && account.audience === 'app-review';
+    if ((!review && account.environment !== environment) || account.productId !== productId ||
         typeof account.appAccountToken !== 'string' || !uuid.test(account.appAccountToken)) throw Error('PURCHASES_UNAVAILABLE');
     return { token, accountToken: account.appAccountToken.toLowerCase() };
   }

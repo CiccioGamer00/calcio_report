@@ -22,6 +22,7 @@ export function installPurchases(session) {
     return response.json();
   };
   const manager = createPurchases({ native, session, request, environment: profile.purchaseEnvironment,
+    allowAppReview: profile.name === 'production',
     onApplied: async () => { await window.refreshTopAuthUI?.(); } });
   let opening = false;
   window.CRNativePurchase = async () => {

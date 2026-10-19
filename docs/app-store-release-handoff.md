@@ -1,5 +1,16 @@
 # Preparazione App Store — 19 ottobre 2026
 
+## Aggiornamento serale
+
+Worker TEST e nuova tabella distribuiti dal proprietario; registro abilitato con
+cutover 1792424160000. Ricerca, Indicatori, Prediction e logout/login confermati
+funzionanti alle 17:47. Nessun altro acquisto da ripetere.
+
+Il percorso software di revisione è ora implementato nel candidato: vedere
+`docs/app-review-isolation.md`. 108 test root passano; build web Sandbox/production
+e bundle Worker pubblico generati. Restano provision, notifiche, migrazione live
+e collaudo della build firmata. Le sezioni successive conservano il piano iniziale.
+
 ## Stato reale
 
 La 21.1 installata usa ancora il Worker e il database di test. Il proprietario ha

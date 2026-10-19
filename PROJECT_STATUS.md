@@ -4,7 +4,41 @@ _Last updated: 2026-10-19_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
 
+## App Review isolation candidate — 2026-10-19 evening
+
+- Implemented reserved review login and authenticated session routing in the public
+  candidate only, with separate D1 binding and signing secret and designated account
+  ID. Normal accounts stay on the production backend. Review credentials cannot
+  reach public entitlement writes, admin routes or web payment endpoints.
+- Production mobile accepts Sandbox context only when the authenticated backend
+  explicitly marks app-review. Default Sandbox mobile behavior is unchanged.
+- Nine new tests include real signed login sessions across two SQLite databases,
+  forged routing prefixes, wrong identities, revoked/deleted accounts and config
+  failures. 108 root tests pass. Both mobile profiles and production bundle build.
+- Prepared scripts/manual/test-pro-ledger.ps1: fixed TEST endpoint, hidden admin
+  key input, fresh disposable account, grant/retry comparison and auth/me expiry
+  check. Script has NOT run remotely or under Windows PowerShell yet.
+- No production deploy/new iOS upload. Review infrastructure, notification routing,
+  signed candidate build and device review flow still require completion. See
+  docs/app-review-isolation.md. Production Apple source gate remains closed.
+
 ## Unified web/Apple entitlement writers — 2026-10-19 afternoon
+
+### Remote test rollout accepted — 2026-10-19 17:47 Europe/Rome
+
+- Owner created pro_payment_operations and pro_payment_operation_immutable in
+  calcio_users_test; screenshot confirmed both objects.
+- Owner deployed the complete 2501-line apple-test-worker.mjs bundle to
+  calcio-report-test, then set PRO_LEDGER_CUTOVER_MS=1792424160000 and
+  PRO_LEDGER_ENABLED=1 (separate variable deployments).
+- Unauthenticated root probe returned expected HTTP 401 AUTH_REQUIRED.
+- Owner confirmed TestFlight search, Indicatori, Prediction and logout/login all
+  work after rollout. This regression check is closed; do not repeat purchases.
+- Targeted remote admin/redeem ledger delivery and retry check remains pending;
+  this smoke check does not validate those payment operations. Stripe test plink
+  remains unconfigured. Production, main and TestFlight build remain unchanged.
+
+The following implementation notes describe the pre-rollout preparation.
 
 PR #15 now includes opt-in source-aware adapters for Stripe, redeem and admin
 (grant/positive/negative adjustments). Existing authentication/signature guards
@@ -32,8 +66,8 @@ acceptance test. See docs/pro-payment-migration.md for cutover, Stripe plink ID 
 old-code handling. Pre-cutover Stripe checkouts require reconciliation because the
 old system cannot prove prior delivery. Stripe refund automation is not added.
 
-Remaining software release blocker: isolated App Review/Sandbox access in the
-public candidate. Production Apple source gate remains intentionally closed.
+Remaining release blocker: provision and validate the new isolated App Review
+path, finish Sandbox notification routing and reconcile production migration. Production Apple source gate remains intentionally closed.
 
 ## Production preparation foundation — 2026-10-19
 
