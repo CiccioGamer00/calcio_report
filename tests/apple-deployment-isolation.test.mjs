@@ -91,3 +91,12 @@ test('same installation never reuses Sandbox credentials for production or vice 
   assert.equal(sandboxAgain.token,'sandbox-token');
   assert.ok(![...flags.values()].some(v=>String(v).includes('token')));
 });
+
+test('review profile uses isolated host/session while exercising Production review exception', () => {
+  const review=resolveBuildProfile('review');
+  assert.equal(review.baseUrl,'https://calcio-report-review.stemoro84.workers.dev');
+  assert.equal(review.sessionNamespace,'review');
+  assert.equal(review.purchaseEnvironment,'Production');
+  assert.notEqual(review.sessionNamespace,resolveBuildProfile('sandbox').sessionNamespace);
+  assert.notEqual(review.sessionNamespace,resolveBuildProfile('production').sessionNamespace);
+});

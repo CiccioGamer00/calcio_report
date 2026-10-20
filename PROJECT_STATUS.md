@@ -1629,3 +1629,26 @@ App Review purchase/refund verification. Next owner step: add APP_REVIEW_DB bind
 to calcio-report-test pointing to calcio_users_review; keep original DB binding.
 Then deploy new TEST bundle, set dedicated account ID and enable notification flag.
 Do not change Apple notification URL or deploy to production.
+
+
+### Dual-DB notifications rollout confirmed by owner — 2026-10-20 18:07 Europe/Rome
+Owner confirmed APP_REVIEW_DB binding added to calcio-report-test while retaining
+DB -> calcio_users_test, deployed the 2521-line apple-test-worker.mjs from
+calcio-report-test-notifications.zip, then saved/deployed Text variables:
+APP_REVIEW_ACCOUNT_ID=b960e09e-0937-49f3-9acb-18fb373e69f9 and
+APPLE_REVIEW_NOTIFICATIONS_ENABLED=1. Apple Sandbox notification URL unchanged.
+These are owner-confirmed settings/deploy, NOT remote proof of real notification
+reconciliation/routing. Still require signed purchase/notification in review context.
+Do not repeat completed generic purchases or grant/retry tests.
+
+
+## Internal review mobile profile prepared — 2026-10-20 18:10 Europe/Rome
+Added build profile review: fixed calcio-report-review.stemoro84.workers.dev
+origin, isolated review session namespace, Production purchase coordinator with
+authenticated app-review Sandbox exception (same logic intended for public build).
+Packaged review web assets successfully; 18 targeted tests pass. Workflow manual
+dispatch supports sandbox/review on mobile/ios-preparation or dedicated release
+branch. Default remains sandbox. Signing verifies profile-specific IPA endpoint;
+upload checks metadata matches selected profile and still requires explicit upload
+request. No signed IPA or TestFlight upload yet; do not represent local web build
+as native acceptance. Worker notification rollout owner-confirmed above.

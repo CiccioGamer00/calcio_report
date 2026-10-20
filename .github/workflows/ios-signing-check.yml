@@ -11,6 +11,12 @@ on:
       - 'mobile/**'
   workflow_dispatch:
     inputs:
+      mobile_profile:
+        description: 'Internal build backend'
+        type: choice
+        options: [sandbox, review]
+        default: sandbox
+        required: true
       upload_testflight:
         description: 'Upload this test build to internal TestFlight (no App Store submission)'
         type: boolean
@@ -23,7 +29,9 @@ concurrency:
   cancel-in-progress: false
 jobs:
   archive:
-    if: github.repository == 'CiccioGamer00/calcio_report' && github.ref == 'refs/heads/mobile/ios-preparation'
+    if: github.repository == 'CiccioGamer00/calcio_report' && (github.ref == 'refs/heads/mobile/ios-preparation' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/release/apple-production-preparation'))
+    env:
+      CR_MOBILE_PROFILE: ${{ github.event_name == 'workflow_dispatch' && inputs.mobile_profile || 'sandbox' }}
     runs-on: macos-26
     timeout-minutes: 25
     steps:

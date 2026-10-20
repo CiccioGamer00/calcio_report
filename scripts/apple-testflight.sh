@@ -9,7 +9,8 @@ if [[ "$MODE" == upload ]]; then
 import json, os
 from pathlib import Path
 assert os.environ.get('GITHUB_REPOSITORY') == 'CiccioGamer00/calcio_report', 'Wrong repository'
-assert os.environ.get('GITHUB_REF') == 'refs/heads/mobile/ios-preparation', 'Wrong upload branch'
+branch = os.environ.get('GITHUB_REF')
+assert branch in ['refs/heads/mobile/ios-preparation', 'refs/heads/release/apple-production-preparation'], 'Wrong upload branch'
 event = json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text())
 kind = os.environ.get('GITHUB_EVENT_NAME')
 manual = kind == 'workflow_dispatch' and str(event.get('inputs', {}).get('upload_testflight', '')).lower() == 'true'
@@ -17,7 +18,7 @@ release = (kind == 'push' and event.get('head_commit', {}).get('message', '').st
            'release: upload internal TestFlight StoreKit sandbox 2026-10-17' and
            event.get('after') == os.environ.get('GITHUB_SHA') and
            os.environ.get('GITHUB_RUN_ATTEMPT') == '1')
-assert manual or release, 'An explicit upload request is required'
+assert manual or (release and branch == 'refs/heads/mobile/ios-preparation'), 'An explicit upload request is required'
 PYGATE
 fi
 : "${RUNNER_TEMP:?GitHub-hosted macOS runner required}"
@@ -35,7 +36,10 @@ root = Path(os.environ['RUNNER_TEMP']) / 'calcio-ipa'
 info = json.loads((root / 'build.json').read_text())
 assert info['commit'] == os.environ['GITHUB_SHA'], 'IPA commit mismatch'
 assert info['bundleId'] == 'com.calcioreport.app', 'Wrong bundle'
-assert info['backend'] == 'test' and info['payments'] == 'disabled', 'Test build required'
+profile = os.environ.get('CR_MOBILE_PROFILE', 'sandbox')
+assert profile in ['sandbox', 'review'], 'Internal build profile required'
+assert info['backend'] == ('review' if profile == 'review' else 'test') and info['payments'] == 'disabled', 'Test build required'
+assert info.get('mobileProfile', 'sandbox') == profile, 'Build profile mismatch'
 assert info['sha256'] == hashlib.sha256((root / 'CalcioReport-test.ipa').read_bytes()).hexdigest(), 'IPA checksum mismatch'
 assert re.fullmatch(r'[A-Za-z0-9]{10}', os.environ['APP_STORE_CONNECT_KEY_ID']), 'Invalid key ID format'
 assert re.fullmatch(r'[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}', os.environ['APP_STORE_CONNECT_ISSUER_ID']), 'Invalid issuer ID format'
