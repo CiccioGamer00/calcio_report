@@ -42,15 +42,26 @@ può provare l'identità fisica di due binding Cloudflare separati: controllare 
 UUID D1 prima del deploy. Configurazione mancante/non valida blocca solo il
 percorso revisione, senza ripiegare sul database pubblico.
 
-Notifiche Sandbox della revisione (instradamento ancora da completare):
-Apple usa un URL Sandbox per app; non si possono semplicemente configurare due
-URL indipendenti per i collaudi esistenti e la revisione. Predisporre un dispatcher
-che verifichi prima il payload e distingua il proprietario tramite appAccountToken,
-oppure pianificare esplicitamente il passaggio dell'endpoint. La destinazione di
-revisione deve usare lo stesso
-DB e verificatore di revisione usando il bundle Apple test. Non inviare quelle
-notifiche al database live o al database dei collaudi 21.1. Questa infrastruttura
-non è stata creata; i secret non sono presenti nel repository.
+## Notifiche Sandbox condivise — implementate, rollout da completare
+
+Mantenere l'URL Sandbox Apple attuale sul Worker `calcio-report-test`.
+Il nuovo bundle TEST può cercare il proprietario in entrambi i database, solo dopo
+verifica della firma e riconciliazione Apple. Attivazione sul Worker TEST:
+
+- binding `APP_REVIEW_DB` → `calcio_users_review` (controllare UUID diverso dal DB test);
+- `APP_REVIEW_ACCOUNT_ID=b960e09e-0937-49f3-9acb-18fb373e69f9`;
+- `APPLE_REVIEW_NOTIFICATIONS_ENABLED=1` dopo il nuovo bundle e il binding.
+
+Il verificatore e il suo segreto rimangono quelli TEST già configurati. Nessun
+cambio all'URL notifiche in App Store Connect. Una corrispondenza unica decide il
+DB di accredito. Corrispondenze multiple, proprietario sconosciuto o errore di un
+DB restituiscono 503 senza accredito: Apple può ritentare. Tombstone di account
+cancellati sono riconosciute senza ricreare utenti. Il flag assente conserva il
+comportamento precedente a un solo DB. Non attivare questo flag sul Worker review.
+
+Il confronto dei binding non dimostra l'identità fisica dei DB: verificare in
+Cloudflare i nomi/UUID. I test locali includono due SQLite reali, idempotenza e
+rimborso. Rollout e ricezione remota delle notifiche review restano da confermare.
 
 ## Verifica e limiti
 
@@ -60,7 +71,8 @@ configurazione errata, cancellazione e contesto acquisti mobile. Un test usa il
 vero codice di login/firma e due database SQLite, verificando che la sessione di
 revisione sia rifiutata sul DB live e dopo cancellazione dell'account.
 
-Restano configurazione Cloudflare, provision account, notifiche dedicate, build
-firmata e collaudo StoreKit nel percorso di revisione. Non è una prova su iPhone
+Account e Worker isolato sono configurati; login, contesto Sandbox e dati calcistici
+sono verificati. Restano rollout notifiche, build firmata e collaudo StoreKit nel
+percorso di revisione. Non è una prova su iPhone
 né un'autorizzazione a pubblicare. Descrivere esplicitamente nelle note App Review
 che l'account fornito usa dati/account e pagamenti Sandbox isolati.

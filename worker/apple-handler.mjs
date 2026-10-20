@@ -2,6 +2,7 @@ import { createLegacyPayments } from './legacy-pro-delivery.mjs';
 import { ensureAppleAccountToken } from './apple-purchase-ledger.mjs';
 import { fetchReconciledAppleTransaction } from './apple-verifier-client.mjs';
 import { deliverReconciledApplePurchase } from './apple-pro-delivery.mjs';
+import { resolveNotificationOwner } from './apple-notification-owner.mjs';
 
 const headers = { 'content-type':'application/json', 'cache-control':'no-store',
   'Access-Control-Allow-Origin':'*', 'Access-Control-Allow-Methods':'GET,POST,OPTIONS',
@@ -69,12 +70,9 @@ export function createAppleHandler(core, deployment, dependencies = {}) {
         if(typeof transaction.appAccountToken!=='string' || transaction.environment!==config.environment) {
           return json({error:'APPLE_NOTIFICATION_ACCOUNT_INVALID'},503);
         }
-        const owner=await env.DB.prepare(`SELECT account_id,retired_at FROM apple_account_tokens
-          WHERE environment=? AND app_account_token=?`)
-          .bind(config.environment,transaction.appAccountToken.toLowerCase()).first();
-        if(!owner)return json({error:'APPLE_NOTIFICATION_ACCOUNT_UNKNOWN'},503);
+        const {db,owner}=await resolveNotificationOwner(env,config,transaction);
         if(owner.retired_at!==null)return json({ok:true,ignored:true});
-        await deliver(env.DB,owner.account_id,transaction,config,Date.now());
+        await deliver(db,owner.account_id,transaction,config,Date.now());
         return json({ok:true});
       }
       const account=await core.authenticatePurchaseAccount(request,env);

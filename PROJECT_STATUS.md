@@ -4,6 +4,17 @@ _Last updated: 2026-10-19_
 
 This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
 
+## Remote PRO ledger acceptance — 2026-10-20 16:57 Europe/Rome
+
+Owner screenshot confirms test-pro-ledger.ps1 PASS against calcio-report-test:
+admin grant recorded, same operation replay adds no days, auth/me expiry matches.
+Operation: admin:ledger-smoke-ce6e9045-785b-4843-b85a-1233509b8d1b.
+paidUntil: 1795100187693. Technical account retained only in TEST.
+ADMIN_KEY was initially absent from the test Worker; owner added a dedicated
+secret and reran successfully. Earlier control-character and FORBIDDEN failures
+were setup/input failures, not a ledger acceptance pass. This admin grant/retry
+check is now closed. Remote redeem/Stripe/refund tests are not implied by it.
+
 ## App Review isolation candidate — 2026-10-19 evening
 
 - Implemented reserved review login and authenticated session routing in the public
@@ -1529,3 +1540,92 @@ Release completed on 2026-10-05:
 
 Status: **RELEASED / VERIFIED IN PRODUCTION**.
 
+
+
+## Review database preparation — 2026-10-20 17:30 Europe/Rome
+
+Owner created dedicated D1 database `calcio_users_review`. After applying
+`worker/schema/app-review-bootstrap.sql`, a separate count query confirmed all
+8 application tables. Trigger existence has not yet been confirmed remotely.
+The dedicated account INSERT succeeded:
+- email: `apple-review@example.invalid` (login identifier, not a mailbox)
+- ID: `b960e09e-0937-49f3-9acb-18fb373e69f9`
+- initial paid_until: 0; trial_ends_at: 1793114975801
+Credentials supplied directly to owner; do not commit password/hash.
+No Worker binding or review login is yet configured or verified. Next step:
+create isolated candidate Worker `calcio-report-review`, initially without custom
+domain/routes; deploy candidate and configure bindings/secrets in subsequent steps.
+Review notification routing and full candidate acceptance remain outstanding.
+
+
+## Review Worker configuration checkpoint — 2026-10-20 17:42 Europe/Rome
+
+Owner confirmed creation of `calcio-report-review` with Hello World, binding
+APP_REVIEW_DB to calcio_users_review, and the three APP_REVIEW_ENABLED /
+APP_REVIEW_ACCOUNT_EMAIL / APP_REVIEW_ACCOUNT_ID text variables. Owner also
+confirmed creation of the dedicated APP_REVIEW_LICENSE_SECRET. Do not store its
+value in Git. APP_REVIEW_VERIFIER_URL was instructed; save not yet confirmed.
+APP_REVIEW_VERIFIER_SECRET is pending: owner did not retain a local copy.
+The October 16 infrastructure handoff already records the verifier secret on
+the server and the systemd service `calcio-report-apple`; do not ask the owner
+to reconstruct this setup or rotate the existing working secret. Next: inspect
+the service EnvironmentFiles path on OVH, then recover the existing value locally
+for the new Worker without posting it in chat. Exact env-file path not yet verified.
+
+
+### Verifier secret recovered — 2026-10-20 17:45 Europe/Rome
+Owner verified systemd EnvironmentFiles: /etc/calcio-report-apple/service.env.
+Recovered existing APPLE_VERIFIER_SECRET locally and confirmed saving it as
+APP_REVIEW_VERIFIER_SECRET in calcio-report-review and in personal password storage.
+No secret rotation or value recorded here. Next configure football relay URL/secret
+from existing /etc/calcio-report/relay.env, then deploy isolated review candidate.
+
+
+### Isolated review candidate bundle — 2026-10-20 17:49 Europe/Rome
+Owner confirmed relay configuration CR_RELAY_URL/CR_RELAY_SECRET and AUTH_PASSWORD_V2.
+Created worker/apple-review-entry.mjs and scripts/build-apple-review-worker.mjs.
+This staging-only entry denies all non-review traffic (403 REVIEW_ONLY) and handles
+CORS preflight. No DB or LICENSE_SECRET for public accounts required. It uses
+the existing review router and Sandbox handler. Nine review tests pass; bundled
+ordinary routes reject without any database binding and preflight returns 204.
+ZIP prepared for owner deployment to calcio-report-review only. Deployment/login
+not yet confirmed. Notifications still outstanding; not App Store release-ready.
+
+
+### Remote review login verified — 2026-10-20 17:54 Europe/Rome
+Owner confirmed isolated 2589-line review bundle deployment. Direct HTTPS checks
+on https://calcio-report-review.stemoro84.workers.dev succeeded with browser UA:
+POST /auth/login 200 with cr-review session; GET /auth/me 200 correct reserved
+email, paidUntil=0; GET /apple/token 200, Sandbox, audience=app-review, product
+com.calcioreport.app.pro30. No purchase or verifier round trip tested by these calls.
+Default Python UA was blocked (Cloudflare 1010), browser UA succeeded.
+/auth/me reports accountDeletionAvailable=false; next enable
+ACCOUNT_DELETION_ENABLED=1 on this isolated review Worker. Do not delete account
+until the planned deletion acceptance step. Notification routing still pending.
+
+
+### Review deletion flag and football data verified — 2026-10-20 17:57 Europe/Rome
+Owner enabled ACCOUNT_DELETION_ENABLED=1. Remote authenticated /auth/me now
+returns accountDeletionAvailable=true; account was NOT deleted. Authenticated
+GET /teams?id=489 returned HTTP 200, errors=[], results=1, AC Milan: review host
+football data path works. Existing Sandbox purchase acceptance need not be repeated.
+Next release blocker is verified Sandbox notification routing between existing
+test DB and dedicated review DB, followed by signed candidate review-flow acceptance.
+
+
+## Sandbox notification dispatcher — 2026-10-20
+Implemented optional dual-DB notification resolution in apple-notification-owner.mjs,
+called after verifier reconciliation by apple-handler.mjs. Existing test notification
+URL is retained. Flag APPLE_REVIEW_NOTIFICATIONS_ENABLED=1 requires APP_REVIEW_DB
+and APP_REVIEW_ACCOUNT_ID on calcio-report-test. Unique verified appAccountToken
+selects DB; ambiguity, unknown ownership, wrong active review account, or DB outage
+fails closed. Retired accounts are ignored without resurrection. No flag preserves
+the existing single-DB flow. No Cloudflare settings automatically changed.
+Seven new tests use real SQLite databases and cover grant, duplicate delivery,
+refund, isolation, invalid signatures/environment, outages, retired users and flag
+compatibility. All 115 repository tests pass. Rebuilt test Worker ZIP prepared for
+owner rollout. Notifications are not remotely accepted yet; no claim of actual
+App Review purchase/refund verification. Next owner step: add APP_REVIEW_DB binding
+to calcio-report-test pointing to calcio_users_review; keep original DB binding.
+Then deploy new TEST bundle, set dedicated account ID and enable notification flag.
+Do not change Apple notification URL or deploy to production.
