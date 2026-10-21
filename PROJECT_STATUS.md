@@ -1662,3 +1662,16 @@ dedicated release/apple-production-preparation branch with review profile.
 Existing mobile/ios-preparation pushes retain sandbox profile. Upload request
 gates unchanged; this correction commit must NOT request TestFlight upload.
 No merge or deployment to main. Native signing/validation result pending.
+
+
+## Review TestFlight delivery authorized — 2026-10-21
+
+Owner explicitly approved internal review-profile TestFlight upload in the resumed chat.
+Validation-only run 39555308970 succeeded on e7e13d: native archive/export and
+Apple VERIFY SUCCEEDED; UPLOAD_TESTFLIGHT=false confirmed no previous delivery.
+Updated release request in workflow and script for this review delivery, restricted
+to release/apple-production-preparation, matching event SHA and first run attempt.
+Six gate checks passed: authorized, ordinary commit, wrong SHA, rerun, main and
+wrong profile. Runtime source unchanged. Upload outcome is pending; do not claim
+installation or review-flow acceptance. Main/production and App Review submission
+remain unchanged. Next: verify CI upload, then guide owner to install review build.

@@ -15,10 +15,10 @@ event = json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text())
 kind = os.environ.get('GITHUB_EVENT_NAME')
 manual = kind == 'workflow_dispatch' and str(event.get('inputs', {}).get('upload_testflight', '')).lower() == 'true'
 release = (kind == 'push' and event.get('head_commit', {}).get('message', '').strip() ==
-           'release: upload internal TestFlight StoreKit sandbox 2026-10-17' and
+           'release: upload internal TestFlight review 2026-10-21' and
            event.get('after') == os.environ.get('GITHUB_SHA') and
            os.environ.get('GITHUB_RUN_ATTEMPT') == '1')
-assert manual or (release and branch == 'refs/heads/mobile/ios-preparation'), 'An explicit upload request is required'
+assert manual or (release and branch == 'refs/heads/release/apple-production-preparation' and os.environ.get('CR_MOBILE_PROFILE') == 'review'), 'An explicit upload request is required'
 PYGATE
 fi
 : "${RUNNER_TEMP:?GitHub-hosted macOS runner required}"
