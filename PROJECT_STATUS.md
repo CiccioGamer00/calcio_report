@@ -1722,3 +1722,22 @@ its isolated session marker. Build 26.1 is known blocked at startup; do not ask
 owner to restart it again. Next: install 27.1 when Apple processing completes and
 confirm the login screen opens. Real-device fix acceptance is still pending.
 Main and all remote Workers unchanged; no App Store submission.
+
+
+## Review 27.1 device acceptance PASSED — 2026-10-21
+
+Owner confirmed successful reserved-account login after manual password reset in
+calcio_users_review, then explicitly reported all requested checks passed:
+Milan search/fixture, Sandbox purchase, PRO badge, and immediate Indicators and
+Prediction access without logout. Startup/session fix and review-profile purchase
+flow are now device accepted. Do not repeat these checks or prior Sandbox tests.
+Credentials are in the owner's private Calcio_Report_Credenziali_Review.md;
+never copy password/hash to Git. Console displayed no data; successful login is
+the observed reset acceptance, not a confirmed SQL affected-row count.
+
+This does NOT independently prove server-to-server notification routing, refund,
+interrupted-delivery or deletion acceptance. Next checkpoint: read-only evidence
+that the signed review purchase notification reached the review DB through the
+existing TEST dispatcher; no extra purchase requested. Then complete production
+migration/verifier/release preparation. Public Apple source gate remains closed;
+main, remote Workers and App Review submission unchanged in this checkpoint.
