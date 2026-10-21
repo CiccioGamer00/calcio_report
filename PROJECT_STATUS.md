@@ -1710,3 +1710,15 @@ their keys/markers. New behavioral regression starts all resolved build profiles
 saves/restores each session and clears review without affecting other profiles.
 It failed before fix and now passes; full suite 118/118 locally. Preparing corrected
 internal TestFlight delivery under existing owner authorization. No Worker change.
+
+
+## Review session fix 1.0 (27.1) uploaded — 2026-10-21 17:00 Europe/Rome
+
+Commit 7878e7b9e3e1a5e51ec00a8668796753199375a2; signing run 39621282637,
+job 119295059089. All 118 tests passed, archive/export succeeded, and Apple logs
+confirm UPLOAD_TESTFLIGHT=true, VERIFY SUCCEEDED at 14:58:55 UTC and UPLOAD
+SUCCEEDED at 15:00:04 UTC. Fix adds the previously rejected review namespace and
+its isolated session marker. Build 26.1 is known blocked at startup; do not ask
+owner to restart it again. Next: install 27.1 when Apple processing completes and
+confirm the login screen opens. Real-device fix acceptance is still pending.
+Main and all remote Workers unchanged; no App Store submission.
