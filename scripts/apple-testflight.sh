@@ -1,4 +1,5 @@
 #!/bin/bash
+# Review delivery retry after concurrent-payment regression correction.
 # Validate the isolated IPA. Upload requires explicit dispatch or a release commit.
 set -euo pipefail
 umask 077

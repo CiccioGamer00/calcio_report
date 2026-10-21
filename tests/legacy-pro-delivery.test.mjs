@@ -48,10 +48,23 @@ test('concurrent duplicate web deliveries grant once; replay uses original deliv
   const h=harness(t);
   await Promise.all([h.payments.stripe(h.account(),h.session,now),h.payments.stripe(h.account(),h.session,now+1)]);
   const expiry=h.account().paid_until;
-  assert.equal(expiry,now+30*day);
+  const recorded=JSON.parse(h.sql.prepare('SELECT event_json FROM pro_payment_operations').get().event_json);
+  assert.ok(recorded.at===now || recorded.at===now+1);
+  assert.equal(expiry,recorded.at+30*day);
   const replay=await h.payments.stripe(h.account(),h.session,now+10*day);
   assert.equal(replay.duplicate,true);assert.equal(h.account().paid_until,expiry);
   assert.equal(h.sql.prepare('SELECT count(*) n FROM pro_payment_operations').get().n,1);
+});
+test('earlier-started duplicate resumes after later request persisted the operation',async t=>{
+  const h=harness(t);h.fail(true);
+  await assert.rejects(h.payments.stripe(h.account(),h.session,now+1),/injected outage/);
+  h.fail(false);
+  await h.payments.stripe(h.account(),h.session,now);
+  assert.equal(h.account().paid_until,now+1+30*day);
+  const replay=await h.payments.stripe(h.account(),h.session,now+day);
+  assert.equal(replay.duplicate,true);
+  assert.equal(h.account().paid_until,now+1+30*day);
+  assert.equal(h.sql.prepare('SELECT count(*) n FROM pro_entitlement_events').get().n,1);
 });
 test('Apple and Stripe stack; Apple refund preserves only web duration',async t=>{
   const h=harness(t);const accountToken=await ensureAppleAccountToken(h.db,'account-1',config,now);

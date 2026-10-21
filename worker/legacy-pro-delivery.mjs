@@ -33,7 +33,10 @@ export function createLegacyPayments(db, config, {cutover, stripePaymentLink} = 
     if (!stored || stored.account_id !== account.id || stored.fingerprint !== fingerprint) {
       throw Error('PRO_PAYMENT_OPERATION_CONFLICT');
     }
-    const outcome = await applyProEvents(db,account.id,config,[{...JSON.parse(stored.event_json),order:stored.sequence}],now);
+    const recordedEvent = {...JSON.parse(stored.event_json),order:stored.sequence};
+    // A concurrent request with a later start time may persist the operation first.
+    // Use that trusted persisted time without moving or duplicating the grant.
+    const outcome = await applyProEvents(db,account.id,config,[recordedEvent],Math.max(now,recordedEvent.at));
     return {...outcome,operationId};
   }
   return Object.freeze({
