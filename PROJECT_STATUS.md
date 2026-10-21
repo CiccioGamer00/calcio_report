@@ -1675,3 +1675,25 @@ Six gate checks passed: authorized, ordinary commit, wrong SHA, rerun, main and
 wrong profile. Runtime source unchanged. Upload outcome is pending; do not claim
 installation or review-flow acceptance. Main/production and App Review submission
 remain unchanged. Next: verify CI upload, then guide owner to install review build.
+
+
+## Review build 1.0 (26.1) uploaded — 2026-10-21 16:48 Europe/Rome
+
+Release commit 35c528c0a0944804260985f3232a397dfb6f90d8, signing run
+39619431564, job 119288588564: 117 tests pass; archive/export succeeded.
+Logs confirm review profile, UPLOAD_TESTFLIGHT=true, VERIFY SUCCEEDED at
+14:47:16 UTC and UPLOAD SUCCEEDED at 14:48:37 UTC. Simulator and verifier CI
+also passed. Apple processing, tester availability and device acceptance remain
+unconfirmed. Next owner step: open TestFlight and install 1.0 (26.1) when available;
+then guide reserved review-account login separately. This build uses the isolated
+review Worker and session namespace; existing Sandbox account is not the review login.
+No App Review submission, main merge or remote Worker deployment performed.
+
+Initial release run 39618989821 (25.1) stopped at tests before archive/upload.
+A real concurrent legacy payment race was reproduced: later-started duplicate can
+persist first, causing the earlier request's stale timestamp to reject that stored
+event. Adapter now uses max(request time, trusted persisted event time), retaining
+original grant time and idempotency. Test accepts either concurrent winner and an
+additional deterministic interrupted/later-first case passes. All 117 tests passed
+locally and in CI. This backend correction is committed ONLY; existing remote
+TEST/review/production Worker bundles have NOT been redeployed with it.
