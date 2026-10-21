@@ -1652,3 +1652,13 @@ branch. Default remains sandbox. Signing verifies profile-specific IPA endpoint;
 upload checks metadata matches selected profile and still requires explicit upload
 request. No signed IPA or TestFlight upload yet; do not represent local web build
 as native acceptance. Worker notification rollout owner-confirmed above.
+
+
+## Signing workflow launch correction — 2026-10-21
+Owner signed into GitHub but Run workflow remains absent. The workflow file is
+absent on main (GitHub contents request returned 404); prior manual-launch
+instructions were not usable. Enable push-triggered signing validation on the
+dedicated release/apple-production-preparation branch with review profile.
+Existing mobile/ios-preparation pushes retain sandbox profile. Upload request
+gates unchanged; this correction commit must NOT request TestFlight upload.
+No merge or deployment to main. Native signing/validation result pending.

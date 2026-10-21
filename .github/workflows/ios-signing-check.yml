@@ -1,7 +1,7 @@
 name: iOS signing check
 on:
   push:
-    branches: [mobile/ios-preparation]
+    branches: [mobile/ios-preparation, release/apple-production-preparation]
     paths:
       - '.github/workflows/ios-signing-check.yml'
       - 'scripts/check-ios-signing.sh'
@@ -29,9 +29,9 @@ concurrency:
   cancel-in-progress: false
 jobs:
   archive:
-    if: github.repository == 'CiccioGamer00/calcio_report' && (github.ref == 'refs/heads/mobile/ios-preparation' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/release/apple-production-preparation'))
+    if: github.repository == 'CiccioGamer00/calcio_report' && (github.ref == 'refs/heads/mobile/ios-preparation' || github.ref == 'refs/heads/release/apple-production-preparation')
     env:
-      CR_MOBILE_PROFILE: ${{ github.event_name == 'workflow_dispatch' && inputs.mobile_profile || 'sandbox' }}
+      CR_MOBILE_PROFILE: ${{ github.event_name == 'workflow_dispatch' && inputs.mobile_profile || (github.ref == 'refs/heads/release/apple-production-preparation' && 'review' || 'sandbox') }}
     runs-on: macos-26
     timeout-minutes: 25
     steps:
