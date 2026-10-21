@@ -1697,3 +1697,16 @@ original grant time and idempotency. Test accepts either concurrent winner and a
 additional deterministic interrupted/later-first case passes. All 117 tests passed
 locally and in CI. This backend correction is committed ONLY; existing remote
 TEST/review/production Worker bundles have NOT been redeployed with it.
+
+
+## Review 26.1 device startup blocker — 2026-10-21
+
+Owner reports protected-session error on 26.1, persisting after closing/reopening.
+Do NOT ask owner to repeat restart. Root cause reproduced: review build profile
+passes sessionNamespace=review while createSession only allowed test/production,
+throwing SESSION_NAMESPACE_INVALID before initialization. Added review namespace
+and a dedicated CR_NATIVE_REVIEW_SESSION_ACTIVE marker; existing namespaces retain
+their keys/markers. New behavioral regression starts all resolved build profiles,
+saves/restores each session and clears review without affecting other profiles.
+It failed before fix and now passes; full suite 118/118 locally. Preparing corrected
+internal TestFlight delivery under existing owner authorization. No Worker change.

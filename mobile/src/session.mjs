@@ -1,8 +1,9 @@
 // Only the session is secret. The installation/logout marker contains no user data.
 export function createSession(vault, storage, now = Date.now, namespace = 'test') {
-  if (!['test', 'production'].includes(namespace)) throw Error('SESSION_NAMESPACE_INVALID');
+  if (!['test', 'production', 'review'].includes(namespace)) throw Error('SESSION_NAMESPACE_INVALID');
   const key = `calcio-report.${namespace}.session.v1`;
-  const marker = namespace === 'test' ? 'CR_NATIVE_SESSION_ACTIVE' : 'CR_NATIVE_PRODUCTION_SESSION_ACTIVE';
+  const marker = namespace === 'test' ? 'CR_NATIVE_SESSION_ACTIVE'
+    : namespace === 'review' ? 'CR_NATIVE_REVIEW_SESSION_ACTIVE' : 'CR_NATIVE_PRODUCTION_SESSION_ACTIVE';
   const maxAge = 6 * 60 * 60 * 1000;
   let current = null;
   let queue = Promise.resolve();

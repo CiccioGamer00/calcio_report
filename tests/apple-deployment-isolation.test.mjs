@@ -100,3 +100,27 @@ test('review profile uses isolated host/session while exercising Production revi
   assert.notEqual(review.sessionNamespace,resolveBuildProfile('sandbox').sessionNamespace);
   assert.notEqual(review.sessionNamespace,resolveBuildProfile('production').sessionNamespace);
 });
+
+test('all build profiles start, persist and clear sessions independently on one installation', async () => {
+  const records=new Map(), flags=new Map();
+  const vault={get:async k=>records.get(k),set:async(k,v)=>records.set(k,v),remove:async k=>records.delete(k)};
+  const storage={getItem:k=>flags.get(k),setItem:(k,v)=>flags.set(k,v),removeItem:k=>flags.delete(k)};
+  const start=name=>createSession(vault,storage,()=>10000,resolveBuildProfile(name).sessionNamespace);
+  for (const name of ['sandbox','production','review']) {
+    const session=start(name);await session.ready;
+    assert.equal(session.token,'');
+    await session.save(name+'-token',10000);
+  }
+  assert.equal(records.size,3);
+  assert.equal(flags.size,3);
+  for (const name of ['sandbox','production','review']) {
+    const session=start(name);await session.ready;
+    assert.equal(session.token,name+'-token');
+  }
+  const review=start('review');await review.ready;await review.clear();
+  for (const name of ['sandbox','production','review']) {
+    const session=start(name);await session.ready;
+    assert.equal(session.token,name==='review'?'':name+'-token');
+  }
+  assert.throws(()=>createSession(vault,storage,()=>10000,'unknown'),/SESSION_NAMESPACE_INVALID/);
+});
