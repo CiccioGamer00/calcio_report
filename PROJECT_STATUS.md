@@ -1783,3 +1783,16 @@ Not deployed; no new mobile build or purchase performed. This instrumentation
 cannot reconstruct the historical notification. Historical correlation still
 needs Apple notification history or a verified replay; new logs alone do not
 close the acceptance checkpoint. Production remains unchanged.
+
+
+### Notification audit package validated — 2026-10-22
+Full repository suite passed: 126 tests, zero failures. Built the test-only
+single-module Worker using scripts/build-apple-test-worker.mjs; syntax and
+bundled disabled/wrong-environment rejection checks passed. Source commit
+ecda8dab41bdd55206d6316fa08d9c7c7ee6ee67. Delivered
+Calcio_Report_TEST_notifiche.zip with module and installation instructions.
+Owner deployment to calcio-report-test is pending; do not claim rollout.
+Bundle also contains the previously committed/tested legacy concurrency fix.
+No TestFlight build, purchase, production deployment or merge performed.
+After deployment, logs apply only to future deliveries; historical correlation
+still requires notification history or a verified replay, not another purchase.
