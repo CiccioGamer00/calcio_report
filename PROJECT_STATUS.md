@@ -1796,3 +1796,12 @@ Bundle also contains the previously committed/tested legacy concurrency fix.
 No TestFlight build, purchase, production deployment or merge performed.
 After deployment, logs apply only to future deliveries; historical correlation
 still requires notification history or a verified replay, not another purchase.
+
+
+### Owner confirmed TEST audit rollout — 2026-10-22
+Owner reported '2547 deployate' after instructions to deploy the delivered
+apple-test-worker.mjs exclusively to calcio-report-test. Treat as owner-confirmed
+rollout; exact remote version and new audit event not independently observed.
+Next retrieve Apple notification history for the existing Sandbox transaction
+using server-held credentials, without a new purchase or exposing signed payloads.
+No production rollout or new TestFlight build requested.
