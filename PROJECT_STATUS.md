@@ -1766,3 +1766,27 @@ Device acceptance of 27.1 remains passed. No additional purchase requested.
 Remaining notification correlation requires verifier/history evidence or targeted
 safe observability, not another query of the same source-agnostic purchase ledger.
 No runtime code, remote Worker, main branch or App Store submission changed.
+
+
+## Review purchase notification correlated — 2026-10-22
+Owner ran a read-only Apple getNotificationHistory query from the existing OVH
+verifier at /opt/calcio-report-apple, loading its existing service.env without
+printing credentials. The script verified outer and nested signatures using
+createAppleVerifier with Sandbox/test configuration and filtered the exact ledger
+transaction. One matching notification returned:
+- type ONE_TIME_CHARGE; environment Sandbox;
+- notification UUID 357b6be3-fe7d-45f7-aabf-0d9490d9e90a;
+- transaction 2000001254962203, matching the review DB evidence;
+- send attempt 1792596060066, result SUCCESS.
+This correlates Apple's successful delivery with the existing review purchase
+and the Cloudflare POST /apple/notifications HTTP 200 observation. The earlier
+uncertainty whether the observed delivery concerned a no-transaction TEST event
+is resolved. The original request did not log a database-selection outcome;
+do not describe this as a newly observed review-DB write by the notification
+(the purchase was already recorded by 15:21:02 UTC).
+No new purchase, replay, refund, database mutation or service restart performed.
+The punycode deprecation warning did not prevent the successful query.
+Close the historical notification identity/delivery investigation; do not repeat
+these completed checks. Future notifications can use the owner-deployed audit.
+Next resume production migration/verifier/release preparation. Production gate,
+refund/deletion acceptance and App Store submission are not completed by this check.
