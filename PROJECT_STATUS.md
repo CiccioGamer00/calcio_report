@@ -1829,3 +1829,15 @@ Close the historical notification identity/delivery investigation; do not repeat
 these completed checks. Future notifications can use the owner-deployed audit.
 Next resume production migration/verifier/release preparation. Production gate,
 refund/deletion acceptance and App Store submission are not completed by this check.
+
+
+## Production preflight started — 2026-10-22
+Owner explicitly requested proceeding with preparation. Branch
+release/production-preflight includes the audit candidate and its recorded
+rollout, with an updated docs/app-store-release-handoff.md replacing stale
+instructions that requested repeating completed 27.1/notification checks.
+Added worker/schema/production-preflight-readonly.sql to inventory table,
+trigger/index names and users column metadata without returning personal data.
+Current external dependency: identify actual public Worker DB binding and schema.
+No production SQL mutation, gate removal, deploy, main merge or submission made.
+Next owner action: inspect calcio-report-proxy DB binding; return database name.
