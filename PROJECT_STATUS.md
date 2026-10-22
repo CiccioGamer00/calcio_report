@@ -1741,3 +1741,28 @@ that the signed review purchase notification reached the review DB through the
 existing TEST dispatcher; no extra purchase requested. Then complete production
 migration/verifier/release preparation. Public Apple source gate remains closed;
 main, remote Workers and App Review submission unchanged in this checkpoint.
+
+
+## Review notification evidence — 2026-10-22
+
+Owner supplied Cloudflare invocation details for POST /apple/notifications on
+calcio-report-test at 2026-10-21 15:21:03.446 UTC. Network metadata identifies
+Apple Inc.; response HTTP 200, execution outcome ok, Worker version
+3ba5f451-95f4-46d9-8691-f39e40bee8da. Logs were present: expanding the time
+range from one hour to three days exposed the event. Do not ask to enable logs
+or repeat the completed purchase solely because the earlier view was empty.
+
+Read-only query on calcio_users_review for the reserved review account returned
+one Sandbox purchase for com.calcioreport.app.pro30, purchased at
+2026-10-21 15:20:59 UTC and recorded at 15:21:02 UTC. The ledger record precedes
+the notification invocation. This establishes review purchase persistence and
+notification-endpoint HTTP acknowledgement separately; it does not prove that
+this notification routed to the review account or delivered an entitlement.
+The invocation contains neither notification UUID/type nor transaction identity;
+the handler can also acknowledge ignored notifications with HTTP 200. Do not
+claim end-to-end review notification acceptance from these observations.
+
+Device acceptance of 27.1 remains passed. No additional purchase requested.
+Remaining notification correlation requires verifier/history evidence or targeted
+safe observability, not another query of the same source-agnostic purchase ledger.
+No runtime code, remote Worker, main branch or App Store submission changed.
