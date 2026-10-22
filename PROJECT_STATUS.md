@@ -1841,3 +1841,17 @@ trigger/index names and users column metadata without returning personal data.
 Current external dependency: identify actual public Worker DB binding and schema.
 No production SQL mutation, gate removal, deploy, main merge or submission made.
 Next owner action: inspect calcio-report-proxy DB binding; return database name.
+
+
+## Public D1 schema inventoried — 2026-10-22
+Owner screenshots identify calcio-report-proxy version c59345ba with DB bound to
+calcio_users (underscore/plural). Read-only sqlite_master inventory shows only
+_cf_KV, trial_search_log, trial_usage and users; no application indexes/triggers
+returned by the query excluding sqlite_% objects. users columns are id TEXT PK,
+email TEXT UNIQUE, pass_hash TEXT, trial_ends_at INTEGER, paid_until INTEGER,
+created_at INTEGER, note TEXT, last_seen_at INTEGER DEFAULT 0,
+paid_activated_at INTEGER DEFAULT 0, disabled INTEGER DEFAULT 0.
+Apple/entitlement/payment-operation tables are absent in this observed public DB.
+Do not repeat table inventory. Next obtain aggregate user/PRO counts and confirm
+timestamp units before backup and additive migration preparation. No personal
+records requested, live mutation, deployment, gate removal or merge performed.
