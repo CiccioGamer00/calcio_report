@@ -1766,3 +1766,20 @@ Device acceptance of 27.1 remains passed. No additional purchase requested.
 Remaining notification correlation requires verifier/history evidence or targeted
 safe observability, not another query of the same source-agnostic purchase ledger.
 No runtime code, remote Worker, main branch or App Store submission changed.
+
+
+## Notification audit prepared — 2026-10-22
+Branch fix/apple-notification-audit adds structured apple_notification logs in
+worker/apple-handler.mjs: processed after successful delivery, ignored with
+no_transaction/retired_account reason, and error with payload/verification/
+routing/delivery stage. Numeric transaction ID is included only after verifier
+reconciliation; database test/review is included after ownership resolution.
+No account token, account ID, email, credentials, signed payload or raw error
+message is logged. Logging exceptions cannot change purchase delivery responses.
+Eight focused behavioral tests passed locally, covering routing to both DBs,
+ignored cases, verification/delivery errors, unknown ownership, logger failure
+and exclusion of sensitive values. Full suite and deployment bundle pending.
+Not deployed; no new mobile build or purchase performed. This instrumentation
+cannot reconstruct the historical notification. Historical correlation still
+needs Apple notification history or a verified replay; new logs alone do not
+close the acceptance checkpoint. Production remains unchanged.
