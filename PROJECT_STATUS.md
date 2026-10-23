@@ -161,8 +161,16 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   env `/etc/calcio-report-apple-production/service.env`, stesso runtime Node.
   Unit solo su GitHub: non installata o verificata con systemd sul server;
   account, codice, permessi e credenziali Production ancora da predisporre.
-- Prossimo controllo: reverse proxy/HTTPS Sandbox e configurazione hostname
-  Production. Nessun servizio riavviato, installato o esposto da questa ispezione.
+- Caddy attivo; configurazione `/etc/caddy/Caddyfile`. Output filtrato di
+  `caddy adapt` fornito dal proprietario: `apple-test.calcioreport.com` ->
+  `127.0.0.1:8790`. È evidenza della configurazione su disco, non di TLS remoto.
+  Nginx non disponibile; non installarlo né ripetere il controllo Nginx.
+- Aggiunto `deploy/Caddyfile.apple-production.example` (commit `e7ff21a`):
+  hostname proposto `apple.calcioreport.com` -> `127.0.0.1:8791`.
+  DNS/TLS ancora da verificare; candidato non installato, Caddy non ricaricato.
+  Non sostituire il Caddyfile esistente; integrare il sito solo nel deploy autorizzato.
+- Prossimo controllo: DNS del nome Production proposto, poi completare servizio
+  e piano di attivazione. Nessun servizio riavviato, installato o esposto.
 
 ## Attività ancora APERTE — solo il blocco App Store
 
@@ -213,7 +221,7 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
 7. Non inventare esiti di test, deploy o collegamenti a database. Non inserire
    segreti, password, token o chiavi in GitHub, nei log o in chat.
 
-**Prossimo intervento:** inventario read-only del reverse proxy HTTPS su OVH,
+**Prossimo intervento:** verifica DNS del candidato `apple.calcioreport.com`,
 poi completare hostname/TLS e preparazione del servizio Production separato.
 Resta anche l'ID Payment Link Stripe da acquisire. Non richiedere di nuovo il backup.
 Telegram resta un requisito aperto prima della pubblicazione.
