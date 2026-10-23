@@ -47,7 +47,9 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
 
 - Screenshot Cloudflare del proprietario: Worker Production `calcio-report-proxy`,
   binding D1 `DB` -> `calcio_users`; versione visualizzata `c59345ba`
-  (identificativo parziale, non un commit Git). UUID D1 non visibile.
+  (identificativo parziale, non un commit Git).
+  UUID D1 verificato nello screenshot Overview di `calcio_users` del 23 ottobre:
+  `45681187-3565-4d36-8627-131c18ff1885`.
 - Ispezione schema già completata il 22 ottobre, riportata dal proprietario:
   tabelle Apple e nuovo registro PRO assenti. NON richiedere di ripetere il controllo.
 - Query aggregata `users` già completata: 23 utenti, 1 disabilitato,
@@ -111,7 +113,9 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
 7. Non inventare esiti di test, deploy o collegamenti a database. Non inserire
    segreti, password, token o chiavi in GitHub, nei log o in chat.
 
-**Prossimo intervento:** acquisire UUID di `calcio_users` (non ancora documentato),
-poi completare flag/configurazioni Production e piano di cutover/rollback.
+**Prossimo intervento:** inventario read-only di Settings > Variables and Secrets
+sul Worker Production `calcio-report-proxy`: nomi delle variabili/segreti,
+valori dei soli flag non sensibili e URL verifier senza credenziali.
+Poi preparare piano di cutover/rollback; non dedurre la configurazione live dal codice.
 Non ripetere query utenti, ispezione schema o backup già completati. Nessuna migrazione, nuovo acquisto,
 merge o deploy senza autorizzazione esplicita.
