@@ -196,9 +196,17 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   GET locale /health -> {"ok":true}; ss conferma solo `127.0.0.1:8791`.
   La prima sessione terminale non restituiva output; non ripetere installazione.
   Avvio automatico al boot non abilitato dal comando eseguito.
-- Prossimo passo: preparare e validare integrazione Caddy HTTPS, poi chiedere
-  autorizzazione alla sua attivazione. Caddy/Worker/database invariati.
-  Health prova solo liveness, non accesso API Apple Production o accrediti.
+- Caddy importa `/etc/caddy/sites/*.caddy`. Candidato preparato fuori dai siti
+  attivi in `/etc/calcio-report-apple-production/caddy-stage`; `caddy adapt`
+  ha accettato sintassi e import. Il proprietario ha poi autorizzato HTTPS.
+  Installato `/etc/caddy/sites/apple-production.caddy`, reload Caddy riuscito.
+  Output del proprietario: HTTPS OK, certificato verificato e health OK da OVH
+  su `https://apple.calcioreport.com/health`.
+  Worker/database invariati. Health prova solo liveness, non accesso API Apple
+  Production o accrediti. Non richiedere nuovamente autorizzazione per questo avvio/HTTPS.
+- Prossimo passo per chiudere infrastruttura: abilitare avvio al boot e verificare
+  rifiuto HTTP 401 AUTH_INVALID sui due endpoint HTTPS senza firma.
+  Questi controlli non sono ancora eseguiti; nessuna chiamata Apple prevista.
 
 ## Attività ancora APERTE — solo il blocco App Store
 
@@ -249,8 +257,8 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
 7. Non inventare esiti di test, deploy o collegamenti a database. Non inserire
    segreti, password, token o chiavi in GitHub, nei log o in chat.
 
-**Prossimo intervento:** completare prerequisiti e preparazione del servizio
-Production separato; record DNS creato, propagazione/TLS da verificare.
+**Prossimo intervento:** completare avvio al boot e controllo autenticazione
+HTTPS del verifier Production, già attivo con TLS verificato da OVH.
 Resta anche l'ID Payment Link Stripe da acquisire. Non richiedere di nuovo il backup.
 Telegram resta un requisito aperto prima della pubblicazione.
 Nessuna migrazione, nuovo acquisto, merge o deploy senza autorizzazione esplicita.
