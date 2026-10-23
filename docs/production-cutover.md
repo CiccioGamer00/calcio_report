@@ -45,11 +45,28 @@ identificare/preparare con ambiente Production, app Apple ID numerico, HTTPS e
 segreto dedicato; non copiare la configurazione Sandbox come se fosse Production.
 Mantenere l'URL notifiche Sandbox attuale sul Worker TEST.
 
+## Input preparati, nessuna configurazione live modificata
+
+`deploy/apple-production-inputs.json` contiene solo metadati non segreti.
+`node scripts/check-production-inputs.mjs` controlla la coerenza offline:
+attualmente segnala cinque dati mancanti, non deve risultare pronto.
+Non verifica account Cloudflare, disponibilità server, certificati, credenziali
+Apple, schemi remoti o cutover. Non autorizza un deploy.
+
+Verifier Sandbox già documentato: https://apple-test.calcioreport.com.
+Il modello separato `deploy/apple-verifier-production.env.example` mantiene
+vuoti ID app e credenziali; porta 8791 proposta, disponibilità non verificata.
+Non copiarlo sopra l'ambiente Sandbox. Il Worker pubblico candidato richiederà
+anche APPLE_DEPLOYMENT=production, APPLE_ENVIRONMENT=Production e
+APPLE_VERIFIER_URL/APPLE_VERIFIER_SECRET dedicati. Il gate nel codice
+APPLE_PRODUCTION_NOT_READY resta chiuso oltre al flag: non rimuoverlo durante
+questa preparazione. Nessuna verifica locale sostituisce le accettazioni remote.
+
 ## Ordine operativo da autorizzare separatamente
 
 1. Completare UUID review, verifier Production e ID Payment Link; riconciliare
    pagamenti/coupon precedenti. I PRO esistenti sono test, ma vanno preservati.
-2. Risolvere il conflitto PR #16 e proporre il commit candidato senza merge implicito.
+2. PR #16: conflitto documentale risolto; proporre l'integrazione senza merge implicito.
 3. Concordare una finestra senza writer legacy concorrenti; applicare gli schemi
    solo al DB identificato, previa autorizzazione. Verifica mirata post-migrazione.
 4. Cutover del bundle completo e del registro, con istante registrato e gate
