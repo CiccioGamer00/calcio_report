@@ -62,11 +62,10 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   Esportazione/download completati; ripristino e integrità del dump non ancora collaudati.
   Non richiedere una nuova esportazione per riconfermare questo checkpoint.
   Il dump resta sul PC del proprietario, senza caricarne i dati in chat/Git.
-- PR #16 verificata il 23 ottobre: aperta, draft, non merged; ultimo controllo `mergeable=false`,
-  da diagnosticare prima dell’integrazione;
-  head `14f2d3162938253dab8f7b2f5eb6e1cc3f4a7894`,
-  base release `d2132f6bc47abac1e2c41dea3babe12f18b6daa9`.
-  La patch non è ancora integrata nel branch release. Nessun merge autorizzato.
+- PR #16: conflitto risolto il 23 ottobre allineando il solo riepilogo del branch
+  audit alla release (commit `c84cebb`); GitHub conferma `mergeable=true`.
+  Rimane aperta, draft e non merged. Codice notifiche invariato; test già
+  accettati non ripetuti. Descrizione PR aggiornata alle evidenze reali.
 
 ## Configurazione live rilevata — screenshot 23 ottobre
 
@@ -120,6 +119,26 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   Restano UUID review, verifier Production e ID Stripe Payment Link da verificare.
   Gate Apple chiuso; migrazione e cutover non autorizzati né eseguiti.
 
+## Configurazione candidata e controlli offline — 23 ottobre
+
+- `deploy/apple-production-inputs.json`: destinazione live nota, gate Apple 0,
+  valori ignoti lasciati vuoti. Verifier Sandbox recuperato dal lavoro precedente:
+  `https://apple-test.calcioreport.com` (non è l'URL notifiche del Worker).
+- `deploy/apple-verifier-production.env.example`: servizio separato, ambiente
+  Production, porta candidata 8791 da verificare su OVH; nessun segreto inserito.
+  Riferimenti Sandbox recuperati: /opt/calcio-report-apple, unit calcio-report-apple;
+  sono contesto precedente, non un'ispezione attuale del server.
+- `scripts/check-production-inputs.mjs` controlla offline destinazione, UUID
+  distinti, origini HTTPS separate, ID app distinto dal prodotto e gate chiuso.
+  Quattro nuovi test mirati superati; nessuna chiamata Apple, D1 o deploy.
+  Ultimo commit del blocco: `cd959b5`.
+- Cinque input mancanti: UUID D1 review e test, origine verifier Production,
+  APP Apple ID numerico, ID Payment Link Stripe Production. Il checker deve
+  attualmente fallire: non equivale a readiness remota o approvazione del rilascio.
+- Il blocco hard-coded `APPLE_PRODUCTION_NOT_READY` è ancora presente in
+  worker/apple-handler.mjs: il solo flag NON abilita Production. Rimozione futura
+  subordinata alla migrazione e alle accettazioni previste.
+
 ## Attività ancora APERTE — solo il blocco App Store
 
 1. **Inventario READ-ONLY della produzione:** identificare branch/commit candidati,
@@ -169,8 +188,8 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
 7. Non inventare esiti di test, deploy o collegamenti a database. Non inserire
    segreti, password, token o chiavi in GitHub, nei log o in chat.
 
-**Prossimo intervento:** diagnosticare il conflitto PR #16 senza merge; completare
-inventario verifier Production e UUID review per il piano di cutover già preparato.
-Telegram resta un requisito aperto della chiusura release.
-Non ripetere query utenti, ispezione schema, backup o prove già accettate.
+**Prossimo intervento:** acquisire UUID D1 di calcio_users_review dalla sua Overview
+(non è l'UUID dell'account review), poi completare gli altri input mancanti e
+preparare il verifier Production separato. Non richiedere di nuovo il backup.
+Telegram resta un requisito aperto prima della pubblicazione.
 Nessuna migrazione, nuovo acquisto, merge o deploy senza autorizzazione esplicita.
