@@ -108,6 +108,18 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   Compatibilità finale da verificare sul candidato.
 - Contatore pubblico utenti/attività rinviato al post-release; non equivale a download.
 
+## Preparazione migrazione — 23 ottobre
+
+- Generatore locale `scripts/prepare-production-schema.mjs` (commit `654a241`):
+  assembla i tre schemi versionati in `worker/dist/production-initial.sql`,
+  senza connessioni remote né modifiche a flag/configurazione live.
+- Verifica locale con SQLite e utenti sintetici superata: cinque nuove tabelle
+  vuote, sei trigger, chiavi esterne coerenti, utenti/scadenze invariati e
+  riesecuzione rifiutata. Non è collaudo della migrazione D1 remota.
+- Piano e matrice configurazione in `docs/production-cutover.md` (`d8847c3`).
+  Restano UUID review, verifier Production e ID Stripe Payment Link da verificare.
+  Gate Apple chiuso; migrazione e cutover non autorizzati né eseguiti.
+
 ## Attività ancora APERTE — solo il blocco App Store
 
 1. **Inventario READ-ONLY della produzione:** identificare branch/commit candidati,
@@ -126,6 +138,9 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
 5. **Release App Store:** bundle/build firmata corretta, metadati/screenshot,
    privacy/supporto, istruzioni e account di revisione, approvazione proprietario
    prima di deploy pubblico o invio alla review.
+6. **Telegram — richiesto dal proprietario il 23 ottobre:** configurare il link
+   attualmente non attivo e verificarne l’apertura prima della pubblicazione.
+   Acquisire URL/canale definitivo quando si affronta questo blocco.
 
 ## Documenti di dettaglio SOLO SE pertinenti al blocco
 
@@ -154,7 +169,8 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
 7. Non inventare esiti di test, deploy o collegamenti a database. Non inserire
    segreti, password, token o chiavi in GitHub, nei log o in chat.
 
-**Prossimo intervento:** preparare schema/configurazione candidata di produzione
-con gate Apple chiuso e isolamento review; diagnosticare il conflitto PR #16.
+**Prossimo intervento:** diagnosticare il conflitto PR #16 senza merge; completare
+inventario verifier Production e UUID review per il piano di cutover già preparato.
+Telegram resta un requisito aperto della chiusura release.
 Non ripetere query utenti, ispezione schema, backup o prove già accettate.
 Nessuna migrazione, nuovo acquisto, merge o deploy senza autorizzazione esplicita.
