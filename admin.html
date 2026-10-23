@@ -1,0 +1,470 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Admin Calcio Report</title>
+    <style>
+      body {
+        font-family: Arial;
+        background: #111;
+        color: #fff;
+        padding: 20px;
+      }
+      input,
+      button,
+      textarea {
+        padding: 8px;
+        margin: 5px 0;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+      th,
+      td {
+        border: 1px solid #333;
+        padding: 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+      button {
+        cursor: pointer;
+      }
+      .pro {
+        color: #00ff88;
+        font-weight: 700;
+      }
+      .trial {
+        color: #ffaa00;
+        font-weight: 700;
+      }
+      .expired {
+        color: #ff4444;
+        font-weight: 700;
+      }
+      textarea {
+        width: 100%;
+        min-height: 44px;
+        resize: vertical;
+        background: #1a1a1a;
+        color: #fff;
+        border: 1px solid #333;
+        border-radius: 6px;
+      }
+      .muted {
+        opacity: 0.85;
+      }
+      .rowbtn {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      pre {
+        white-space: pre-wrap;
+      }
+    
+      .dashcard{
+        background:#1a1a1a;
+        border:1px solid #333;
+        border-radius:10px;
+        padding:10px 12px;
+        min-width: 180px;
+        flex: 0 0 auto;
+      }
+      .dashcard .k{ font-size:12px; opacity:.8; }
+      .dashcard .v{ font-size:20px; font-weight:700; margin-top:4px; }
+      .danger{ color:#ff6b6b; font-weight:700; }
+      .ok{ color:#00ff88; font-weight:700; }
+
+    </style>
+  </head>
+
+  <body>
+    <h1>Admin Utenti</h1>
+
+    <label>Worker URL:</label><br />
+    <input
+      id="workerUrl"
+      size="60"
+      value="https://api.calcioreport.com"
+    /><br />
+
+    <label>Admin Key:</label><br />
+    <input
+      id="adminKey"
+      size="60"
+      type="password"
+      placeholder="incolla la ADMIN_KEY"
+    /><br />
+
+    <button id="btnLoad">Carica Utenti</button>
+    <div
+      style="
+        margin-top: 10px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+      "
+    >
+      <input
+        id="searchEmail"
+        placeholder="Cerca email..."
+        style="min-width: 260px"
+      />
+      <select id="filterStatus">
+        <option value="">Tutti</option>
+        <option value="PRO">Solo PRO</option>
+        <option value="TRIAL">Solo TRIAL</option>
+        <option value="SCADUTO">Solo SCADUTI</option>
+      </select>
+      <button id="btnApplyFilters">Applica filtri</button>
+    </div>
+    <span id="miniStatus" class="muted"></span>
+
+    <div id="dashboard" style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; align-items:stretch;"></div>
+    <div id="output" style="margin-top: 12px"></div>
+
+    <script>
+            let __USERS__ = [];
+            function escapeHtml(value) {
+              return String(value ?? "").replace(/[&<>"']/g, c => ({
+                "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+              })[c]);
+            }
+            function fmtDate(ts) {
+              const n = Number(ts || 0);
+              if (!n) return "—";
+              return new Date(n).toLocaleString("it-IT");
+            }
+
+            // stesso principio usato nell'app: evita 8gg appena creato
+            function daysLeft(ts) {
+              const diff = Number(ts || 0) - Date.now();
+              if (diff <= 0) return 0;
+              return Math.max(1, Math.floor(diff / (1000 * 60 * 60 * 24)));
+            }
+
+            function statusClass(s) {
+              if (s === "PRO") return "pro";
+              if (s === "TRIAL") return "trial";
+              return "expired";
+            }
+
+            function getCfg() {
+              return {
+                url: document.getElementById("workerUrl").value.trim(),
+                key: document.getElementById("adminKey").value.trim(),
+                out: document.getElementById("output"),
+                mini: document.getElementById("miniStatus"),
+              };
+            }
+
+           
+      async function loadUsers() {
+        const { url, key, out, mini } = getCfg();
+        out.innerHTML = "Caricamento...";
+        mini.textContent = "";
+
+        let res, text, data;
+        try {
+          res = await fetch(url + "/admin/users", {
+            method: "GET",
+            headers: { "x-admin-key": key },
+          });
+          text = await res.text();
+          try { data = JSON.parse(text); } catch { data = null; }
+        } catch (e) {
+          out.textContent = "Errore rete: " + String(e.message || e);
+          return;
+        }
+
+        if (!res.ok || !data || !data.ok) {
+          out.innerHTML =
+            "Errore Worker (status " + res.status + "):<br><pre>" +
+            escapeHtml(text || "") +
+            "</pre>";
+          return;
+        }
+
+        __USERS__ = Array.isArray(data.users) ? data.users : [];
+        renderUsers(__USERS__);
+        await loadStats();
+      }
+
+      async function loadStats(){
+        const { url, key } = getCfg();
+        const dash = document.getElementById("dashboard");
+        if (!dash) return;
+        dash.innerHTML = '<div class="dashcard"><div class="k">Dashboard</div><div class="v">...</div></div>';
+        let res, text, data;
+        try {
+          res = await fetch(url + "/admin/stats", { method: "GET", headers: { "x-admin-key": key } });
+          text = await res.text();
+          try { data = JSON.parse(text); } catch { data = null; }
+        } catch(e){
+          dash.innerHTML = '<div class="dashcard"><div class="k">Dashboard</div><div class="v danger">Errore rete</div></div>';
+          return;
+        }
+        if (!res.ok || !data || !data.ok){
+          dash.innerHTML = '<div class="dashcard"><div class="k">Dashboard</div><div class="v danger">Errore</div><div class="k" style="margin-top:6px">'+escapeHtml(text||'')+'</div></div>';
+          return;
+        }
+        renderDashboard(data);
+      }
+
+      function renderDashboard(s){
+        const dash = document.getElementById("dashboard");
+        if (!dash) return;
+        const fmtN = (n)=> (Number(n)||0).toString();
+        dash.innerHTML = `
+          <div class="dashcard"><div class="k">Online (ultimi 5m)</div><div class="v">${fmtN(s.online5m)}</div></div>
+          <div class="dashcard"><div class="k">Attivi (24h)</div><div class="v">${fmtN(s.active24h)}</div></div>
+          <div class="dashcard"><div class="k">Attivi (7d)</div><div class="v">${fmtN(s.active7d)}</div></div>
+          <div class="dashcard"><div class="k">Nuovi PRO (24h)</div><div class="v">${fmtN(s.newPro24h)}</div></div>
+          <div class="dashcard" style="display:flex; align-items:center; gap:10px;">
+            <button id="btnRefreshDash">Aggiorna dashboard</button>
+            <span class="muted">${new Date(s.now).toLocaleString()}</span>
+          </div>
+        `;
+        const b = document.getElementById("btnRefreshDash");
+        if (b) b.onclick = ()=>loadStats();
+      }
+            function renderUsers(list) {
+              const out = document.getElementById("output");
+              const mini = document.getElementById("miniStatus");
+
+              const q = (document.getElementById("searchEmail")?.value || "")
+                .trim()
+                .toLowerCase();
+              const s = (document.getElementById("filterStatus")?.value || "").trim();
+
+              let users = Array.isArray(list) ? list.slice() : [];
+
+              if (q)
+                users = users.filter((u) =>
+                  String(u.email || "")
+                    .toLowerCase()
+                    .includes(q),
+                );
+              if (s) users = users.filter((u) => String(u.status || "") === s);
+
+              mini.textContent = `Totale utenti: ${users.length}`;
+
+              if (!users.length) {
+                out.innerHTML = "<em>Nessun utente trovato con questi filtri.</em>";
+                return;
+              }
+
+              let html =
+                "<table><tr>" +
+                "<th>Email</th><th>Status</th>" +
+                "<th>Trial gg</th><th>Trial fine</th>" +
+                "<th>Pro gg</th><th>Pro fine</th>" +
+                "<th>Ultima attività</th><th>Creato</th>" +
+                "<th>Note</th>" +
+                "<th>Azioni</th>" +
+                "</tr>";
+
+              for (const u of users) {
+                const trialDays = daysLeft(u.trialEndsAt);
+                const proDays = daysLeft(u.paidUntil);
+                const cls = statusClass(u.status);
+
+                html += `
+            <tr>
+              <td>${escapeHtml(u.email)}</td>
+              <td class="${cls}">${escapeHtml(u.status || "SCADUTO")}</td>
+              <td>${trialDays}</td>
+              <td>${fmtDate(u.trialEndsAt)}</td>
+              <td>${proDays}</td>
+              <td>${fmtDate(u.paidUntil)}</td>
+              <td>${fmtDate(u.lastSeenAt)}</td>
+              <td>${fmtDate(u.createdAt)}</td>
+              <td>
+                <textarea data-note-email="${escapeHtml(u.email)}">${escapeHtml(u.note)}</textarea>
+                <button data-act="saveNote" data-email="${escapeHtml(u.email)}">Salva nota</button>
+              </td>
+              <td>
+                <div class="rowbtn">
+                  <button data-act="adjust" data-delta="30" data-email="${escapeHtml(u.email)}">+30gg</button>
+                  <button data-act="adjust" data-delta="-30" data-email="${escapeHtml(u.email)}">-30gg</button>
+                  <button data-act="resolveAdjust" data-email="${escapeHtml(u.email)}">Sblocca rettifica verificata</button>
+                  <button data-act="mint" data-email="${escapeHtml(u.email)}">Genera codice</button>
+                  <button data-act="disable" data-email="${escapeHtml(u.email)}">Disabilita</button>
+                </div>
+              </td>
+            </tr>
+          `;
+              }
+
+              html += "</table>";
+              out.innerHTML = html;
+
+              out.querySelectorAll("button[data-act]").forEach((btn) => {
+                btn.addEventListener("click", async () => {
+                  const email = btn.getAttribute("data-email");
+                  const act = btn.getAttribute("data-act");
+                  if (!email || !act) return;
+
+                  if (act === "resolveAdjust") resolveAdjustment(email);
+                  if (act === "mint") await mintCode(email);
+                  if (act === "saveNote") await saveNote(email);
+
+                  if (act === "adjust") {
+                    const delta = parseInt(btn.getAttribute("data-delta"), 10);
+                    await adjustDays(email, delta);
+                  }
+
+                  if (act === "disable") {
+                    const ok = confirm("Disabilitare l'utente " + email + "? (non potra piu loggarsi)");
+                    if (!ok) return;
+                    await disableUser(email, true);
+                  }
+                });
+              });
+            }
+
+            async function mintCode(email) {
+              const { url, key } = getCfg();
+
+              const res = await fetch(
+                url + "/admin/mint?email=" + encodeURIComponent(email),
+                {
+                  method: "GET",
+                  headers: { "x-admin-key": key },
+                },
+              );
+
+              const j = await res.json().catch(() => ({}));
+              if (!res.ok || !j.ok || !j.code) {
+                alert(
+                  "Errore mint: " + (j.message || j.error || "HTTP " + res.status),
+                );
+                return;
+              }
+
+              const code = j.code;
+
+              // prova a copiare negli appunti
+              if (navigator.clipboard?.writeText) {
+                try {
+                  await navigator.clipboard.writeText(code);
+                } catch {}
+              }
+              alert("Codice generato (copiato se possibile):\n\n" + code);
+            }
+            // Persist unresolved operations before sending. Never store the admin key.
+            const adjustmentsInFlight = new Set();
+            function adjustmentKey(url, email) {
+              return "calcio-report:pending-adjust:" + JSON.stringify([url, email.toLowerCase()]);
+            }
+            async function adjustDays(email, deltaDays) {
+              const { url: rawUrl, key } = getCfg();
+              const url = rawUrl.replace(/\/+$/, "");
+              const storageKey = adjustmentKey(url, email);
+              if (adjustmentsInFlight.has(storageKey)) return;
+              let pending;
+              try { pending = JSON.parse(localStorage.getItem(storageKey) || "null"); }
+              catch { alert("Archivio locale non disponibile: rettifica non inviata."); return; }
+              if (pending) {
+                alert("Rettifica con esito da verificare: " + pending.requestId +
+                  "\nNon viene reinviata: il Worker attuale potrebbe non gestire i retry. " +
+                  "Verifica l'operazione prima di sbloccare una nuova rettifica.");
+                return;
+              }
+              if (!confirm(`Confermi ${deltaDays > 0 ? "+" : ""}${deltaDays} giorni PRO per:\n${email}?`)) return;
+              const operation = { requestId: crypto.randomUUID(), deltaDays, createdAt: Date.now() };
+              try { localStorage.setItem(storageKey, JSON.stringify(operation)); }
+              catch { alert("Impossibile salvare l'operazione: rettifica non inviata."); return; }
+              adjustmentsInFlight.add(storageKey);
+              try {
+                const res = await fetch(url + "/admin/adjust", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", "x-admin-key": key },
+                  body: JSON.stringify({ email, deltaDays, requestId: operation.requestId }),
+                });
+                const j = await res.json();
+                if (!res.ok || !j.ok) throw Error(j.message || j.error || "HTTP " + res.status);
+                localStorage.removeItem(storageKey);
+              } catch (e) {
+                alert("Rettifica non confermata: " + String(e.message || e) +
+                  "\nID: " + operation.requestId +
+                  "\nNon ripetere l'accredito. Il blocco resta anche riaprendo questo file nello stesso browser.");
+                return;
+              } finally { adjustmentsInFlight.delete(storageKey); }
+              await loadUsers();
+            }
+            function resolveAdjustment(email) {
+              const { url } = getCfg();
+              const storageKey = adjustmentKey(url.replace(/\/+$/, ""), email);
+              if (adjustmentsInFlight.has(storageKey)) return;
+              const pending = localStorage.getItem(storageKey);
+              if (!pending) { alert("Nessuna rettifica sospesa."); return; }
+              if (confirm("Hai verificato sul server se questa rettifica è stata applicata?\n" +
+                pending + "\nSblocca solo dopo aver accertato l'esito: il prossimo clic sarà una NUOVA operazione.")) {
+                localStorage.removeItem(storageKey);
+              }
+            }
+
+            async function disableUser(email, disabled) {
+              const { url, key } = getCfg();
+
+              const res = await fetch(url + "/admin/disable", {
+                method: "POST",
+                headers: { "content-type": "application/json", "x-admin-key": key },
+                body: JSON.stringify({ email, disabled: !!disabled }),
+              });
+
+              const j = await res.json().catch(() => ({}));
+              if (!res.ok || !j.ok) {
+                alert("Errore disable: " + (j.message || j.error || res.status));
+                return;
+              }
+
+              // ricarica lista + dashboard
+              await loadUsers();
+            }
+
+
+            async function saveNote(email) {
+              const { url, key } = getCfg();
+              const ta = document.querySelector(
+                `textarea[data-note-email="${CSS.escape(email)}"]`,
+              );
+              const note = ta ? ta.value : "";
+
+              const res = await fetch(url + "/admin/note", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "x-admin-key": key,
+                },
+                body: JSON.stringify({ email, note }),
+              });
+
+              const j = await res.json().catch(() => ({}));
+              if (!res.ok || !j.ok) {
+                alert(
+                  "Errore nota: " + (j.message || j.error || "HTTP " + res.status),
+                );
+                return;
+              }
+              alert("Nota salvata ✅");
+              await loadUsers();
+            }
+
+            document.getElementById("btnLoad").addEventListener("click", loadUsers);
+            document
+              .getElementById("btnApplyFilters")
+              .addEventListener("click", () => renderUsers(__USERS__));
+            document
+              .getElementById("searchEmail")
+              .addEventListener("input", () => renderUsers(__USERS__));
+            document
+              .getElementById("filterStatus")
+              .addEventListener("change", () => renderUsers(__USERS__));
+    </script>
+  </body>
+</html>
