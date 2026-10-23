@@ -1,6 +1,6 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
-_Aggiornato: 2026-10-23 (evidenze tecniche e conferme proprietario del 22 ottobre)._
+_Aggiornato: 2026-10-23 (inventario produzione e ripresa dal checkpoint del 22 ottobre)._
 _Questo è il PUNTO DI INGRESSO per le prossime sessioni Work. Leggerlo una sola volta a inizio attività._
 
 ## Obiettivo unico attuale
@@ -42,6 +42,26 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   non tornare ai test di settembre senza regressione pertinente.
 - I test automatici già registrati nel file storico rimangono evidenze valide per
   i commit indicati; non scambiarli per nuove prove su iPhone o in produzione.
+
+## Checkpoint produzione — riprendere da qui (23 ottobre)
+
+- Screenshot Cloudflare del proprietario: Worker Production `calcio-report-proxy`,
+  binding D1 `DB` -> `calcio_users`; versione visualizzata `c59345ba`
+  (identificativo parziale, non un commit Git). UUID D1 non visibile.
+- Ispezione schema già completata il 22 ottobre, riportata dal proprietario:
+  tabelle Apple e nuovo registro PRO assenti. NON richiedere di ripetere il controllo.
+- Query aggregata `users` già completata: 23 utenti, 1 disabilitato,
+  6 con `paid_until > 0` (non necessariamente ancora attivi).
+  Scadenza minima 1774800857114; massima 1796750470265;
+  ultima registrazione 1791477327458. Preservare utenti e diritti PRO esistenti.
+- Backup completo proposto sul PC Windows:
+  `npx wrangler d1 export calcio_users --remote --output=./calcio_users_backup_2026-10-22.sql`.
+  **Esito non ancora comunicato**: non considerarlo eseguito o verificato.
+  Il dump deve restare sul PC del proprietario, senza caricarne i dati in chat/Git.
+- PR #16 verificata il 23 ottobre: aperta, draft, non merged, mergeable;
+  head `14f2d3162938253dab8f7b2f5eb6e1cc3f4a7894`,
+  base release `d2132f6bc47abac1e2c41dea3babe12f18b6daa9`.
+  La patch non è ancora integrata nel branch release. Nessun merge autorizzato.
 
 ## Attività ancora APERTE — solo il blocco App Store
 
@@ -89,6 +109,7 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
 7. Non inventare esiti di test, deploy o collegamenti a database. Non inserire
    segreti, password, token o chiavi in GitHub, nei log o in chat.
 
-**Prossimo intervento consigliato:** inventario di produzione in sola lettura e
-checklist concreta del cutover; non eseguire migrazioni, nuovi acquisti o deploy
-senza istruzione e consenso del proprietario.
+**Prossimo intervento:** acquisire solo l'esito del backup già proposto, senza
+ripetere query utenti o ispezione schema. Poi completare i soli elementi mancanti
+dell'inventario e preparare il cutover. Nessuna migrazione, nuovo acquisto,
+merge o deploy senza autorizzazione esplicita.
