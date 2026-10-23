@@ -178,9 +178,14 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   `/opt/calcio-report-apple-production`, env e unit Production assenti.
   Nel Sandbox APPLE_KEY_ID e APPLE_ISSUER_ID configurati, file chiave Apple presente;
   valori non esposti. Presenza locale non prova autorizzazione API Production.
-- Prossimo passo: creare account e directory isolati, poi predisporre codice
-  versionato e credenziali protette. Non copiare il segreto HMAC Sandbox.
-  Servizio Production non installato/avviato; Caddy non ricaricato.
+- Proprietario conferma account `calcioappleprod` e directory isolate creati.
+  Creati env Production (root, 0600) e copia chiave Apple (root:calcioappleprod,
+  0640), con APPLE_APP_ID=6821570508, Production, porta 8791 e nuovo segreto
+  HMAC casuale dedicato. Nessun valore segreto esposto; nessun servizio avviato.
+- Prossimo passo: predisporre codice verifier dal commit release
+  `d95e7c51bda3de71731f624eabf10192e6980075` e dipendenze lockfile.
+  Repository pubblico verificato, nessun token GitHub richiesto.
+  Codice/dependenze ancora da installare; unit non installata, Caddy non ricaricato.
 
 ## Attività ancora APERTE — solo il blocco App Store
 
