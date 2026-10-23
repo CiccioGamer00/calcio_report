@@ -172,9 +172,15 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   Non sostituire il Caddyfile esistente; integrare il sito solo nel deploy autorizzato.
 - DNS predisposto dal proprietario il 23 ottobre, screenshot conferma record A
   `apple.calcioreport.com` -> `51.254.212.179`, DNS only, TTL Auto; Sandbox invariato.
-  Origine inserita nel manifest (`b67f847`). Propagazione e TLS non ancora verificati.
-- Prossimo controllo: prerequisiti locali e disponibilità credenziali per preparare
-  il servizio separato e il piano di attivazione. Nessun servizio riavviato o installato.
+  Origine inserita nel manifest (`b67f847`). Risoluzione da OVH confermata dal
+  proprietario: `51.254.212.179`; TLS ancora da predisporre/verificare.
+- Prerequisiti verificati dal proprietario: utente `calcioappleprod`, directory
+  `/opt/calcio-report-apple-production`, env e unit Production assenti.
+  Nel Sandbox APPLE_KEY_ID e APPLE_ISSUER_ID configurati, file chiave Apple presente;
+  valori non esposti. Presenza locale non prova autorizzazione API Production.
+- Prossimo passo: creare account e directory isolati, poi predisporre codice
+  versionato e credenziali protette. Non copiare il segreto HMAC Sandbox.
+  Servizio Production non installato/avviato; Caddy non ricaricato.
 
 ## Attività ancora APERTE — solo il blocco App Store
 
