@@ -67,6 +67,29 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   base release `d2132f6bc47abac1e2c41dea3babe12f18b6daa9`.
   La patch non è ancora integrata nel branch release. Nessun merge autorizzato.
 
+## Configurazione live rilevata — screenshot 23 ottobre
+
+- Elenco Runtime variables and secrets, scheda Production: nove voci visibili.
+  `AUTH_PASSWORD_V2=1`, `CR_RELAY_URL=https://relay.calcioreport.com`;
+  variabile `ACCOUNT_DELETION_ENA...` con valore 1 (nome troncato nello screenshot).
+- Segreti presenti, valori non letti: `ADMIN_KEY`, `APISPORTS_KEY`,
+  `CR_RELAY_SECRET`, `LICENSE_SECRET`, `RESEND_API_KEY`, `STRIPE_WEBHOOK_SECRET`.
+- Nell'elenco non compaiono impostazioni `APPLE_*`, `APP_REVIEW_*` o
+  `PRO_LEDGER_*`. Non è una verifica del codice effettivamente distribuito.
+- Prima della preparazione del cutover chiarire l'uso reale dei pagamenti Stripe,
+  dei codici redeem e degli accrediti amministrativi. La presenza del segreto
+  Stripe non dimostra pagamenti incassati. I sei paid_until non identificano
+  da soli la sorgente degli accrediti.
+- Piano: riconciliare eventuali pagamenti/codici preesistenti; predisporre schemi
+  e configurazione candidata con Apple Production disabilitato; verificare UUID
+  review distinto dal live e verifier Production dedicato; pianificare cutover
+  senza writer legacy concorrenti e rollback che conservi gli accrediti successivi.
+  Il backup del 23 ottobre non va ripristinato automaticamente sul live dopo nuovi
+  pagamenti. Nessuna configurazione, migrazione o deploy eseguiti in questo blocco.
+- Consultati solo i documenti pertinenti `docs/pro-payment-migration.md` e
+  `docs/app-review-isolation.md`; i loro vecchi pending TestFlight/notifiche non
+  riaprono le accettazioni chiuse sopra.
+
 ## Attività ancora APERTE — solo il blocco App Store
 
 1. **Inventario READ-ONLY della produzione:** identificare branch/commit candidati,
@@ -113,9 +136,8 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
 7. Non inventare esiti di test, deploy o collegamenti a database. Non inserire
    segreti, password, token o chiavi in GitHub, nei log o in chat.
 
-**Prossimo intervento:** inventario read-only di Settings > Variables and Secrets
-sul Worker Production `calcio-report-proxy`: nomi delle variabili/segreti,
-valori dei soli flag non sensibili e URL verifier senza credenziali.
-Poi preparare piano di cutover/rollback; non dedurre la configurazione live dal codice.
-Non ripetere query utenti, ispezione schema o backup già completati. Nessuna migrazione, nuovo acquisto,
-merge o deploy senza autorizzazione esplicita.
+**Prossimo intervento:** chiarire con il proprietario se esistono pagamenti Stripe
+reali o codici PRO già distribuiti/ancora utilizzabili, e l'origine dei PRO esistenti.
+Poi preparare il piano concreto di migrazione e configurazione candidata.
+Non ripetere query utenti, ispezione schema o backup già completati.
+Nessuna migrazione, nuovo acquisto, merge o deploy senza autorizzazione esplicita.
