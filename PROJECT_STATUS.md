@@ -76,10 +76,8 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   `CR_RELAY_SECRET`, `LICENSE_SECRET`, `RESEND_API_KEY`, `STRIPE_WEBHOOK_SECRET`.
 - Nell'elenco non compaiono impostazioni `APPLE_*`, `APP_REVIEW_*` o
   `PRO_LEDGER_*`. Non è una verifica del codice effettivamente distribuito.
-- Prima della preparazione del cutover chiarire l'uso reale dei pagamenti Stripe,
-  dei codici redeem e degli accrediti amministrativi. La presenza del segreto
-  Stripe non dimostra pagamenti incassati. I sei paid_until non identificano
-  da soli la sorgente degli accrediti.
+- Il 23 ottobre il proprietario conferma che i PRO esistenti sono solo test.
+  Non trattarli come vendite reali. Preservare comunque utenti e scadenze.
 - Piano: riconciliare eventuali pagamenti/codici preesistenti; predisporre schemi
   e configurazione candidata con Apple Production disabilitato; verificare UUID
   review distinto dal live e verifier Production dedicato; pianificare cutover
@@ -89,6 +87,28 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
 - Consultati solo i documenti pertinenti `docs/pro-payment-migration.md` e
   `docs/app-review-isolation.md`; i loro vecchi pending TestFlight/notifiche non
   riaprono le accettazioni chiuse sopra.
+
+## Cruscotto amministrativo — requisito di compatibilità release
+
+- Allegato `admin.html` letto il 23 ottobre (copia fornita dal proprietario, non
+  assunta identica alla versione GitHub): Worker pubblico predefinito
+  `https://calcio-report-proxy.stemoro84.workers.dev`.
+- Funzioni da preservare: `/admin/users`, `/admin/stats`, note, disabilitazione,
+  rettifiche PRO ±30 giorni (`/admin/adjust`), coupon (`/admin/mint`).
+- `adjustDays` invia solo email e deltaDays: adeguare l'interfaccia al registro
+  con ID operazione stabile sui retry e protezione da doppio invio; non basta
+  generare un nuovo ID a ogni tentativo. Nessuna modifica al cruscotto ancora eseguita.
+- Documentazione registro: nuovi coupon legati all'account e monouso; vecchi
+  coupon email-only richiedono riemissione, non promessa di compatibilità automatica.
+- Gli utenti iOS registrati sul medesimo backend Production devono comparire
+  nel cruscotto live; gli account review/Sandbox isolati restano separati.
+  Questa è la condizione architetturale da verificare sul candidato finale,
+  non una nuova prova remota già eseguita.
+- Dashboard allegata mostra online5m, active24h, active7d, newPro24h e lastSeenAt:
+  non dimostra conteggi di download né numero totale di accessi.
+- Idea del proprietario per dopo il rilascio: contatore pubblico aggregato
+  utenti/attività. Non esporre endpoint admin o ADMIN_KEY; non chiamarlo download
+  senza misurare download effettivi. Nessun lavoro UI pubblico in questo blocco.
 
 ## Attività ancora APERTE — solo il blocco App Store
 
@@ -136,8 +156,8 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
 7. Non inventare esiti di test, deploy o collegamenti a database. Non inserire
    segreti, password, token o chiavi in GitHub, nei log o in chat.
 
-**Prossimo intervento:** chiarire con il proprietario se esistono pagamenti Stripe
-reali o codici PRO già distribuiti/ancora utilizzabili, e l'origine dei PRO esistenti.
-Poi preparare il piano concreto di migrazione e configurazione candidata.
+**Prossimo intervento:** preparare migrazione/configurazione candidata preservando
+il cruscotto admin; verificare i contratti degli endpoint e adeguare i retry delle
+rettifiche PRO prima del rilascio. PRO esistenti confermati come soli test.
 Non ripetere query utenti, ispezione schema o backup già completati.
 Nessuna migrazione, nuovo acquisto, merge o deploy senza autorizzazione esplicita.
