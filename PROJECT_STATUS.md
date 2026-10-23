@@ -54,10 +54,12 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   6 con `paid_until > 0` (non necessariamente ancora attivi).
   Scadenza minima 1774800857114; massima 1796750470265;
   ultima registrazione 1791477327458. Preservare utenti e diritti PRO esistenti.
-- Backup completo proposto sul PC Windows:
-  `npx wrangler d1 export calcio_users --remote --output=./calcio_users_backup_2026-10-22.sql`.
-  **Esito non ancora comunicato**: non considerarlo eseguito o verificato.
-  Il dump deve restare sul PC del proprietario, senza caricarne i dati in chat/Git.
+- **Backup completo esportato il 23 ottobre**, Wrangler 4.152.0, dopo autorizzazione
+  Cloudflare. Il proprietario ha riportato l'esito `Downloaded ... successfully!`:
+  `C:\Users\stefa\calcio_users_backup_2026-10-23.sql`.
+  Esportazione/download completati; ripristino e integrità del dump non ancora collaudati.
+  Non richiedere una nuova esportazione per riconfermare questo checkpoint.
+  Il dump resta sul PC del proprietario, senza caricarne i dati in chat/Git.
 - PR #16 verificata il 23 ottobre: aperta, draft, non merged, mergeable;
   head `14f2d3162938253dab8f7b2f5eb6e1cc3f4a7894`,
   base release `d2132f6bc47abac1e2c41dea3babe12f18b6daa9`.
@@ -109,7 +111,7 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
 7. Non inventare esiti di test, deploy o collegamenti a database. Non inserire
    segreti, password, token o chiavi in GitHub, nei log o in chat.
 
-**Prossimo intervento:** acquisire solo l'esito del backup già proposto, senza
-ripetere query utenti o ispezione schema. Poi completare i soli elementi mancanti
-dell'inventario e preparare il cutover. Nessuna migrazione, nuovo acquisto,
+**Prossimo intervento:** acquisire UUID di `calcio_users` (non ancora documentato),
+poi completare flag/configurazioni Production e piano di cutover/rollback.
+Non ripetere query utenti, ispezione schema o backup già completati. Nessuna migrazione, nuovo acquisto,
 merge o deploy senza autorizzazione esplicita.
