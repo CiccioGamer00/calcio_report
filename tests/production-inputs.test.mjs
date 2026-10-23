@@ -10,7 +10,8 @@ const synthetic = {...candidate, reviewDatabaseId:'11111111-1111-4111-8111-11111
   sandboxVerifierOrigin:'https://sandbox.example.invalid', appAppleId:'123456789',
   stripePaymentLinkId:'plink_SyntheticOnly'};
 test('incomplete release metadata blocks preparation approval', () => {
-  assert.deepEqual(checkProductionInputs(candidate), [
+  assert.deepEqual(checkProductionInputs({...synthetic, reviewDatabaseId:'', testDatabaseId:'',
+    productionVerifierOrigin:'', appAppleId:'', stripePaymentLinkId:''}), [
     'MISSING_reviewDatabaseId','MISSING_testDatabaseId','MISSING_productionVerifierOrigin',
     'MISSING_appAppleId','MISSING_stripePaymentLinkId']);
   assert.deepEqual(checkProductionInputs(synthetic), []);
