@@ -62,7 +62,8 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   Esportazione/download completati; ripristino e integrità del dump non ancora collaudati.
   Non richiedere una nuova esportazione per riconfermare questo checkpoint.
   Il dump resta sul PC del proprietario, senza caricarne i dati in chat/Git.
-- PR #16 verificata il 23 ottobre: aperta, draft, non merged, mergeable;
+- PR #16 verificata il 23 ottobre: aperta, draft, non merged; ultimo controllo `mergeable=false`,
+  da diagnosticare prima dell’integrazione;
   head `14f2d3162938253dab8f7b2f5eb6e1cc3f4a7894`,
   base release `d2132f6bc47abac1e2c41dea3babe12f18b6daa9`.
   La patch non è ancora integrata nel branch release. Nessun merge autorizzato.
@@ -88,27 +89,24 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   `docs/app-review-isolation.md`; i loro vecchi pending TestFlight/notifiche non
   riaprono le accettazioni chiuse sopra.
 
-## Cruscotto amministrativo — requisito di compatibilità release
+## Cruscotto amministrativo — aggiornato 23 ottobre
 
-- Allegato `admin.html` letto il 23 ottobre (copia fornita dal proprietario, non
-  assunta identica alla versione GitHub): Worker pubblico predefinito
-  `https://calcio-report-proxy.stemoro84.workers.dev`.
-- Funzioni da preservare: `/admin/users`, `/admin/stats`, note, disabilitazione,
-  rettifiche PRO ±30 giorni (`/admin/adjust`), coupon (`/admin/mint`).
-- `adjustDays` invia solo email e deltaDays: adeguare l'interfaccia al registro
-  con ID operazione stabile sui retry e protezione da doppio invio; non basta
-  generare un nuovo ID a ogni tentativo. Nessuna modifica al cruscotto ancora eseguita.
-- Documentazione registro: nuovi coupon legati all'account e monouso; vecchi
-  coupon email-only richiedono riemissione, non promessa di compatibilità automatica.
-- Gli utenti iOS registrati sul medesimo backend Production devono comparire
-  nel cruscotto live; gli account review/Sandbox isolati restano separati.
-  Questa è la condizione architetturale da verificare sul candidato finale,
-  non una nuova prova remota già eseguita.
-- Dashboard allegata mostra online5m, active24h, active7d, newPro24h e lastSeenAt:
-  non dimostra conteggi di download né numero totale di accessi.
-- Idea del proprietario per dopo il rilascio: contatore pubblico aggregato
-  utenti/attività. Non esporre endpoint admin o ADMIN_KEY; non chiamarlo download
-  senza misurare download effettivi. Nessun lavoro UI pubblico in questo blocco.
+- Ripristino confermato dal proprietario con API `https://api.calcioreport.com`:
+  screenshot con 22 utenti elencati e 1 attivo negli ultimi 7 giorni.
+- Aggiunto `admin.html` dalla copia fornita: URL corretto, funzioni esistenti conservate,
+  escaping dei dati mostrati, requestId sulle rettifiche. Commit `79174a0`.
+- Clic concorrenti nella pagina bloccati; esiti incerti persistiti in localStorage
+  impediscono ulteriori rettifiche dello stesso utente fino a verifica esplicita.
+  ADMIN_KEY non salvata. Nessun retry automatico: il live legacy può ignorare requestId.
+  Il retry con stesso ID resta da verificare/abilitare dopo il cutover del registro.
+  Il blocco locale non coordina dispositivi diversi o schede simultanee.
+- Test mirati locali con fetch simulato superati (commit `7bc47c5`): concorrenza,
+  successo, risposta persa, rettifica opposta, reload, sblocco esplicito, nuovo ID,
+  storage non disponibile ed escaping. Nessuna rettifica reale o test remoto ripetuto.
+- Nuovi coupon del registro account-bound e monouso; vecchi email-only da riemettere.
+  Utenti iOS sul medesimo backend Production visibili; review/Sandbox separati.
+  Compatibilità finale da verificare sul candidato.
+- Contatore pubblico utenti/attività rinviato al post-release; non equivale a download.
 
 ## Attività ancora APERTE — solo il blocco App Store
 
@@ -156,8 +154,7 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
 7. Non inventare esiti di test, deploy o collegamenti a database. Non inserire
    segreti, password, token o chiavi in GitHub, nei log o in chat.
 
-**Prossimo intervento:** preparare migrazione/configurazione candidata preservando
-il cruscotto admin; verificare i contratti degli endpoint e adeguare i retry delle
-rettifiche PRO prima del rilascio. PRO esistenti confermati come soli test.
-Non ripetere query utenti, ispezione schema o backup già completati.
+**Prossimo intervento:** preparare schema/configurazione candidata di produzione
+con gate Apple chiuso e isolamento review; diagnosticare il conflitto PR #16.
+Non ripetere query utenti, ispezione schema, backup o prove già accettate.
 Nessuna migrazione, nuovo acquisto, merge o deploy senza autorizzazione esplicita.
