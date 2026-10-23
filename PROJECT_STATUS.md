@@ -195,7 +195,8 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   LoadState=loaded, ActiveState=active, SubState=running, ExecMainStatus=0, Job vuoto.
   GET locale /health -> {"ok":true}; ss conferma solo `127.0.0.1:8791`.
   La prima sessione terminale non restituiva output; non ripetere installazione.
-  Avvio automatico al boot non abilitato dal comando eseguito.
+  Avvio automatico al boot successivamente abilitato: proprietario conferma
+  symlink multi-user.target.wants e `is-enabled=enabled`.
 - Caddy importa `/etc/caddy/sites/*.caddy`. Candidato preparato fuori dai siti
   attivi in `/etc/calcio-report-apple-production/caddy-stage`; `caddy adapt`
   ha accettato sintassi e import. Il proprietario ha poi autorizzato HTTPS.
@@ -204,9 +205,14 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   su `https://apple.calcioreport.com/health`.
   Worker/database invariati. Health prova solo liveness, non accesso API Apple
   Production o accrediti. Non richiedere nuovamente autorizzazione per questo avvio/HTTPS.
-- Prossimo passo per chiudere infrastruttura: abilitare avvio al boot e verificare
-  rifiuto HTTP 401 AUTH_INVALID sui due endpoint HTTPS senza firma.
-  Questi controlli non sono ancora eseguiti; nessuna chiamata Apple prevista.
+- Controllo HTTPS senza firma completato dal proprietario: POST /v1/transaction
+  e POST /v1/notification -> HTTP 401 AUTH_INVALID. Avvio automatico enabled.
+  Blocco provisioning/TLS/rifiuto richieste anonime chiuso; non ripeterlo.
+  Restano verifica del percorso firmato Worker->verifier e accesso Apple Production;
+  non confondere questi esiti con accettazione acquisti o notifiche Production.
+- Prossimo blocco: acquisire ID Payment Link Stripe Production (`plink_...`),
+  ultimo input vuoto nel manifest; poi completare preparazione configurazione/cutover
+  Worker e migrazione D1, ancora non autorizzati né eseguiti.
 
 ## Attività ancora APERTE — solo il blocco App Store
 
@@ -257,8 +263,9 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
 7. Non inventare esiti di test, deploy o collegamenti a database. Non inserire
    segreti, password, token o chiavi in GitHub, nei log o in chat.
 
-**Prossimo intervento:** completare avvio al boot e controllo autenticazione
-HTTPS del verifier Production, già attivo con TLS verificato da OVH.
-Resta anche l'ID Payment Link Stripe da acquisire. Non richiedere di nuovo il backup.
+**Prossimo intervento:** acquisire ID Payment Link Stripe Production e completare
+la configurazione candidata/cutover Worker-D1. Verifier OVH attivo, enabled,
+TLS e rifiuto richieste anonime confermati. Non richiedere di nuovo il backup.
 Telegram resta un requisito aperto prima della pubblicazione.
-Nessuna migrazione, nuovo acquisto, merge o deploy senza autorizzazione esplicita.
+Nessuna migrazione, nuovo acquisto, merge o ulteriore deploy senza autorizzazione
+esplicita. Avvio verifier e HTTPS OVH già autorizzati ed eseguiti.
