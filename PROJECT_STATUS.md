@@ -182,10 +182,15 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   Creati env Production (root, 0600) e copia chiave Apple (root:calcioappleprod,
   0640), con APPLE_APP_ID=6821570508, Production, porta 8791 e nuovo segreto
   HMAC casuale dedicato. Nessun valore segreto esposto; nessun servizio avviato.
-- Prossimo passo: predisporre codice verifier dal commit release
-  `d95e7c51bda3de71731f624eabf10192e6980075` e dipendenze lockfile.
-  Repository pubblico verificato, nessun token GitHub richiesto.
-  Codice/dependenze ancora da installare; unit non installata, Caddy non ricaricato.
+- Codice verifier predisposto dal commit release
+  `d95e7c51bda3de71731f624eabf10192e6980075`, con RELEASE_COMMIT locale.
+  Proprietario conferma `npm ci --omit=dev --ignore-scripts --no-audit --no-fund`
+  riuscito: 48 pacchetti. Codice root:calcioappleprod, non scrivibile dal servizio.
+  Avviso npm: jsrsasign@11.1.5 deprecato/non mantenuto; nessun aggiornamento
+  automatico di dipendenze o npm. Da valutare separatamente, non è un audit vulnerabilità.
+- Prossimo passo: verifica unit candidata con systemd e accesso alla chiave come
+  utente del servizio, prima di richiedere autorizzazione all'avvio locale.
+  Unit non installata, servizio spento; Caddy non ricaricato, database invariati.
 
 ## Attività ancora APERTE — solo il blocco App Store
 
