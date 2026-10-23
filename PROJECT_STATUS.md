@@ -1,6 +1,6 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
-_Aggiornato: 2026-10-23 (evidenze tecniche e conferme proprietario del 22 ottobre)._
+_Aggiornato: 2026-10-23 (inventario produzione e ripresa dal checkpoint del 22 ottobre)._
 _Questo è il PUNTO DI INGRESSO per le prossime sessioni Work. Leggerlo una sola volta a inizio attività._
 
 ## Obiettivo unico attuale
@@ -43,6 +43,83 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
 - I test automatici già registrati nel file storico rimangono evidenze valide per
   i commit indicati; non scambiarli per nuove prove su iPhone o in produzione.
 
+## Checkpoint produzione — riprendere da qui (23 ottobre)
+
+- Screenshot Cloudflare del proprietario: Worker Production `calcio-report-proxy`,
+  binding D1 `DB` -> `calcio_users`; versione visualizzata `c59345ba`
+  (identificativo parziale, non un commit Git).
+  UUID D1 verificato nello screenshot Overview di `calcio_users` del 23 ottobre:
+  `45681187-3565-4d36-8627-131c18ff1885`.
+- Ispezione schema già completata il 22 ottobre, riportata dal proprietario:
+  tabelle Apple e nuovo registro PRO assenti. NON richiedere di ripetere il controllo.
+- Query aggregata `users` già completata: 23 utenti, 1 disabilitato,
+  6 con `paid_until > 0` (non necessariamente ancora attivi).
+  Scadenza minima 1774800857114; massima 1796750470265;
+  ultima registrazione 1791477327458. Preservare utenti e diritti PRO esistenti.
+- **Backup completo esportato il 23 ottobre**, Wrangler 4.152.0, dopo autorizzazione
+  Cloudflare. Il proprietario ha riportato l'esito `Downloaded ... successfully!`:
+  `C:\Users\stefa\calcio_users_backup_2026-10-23.sql`.
+  Esportazione/download completati; ripristino e integrità del dump non ancora collaudati.
+  Non richiedere una nuova esportazione per riconfermare questo checkpoint.
+  Il dump resta sul PC del proprietario, senza caricarne i dati in chat/Git.
+- PR #16 verificata il 23 ottobre: aperta, draft, non merged; ultimo controllo `mergeable=false`,
+  da diagnosticare prima dell’integrazione;
+  head `14f2d3162938253dab8f7b2f5eb6e1cc3f4a7894`,
+  base release `d2132f6bc47abac1e2c41dea3babe12f18b6daa9`.
+  La patch non è ancora integrata nel branch release. Nessun merge autorizzato.
+
+## Configurazione live rilevata — screenshot 23 ottobre
+
+- Elenco Runtime variables and secrets, scheda Production: nove voci visibili.
+  `AUTH_PASSWORD_V2=1`, `CR_RELAY_URL=https://relay.calcioreport.com`;
+  variabile `ACCOUNT_DELETION_ENA...` con valore 1 (nome troncato nello screenshot).
+- Segreti presenti, valori non letti: `ADMIN_KEY`, `APISPORTS_KEY`,
+  `CR_RELAY_SECRET`, `LICENSE_SECRET`, `RESEND_API_KEY`, `STRIPE_WEBHOOK_SECRET`.
+- Nell'elenco non compaiono impostazioni `APPLE_*`, `APP_REVIEW_*` o
+  `PRO_LEDGER_*`. Non è una verifica del codice effettivamente distribuito.
+- Il 23 ottobre il proprietario conferma che i PRO esistenti sono solo test.
+  Non trattarli come vendite reali. Preservare comunque utenti e scadenze.
+- Piano: riconciliare eventuali pagamenti/codici preesistenti; predisporre schemi
+  e configurazione candidata con Apple Production disabilitato; verificare UUID
+  review distinto dal live e verifier Production dedicato; pianificare cutover
+  senza writer legacy concorrenti e rollback che conservi gli accrediti successivi.
+  Il backup del 23 ottobre non va ripristinato automaticamente sul live dopo nuovi
+  pagamenti. Nessuna configurazione, migrazione o deploy eseguiti in questo blocco.
+- Consultati solo i documenti pertinenti `docs/pro-payment-migration.md` e
+  `docs/app-review-isolation.md`; i loro vecchi pending TestFlight/notifiche non
+  riaprono le accettazioni chiuse sopra.
+
+## Cruscotto amministrativo — aggiornato 23 ottobre
+
+- Ripristino confermato dal proprietario con API `https://api.calcioreport.com`:
+  screenshot con 22 utenti elencati e 1 attivo negli ultimi 7 giorni.
+- Aggiunto `admin.html` dalla copia fornita: URL corretto, funzioni esistenti conservate,
+  escaping dei dati mostrati, requestId sulle rettifiche. Commit `79174a0`.
+- Clic concorrenti nella pagina bloccati; esiti incerti persistiti in localStorage
+  impediscono ulteriori rettifiche dello stesso utente fino a verifica esplicita.
+  ADMIN_KEY non salvata. Nessun retry automatico: il live legacy può ignorare requestId.
+  Il retry con stesso ID resta da verificare/abilitare dopo il cutover del registro.
+  Il blocco locale non coordina dispositivi diversi o schede simultanee.
+- Test mirati locali con fetch simulato superati (commit `7bc47c5`): concorrenza,
+  successo, risposta persa, rettifica opposta, reload, sblocco esplicito, nuovo ID,
+  storage non disponibile ed escaping. Nessuna rettifica reale o test remoto ripetuto.
+- Nuovi coupon del registro account-bound e monouso; vecchi email-only da riemettere.
+  Utenti iOS sul medesimo backend Production visibili; review/Sandbox separati.
+  Compatibilità finale da verificare sul candidato.
+- Contatore pubblico utenti/attività rinviato al post-release; non equivale a download.
+
+## Preparazione migrazione — 23 ottobre
+
+- Generatore locale `scripts/prepare-production-schema.mjs` (commit `654a241`):
+  assembla i tre schemi versionati in `worker/dist/production-initial.sql`,
+  senza connessioni remote né modifiche a flag/configurazione live.
+- Verifica locale con SQLite e utenti sintetici superata: cinque nuove tabelle
+  vuote, sei trigger, chiavi esterne coerenti, utenti/scadenze invariati e
+  riesecuzione rifiutata. Non è collaudo della migrazione D1 remota.
+- Piano e matrice configurazione in `docs/production-cutover.md` (`d8847c3`).
+  Restano UUID review, verifier Production e ID Stripe Payment Link da verificare.
+  Gate Apple chiuso; migrazione e cutover non autorizzati né eseguiti.
+
 ## Attività ancora APERTE — solo il blocco App Store
 
 1. **Inventario READ-ONLY della produzione:** identificare branch/commit candidati,
@@ -61,6 +138,9 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
 5. **Release App Store:** bundle/build firmata corretta, metadati/screenshot,
    privacy/supporto, istruzioni e account di revisione, approvazione proprietario
    prima di deploy pubblico o invio alla review.
+6. **Telegram — richiesto dal proprietario il 23 ottobre:** configurare il link
+   attualmente non attivo e verificarne l’apertura prima della pubblicazione.
+   Acquisire URL/canale definitivo quando si affronta questo blocco.
 
 ## Documenti di dettaglio SOLO SE pertinenti al blocco
 
@@ -89,6 +169,8 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
 7. Non inventare esiti di test, deploy o collegamenti a database. Non inserire
    segreti, password, token o chiavi in GitHub, nei log o in chat.
 
-**Prossimo intervento consigliato:** inventario di produzione in sola lettura e
-checklist concreta del cutover; non eseguire migrazioni, nuovi acquisti o deploy
-senza istruzione e consenso del proprietario.
+**Prossimo intervento:** diagnosticare il conflitto PR #16 senza merge; completare
+inventario verifier Production e UUID review per il piano di cutover già preparato.
+Telegram resta un requisito aperto della chiusura release.
+Non ripetere query utenti, ispezione schema, backup o prove già accettate.
+Nessuna migrazione, nuovo acquisto, merge o deploy senza autorizzazione esplicita.
