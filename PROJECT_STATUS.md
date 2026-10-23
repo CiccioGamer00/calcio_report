@@ -116,7 +116,7 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   vuote, sei trigger, chiavi esterne coerenti, utenti/scadenze invariati e
   riesecuzione rifiutata. Non è collaudo della migrazione D1 remota.
 - Piano e matrice configurazione in `docs/production-cutover.md` (`d8847c3`).
-  Restano UUID test, verifier Production e ID Stripe Payment Link da verificare.
+  Restano verifier Production, APP Apple ID e ID Stripe Payment Link da completare.
   Gate Apple chiuso; migrazione e cutover non autorizzati né eseguiti.
 
 ## Configurazione candidata e controlli offline — 23 ottobre
@@ -136,11 +136,14 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   `5b5458eb-4a69-454d-a5ac-76ffc93b8af7`, distinto dall'UUID live.
   Screenshot precedente conferma APP_REVIEW_DB -> calcio_users_review sul Worker review;
   non dimostra il binding futuro sul Worker pubblico.
-- Quattro input mancanti: UUID D1 test, origine verifier Production,
+- UUID D1 test comunicato dal proprietario il 23 ottobre:
+  `2aa786a8-6a61-495e-9c41-507496c39325`. I tre UUID live/review/test sono distinti;
+  registrati nel manifest candidato. Nessuna modifica ai binding remoti.
+- Tre input mancanti: origine verifier Production,
   APP Apple ID numerico, ID Payment Link Stripe Production. Il checker deve
   attualmente fallire: non equivale a readiness remota o approvazione del rilascio.
-  Checker mirato aggiornato sul nuovo input: segnala solo i quattro mancanti;
-  test della fixture incompleta reso indipendente dalla compilazione del manifest.
+  Test della fixture incompleta indipendente dalla compilazione del manifest.
+  Nessun test accettato ripetuto per il solo inserimento dell'UUID test.
 - Il blocco hard-coded `APPLE_PRODUCTION_NOT_READY` è ancora presente in
   worker/apple-handler.mjs: il solo flag NON abilita Production. Rimozione futura
   subordinata alla migrazione e alle accettazioni previste.
@@ -194,8 +197,8 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
 7. Non inventare esiti di test, deploy o collegamenti a database. Non inserire
    segreti, password, token o chiavi in GitHub, nei log o in chat.
 
-**Prossimo intervento:** acquisire UUID D1 di calcio_users_test dalla sua Overview,
-poi completare gli altri input mancanti e
-preparare il verifier Production separato. Non richiedere di nuovo il backup.
+**Prossimo intervento:** acquisire APP Apple ID numerico in App Store Connect
+(Informazioni app, diverso dall'ID prodotto 6822393280), poi preparare il verifier
+Production separato e completare l'ID Payment Link Stripe. Non richiedere di nuovo il backup.
 Telegram resta un requisito aperto prima della pubblicazione.
 Nessuna migrazione, nuovo acquisto, merge o deploy senza autorizzazione esplicita.
