@@ -140,8 +140,9 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
 - APP Apple ID numerico `6821570508` confermato dal proprietario e screenshot
   App Store Connect il 23 ottobre; bundle `com.calcioreport.app`. Inserito nel
   manifest e nel modello env Production. Nessun aggiornamento del servizio remoto.
-- Due input mancanti: origine verifier Production e ID Payment Link Stripe Production. Il checker deve
-  attualmente fallire: non equivale a readiness remota o approvazione del rilascio.
+- Origine Production candidata compilata: `https://apple.calcioreport.com`.
+  Resta mancante l'ID Payment Link Stripe Production: il checker deve ancora fallire.
+  Manifest compilato non equivale a readiness remota o approvazione del rilascio.
   Test della fixture incompleta indipendente dalla compilazione del manifest.
   Nessun test accettato ripetuto per il solo inserimento dell'UUID test.
 - Il blocco hard-coded `APPLE_PRODUCTION_NOT_READY` è ancora presente in
@@ -169,8 +170,11 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   hostname proposto `apple.calcioreport.com` -> `127.0.0.1:8791`.
   DNS/TLS ancora da verificare; candidato non installato, Caddy non ricaricato.
   Non sostituire il Caddyfile esistente; integrare il sito solo nel deploy autorizzato.
-- Prossimo controllo: DNS del nome Production proposto, poi completare servizio
-  e piano di attivazione. Nessun servizio riavviato, installato o esposto.
+- DNS predisposto dal proprietario il 23 ottobre, screenshot conferma record A
+  `apple.calcioreport.com` -> `51.254.212.179`, DNS only, TTL Auto; Sandbox invariato.
+  Origine inserita nel manifest (`b67f847`). Propagazione e TLS non ancora verificati.
+- Prossimo controllo: prerequisiti locali e disponibilità credenziali per preparare
+  il servizio separato e il piano di attivazione. Nessun servizio riavviato o installato.
 
 ## Attività ancora APERTE — solo il blocco App Store
 
@@ -221,8 +225,8 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
 7. Non inventare esiti di test, deploy o collegamenti a database. Non inserire
    segreti, password, token o chiavi in GitHub, nei log o in chat.
 
-**Prossimo intervento:** verifica DNS del candidato `apple.calcioreport.com`,
-poi completare hostname/TLS e preparazione del servizio Production separato.
+**Prossimo intervento:** completare prerequisiti e preparazione del servizio
+Production separato; record DNS creato, propagazione/TLS da verificare.
 Resta anche l'ID Payment Link Stripe da acquisire. Non richiedere di nuovo il backup.
 Telegram resta un requisito aperto prima della pubblicazione.
 Nessuna migrazione, nuovo acquisto, merge o deploy senza autorizzazione esplicita.
