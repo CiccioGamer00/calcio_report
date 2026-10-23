@@ -116,7 +116,8 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   vuote, sei trigger, chiavi esterne coerenti, utenti/scadenze invariati e
   riesecuzione rifiutata. Non è collaudo della migrazione D1 remota.
 - Piano e matrice configurazione in `docs/production-cutover.md` (`d8847c3`).
-  Restano verifier Production e ID Stripe Payment Link da completare.
+  Verifier Production ora predisposto e ID Stripe Payment Link acquisito;
+  vedere checkpoint aggiornati sotto.
   Gate Apple chiuso; migrazione e cutover non autorizzati né eseguiti.
 
 ## Configurazione candidata e controlli offline — 23 ottobre
@@ -141,7 +142,11 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   App Store Connect il 23 ottobre; bundle `com.calcioreport.app`. Inserito nel
   manifest e nel modello env Production. Nessun aggiornamento del servizio remoto.
 - Origine Production candidata compilata: `https://apple.calcioreport.com`.
-  Resta mancante l'ID Payment Link Stripe Production: il checker deve ancora fallire.
+  ID Stripe live fornito dal proprietario tramite URL dashboard:
+  `plink_1T6a4ZLCMe9gtpTW2ticsWmF`, inserito nel manifest (`4b81ffd`).
+  Screenshot link attivo Calcio Report PRO: prezzo web 4,99 EUR, distinto da Apple 9,99 EUR.
+  Checker offline eseguito sul manifest ora completo: exit 0, metadati coerenti.
+  Nessuna suite già accettata ripetuta; nessuna verifica API Stripe effettuata.
   Manifest compilato non equivale a readiness remota o approvazione del rilascio.
   Test della fixture incompleta indipendente dalla compilazione del manifest.
   Nessun test accettato ripetuto per il solo inserimento dell'UUID test.
@@ -210,9 +215,10 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   Blocco provisioning/TLS/rifiuto richieste anonime chiuso; non ripeterlo.
   Restano verifica del percorso firmato Worker->verifier e accesso Apple Production;
   non confondere questi esiti con accettazione acquisti o notifiche Production.
-- Prossimo blocco: acquisire ID Payment Link Stripe Production (`plink_...`),
-  ultimo input vuoto nel manifest; poi completare preparazione configurazione/cutover
-  Worker e migrazione D1, ancora non autorizzati né eseguiti.
+- ID Payment Link Stripe acquisito e manifest completo (vedi sopra).
+  Prossimo blocco: completare configurazione/cutover Worker e piano migrazione D1,
+  verificando coerenza importo web 499 centesimi, associazione account e gestione
+  pagamenti/coupon pre-cutover. Migrazione e deploy Worker non autorizzati né eseguiti.
 
 ## Attività ancora APERTE — solo il blocco App Store
 
@@ -263,8 +269,8 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
 7. Non inventare esiti di test, deploy o collegamenti a database. Non inserire
    segreti, password, token o chiavi in GitHub, nei log o in chat.
 
-**Prossimo intervento:** acquisire ID Payment Link Stripe Production e completare
-la configurazione candidata/cutover Worker-D1. Verifier OVH attivo, enabled,
+**Prossimo intervento:** completare configurazione candidata/cutover Worker-D1,
+con Payment Link acquisito e prezzo web 4,99 EUR da rispettare. Verifier OVH attivo, enabled,
 TLS e rifiuto richieste anonime confermati. Non richiedere di nuovo il backup.
 Telegram resta un requisito aperto prima della pubblicazione.
 Nessuna migrazione, nuovo acquisto, merge o ulteriore deploy senza autorizzazione
