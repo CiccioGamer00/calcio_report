@@ -125,9 +125,7 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   valori ignoti lasciati vuoti. Verifier Sandbox recuperato dal lavoro precedente:
   `https://apple-test.calcioreport.com` (non è l'URL notifiche del Worker).
 - `deploy/apple-verifier-production.env.example`: servizio separato, ambiente
-  Production, porta candidata 8791 da verificare su OVH; nessun segreto inserito.
-  Riferimenti Sandbox recuperati: /opt/calcio-report-apple, unit calcio-report-apple;
-  sono contesto precedente, non un'ispezione attuale del server.
+  Production, porta candidata 8791; nessun segreto inserito.
 - `scripts/check-production-inputs.mjs` controlla offline destinazione, UUID
   distinti, origini HTTPS separate, ID app distinto dal prodotto e gate chiuso.
   Quattro nuovi test mirati superati; nessuna chiamata Apple, D1 o deploy.
@@ -149,6 +147,22 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
 - Il blocco hard-coded `APPLE_PRODUCTION_NOT_READY` è ancora presente in
   worker/apple-handler.mjs: il solo flag NON abilita Production. Rimozione futura
   subordinata alla migrazione e alle accettazioni previste.
+
+## Verifier OVH — ispezione read-only 23 ottobre
+
+- Output fornito dal proprietario: Sandbox `calcio-report-apple` active,
+  utente `calcioapple`, directory `/opt/calcio-report-apple`,
+  unit `/etc/systemd/system/calcio-report-apple.service`.
+- Runtime effettivo `/opt/calcio-report-node24/bin/node`;
+  EnvironmentFile `/etc/calcio-report-apple/service.env` obbligatorio.
+  Porta TCP 8791 libera all'ispezione; nessun contenuto segreto letto/stampato.
+- Predisposto `deploy/calcio-report-apple-production.service`: utente/gruppo
+  candidati `calcioappleprod`, directory `/opt/calcio-report-apple-production`,
+  env `/etc/calcio-report-apple-production/service.env`, stesso runtime Node.
+  Unit solo su GitHub: non installata o verificata con systemd sul server;
+  account, codice, permessi e credenziali Production ancora da predisporre.
+- Prossimo controllo: reverse proxy/HTTPS Sandbox e configurazione hostname
+  Production. Nessun servizio riavviato, installato o esposto da questa ispezione.
 
 ## Attività ancora APERTE — solo il blocco App Store
 
@@ -199,8 +213,8 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
 7. Non inventare esiti di test, deploy o collegamenti a database. Non inserire
    segreti, password, token o chiavi in GitHub, nei log o in chat.
 
-**Prossimo intervento:** ispezione OVH in sola lettura del servizio Sandbox
-calcio-report-apple (stato, utente e directory; senza stampare Environment o segreti),
-poi preparare il servizio Production separato e completare l'ID Payment Link Stripe. Non richiedere di nuovo il backup.
+**Prossimo intervento:** inventario read-only del reverse proxy HTTPS su OVH,
+poi completare hostname/TLS e preparazione del servizio Production separato.
+Resta anche l'ID Payment Link Stripe da acquisire. Non richiedere di nuovo il backup.
 Telegram resta un requisito aperto prima della pubblicazione.
 Nessuna migrazione, nuovo acquisto, merge o deploy senza autorizzazione esplicita.
