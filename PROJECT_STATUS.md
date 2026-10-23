@@ -188,9 +188,17 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   riuscito: 48 pacchetti. Codice root:calcioappleprod, non scrivibile dal servizio.
   Avviso npm: jsrsasign@11.1.5 deprecato/non mantenuto; nessun aggiornamento
   automatico di dipendenze o npm. Da valutare separatamente, non è un audit vulnerabilità.
-- Prossimo passo: verifica unit candidata con systemd e accesso alla chiave come
-  utente del servizio, prima di richiedere autorizzazione all'avvio locale.
-  Unit non installata, servizio spento; Caddy non ricaricato, database invariati.
+- Verifica unit systemd e accesso a codice/chiave come utente servizio superati.
+  Avvisi CPUAccounting relativi a unit XFS di sistema, non al verifier.
+- Proprietario ha autorizzato esplicitamente installazione e avvio SOLO locale
+  del verifier Production. Unit installata; da nuova sessione SSH confermati
+  LoadState=loaded, ActiveState=active, SubState=running, ExecMainStatus=0, Job vuoto.
+  GET locale /health -> {"ok":true}; ss conferma solo `127.0.0.1:8791`.
+  La prima sessione terminale non restituiva output; non ripetere installazione.
+  Avvio automatico al boot non abilitato dal comando eseguito.
+- Prossimo passo: preparare e validare integrazione Caddy HTTPS, poi chiedere
+  autorizzazione alla sua attivazione. Caddy/Worker/database invariati.
+  Health prova solo liveness, non accesso API Apple Production o accrediti.
 
 ## Attività ancora APERTE — solo il blocco App Store
 
