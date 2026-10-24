@@ -356,6 +356,26 @@ Dopo l'esito verificare versione distribuita e pausa, senza ripetere i test chiu
 - D1 ancora invariato; migrazione non autorizzata. Prima del consenso rendere
   disponibile lo schema candidato e la verifica post-migrazione.
 
+## Distribuzione verificata e schema pronto — 24 ottobre
+
+- deployments list fornito dal proprietario: deployment 2026-10-24T12:24:17.455Z,
+  versione 1bf92e06-81d2-45f7-aac9-387a60266449 al 100%.
+  Versione precedente c59345ba-bd17-44d9-93dc-50407c5d94fd.
+  Nessuna distribuzione percentuale concorrente indicata. Controllo chiuso.
+  L'elenco attesta assegnazione traffico, non misura richieste già in corso.
+- Generato lo schema usando lo script già collaudato, sorgenti fissate a 0109f336.
+  Nessun test accettato ripetuto. File revisionabile deploy/production-initial.sql
+  al commit 023403445853231bc88cf2ec3a673c0f4f26192d.
+  SHA256: 045879b80e69a821d87e3d421bcdd87d29ac31ad039c075787d8e7fc610ff9ad.
+- Schema additivo: cinque tabelle vuote, un indice e sei trigger. Nessun backfill
+  o modifica iniziale di users/paid_until. Non è idempotente; stop su errore,
+  niente rilancio alla cieca o drop.
+- Prossima autorizzazione richiesta: applicazione di questo solo schema a
+  calcio_users, UUID 45681187-3565-4d36-8627-131c18ff1885, con manutenzione
+  attiva e registro/Apple disabilitati. D1 non ancora migrato.
+  Non include cutover, abilitazione Apple, acquisti, merge o App Review.
+  Backup del 23 ottobre già sul PC; nessuna nuova esportazione richiesta.
+
 ## Attività ancora APERTE — solo il blocco App Store
 
 1. **Inventario READ-ONLY della produzione:** identificare branch/commit candidati,
