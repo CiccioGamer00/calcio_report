@@ -81,15 +81,22 @@ Il nuovo registro controlla Payment Link, livemode, pagamento una tantum pagato,
 data checkout successiva al cutover e identità operazione stripe:sessionId.
 Un retry usa la stessa operazione e non deve aggiungere altri 30 giorni.
 Il candidato ora richiede currency='eur' e amount_total numerico esattamente 499
-nel registro Production (f46ec5e). Importi diversi, scontati, convertiti o mancanti
+nel registro Production (f46ec5e). Importi originali diversi, scontati o mancanti
 generano PRO_STRIPE_AMOUNT_RECONCILIATION_REQUIRED prima di accedere al DB.
 Il webhook restituisce il generico PAYMENT_DELIVERY_UNAVAILABLE 503, non un
 falso accredito riuscito: il solo retry non risolve un importo da riconciliare.
 La policy Sandbox non è modificata. Test mirati nuovi superati: 20 test inclusi
 15 sottocasi monetari, confine prima della persistenza, unpaid e controlli precedenti.
-Non è una prova di accredito remoto. Prima di distribuire, il proprietario deve
-confermare se usa promozioni/sconti Stripe o conversione automatica valuta:
-il vincolo candidato esclude queste varianti. I coupon PRO del cruscotto
+Non è una prova di accredito remoto. Il 24 ottobre il proprietario conferma assenza di sconti; screenshot del link:
+Consenti l'uso di codici promozionali = No. La conversione non è attestata dallo
+screenshot. La documentazione Stripe attuale indica Adaptive Pricing sempre
+abilitato per Payment Links e webhook in valuta/importo originali, con valuta
+pagata dal cliente in presentment_details. Il controllo EUR499 riguarda quindi
+il prezzo originale, non presentment_details. Nuovo caso locale passato (a7dbc18):
+presentment estero con originale EUR499 ammesso fino alla persistenza simulata;
+originale USD550 respinto anche se presentment dichiara EUR499.
+Fonte: https://docs.stripe.com/payments/currencies/localize-prices/adaptive-pricing?payment-ui=stripe-hosted
+Non è una verifica di un evento reale del nostro account/versione API. I coupon PRO del cruscotto
 restano un percorso distinto; non ne è stata rimossa la gestione.
 
 ## Riconciliazione prima del cutover
@@ -134,8 +141,8 @@ preservare gli account preesistenti senza assumere conteggi globali immutabili.
 
 ## Sequenza da rendere eseguibile e autorizzare
 
-1. Confermare eventuali sconti/conversioni Stripe e completare inventario dei casi
-   pendenti e associazione email. Preparare modalità verificabile di rollout e
+1. Completare inventario dei checkout pendenti/pre-cutover e associazione email;
+   sconti assenti confermati, distinzione valuta originale/presentment documentata. Preparare modalità verificabile di rollout e
    drenaggio del Worker corrente, usando la guardia candidata sopra.
 2. Preparare bundle identificato da commit e configurazione completa; PR #16
    aperta/draft/mergeable al controllo, nessuna integrazione implicita.
@@ -148,6 +155,23 @@ preservare gli account preesistenti senza assumere conteggi globali immutabili.
 
 Finché rollout/drenaggio e inventario Stripe sono aperti, non fornire un comando
 di migrazione come se il cutover fosse già pronto.
+
+## Bundle verificato localmente il 24 ottobre
+
+Sorgenti runtime dal commit b35630786743a485ee340fc16d7c1c7d150bf494,
+script versionato scripts/build-apple-production-worker.mjs, esbuild 0.28.2
+(stessa versione esatta dichiarata in mobile/package.json).
+Build riuscita: 105160 byte; SHA256
+ed9d15719b2a0e9b4291fa1c0a8fd4f8c9f88cac4b8e67ea2c934054c187871c.
+Smoke sul bundle effettivo: webhook in pausa -> 503 PRO_MAINTENANCE;
+Apple con flag 0 -> 503 APPLE_PURCHASES_DISABLED; accessi DB e rete vietati,
+nessuno effettuato. Non è dry-run Wrangler, verifica binding o deploy.
+PR16 non integrata. Ricostruire il candidato se cambiano sorgenti runtime.
+
+Screenshot Stripe: riscossione automatica imposte Sì; prezzo inclusivo già
+documentato. Pagina conferma ancora
+https://cicciogamer00.github.io/calcio_report/?stripe=success.
+Verificare destinazione finale prima della release; non modificata qui.
 
 ## Recupero e chiusura
 
