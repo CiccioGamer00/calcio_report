@@ -3,8 +3,10 @@ $ErrorActionPreference = 'Stop'
 $sourceRef = '8dd45006cdd3e447d4d1dc2c4943cf7d563f9296'
 $snapshotFile = Join-Path $SnapshotDirectory 'wrangler.jsonc'
 if (-not (Test-Path -LiteralPath $snapshotFile)) { throw 'Copia locale Worker non trovata.' }
-$nodeMajor = [int]((& node -p 'process.versions.node.split(".")[0]') | Select-Object -Last 1)
-if ($LASTEXITCODE -ne 0 -or $nodeMajor -lt 22) { throw 'Serve Node 22 o successivo.' }
+$nodeVersion = & node --version
+if ($LASTEXITCODE -ne 0) { throw 'Node non disponibile.' }
+$nodeMajor = [int]($nodeVersion.Trim().TrimStart('v').Split('.')[0])
+if ($nodeMajor -lt 22) { throw 'Serve Node 22 o successivo.' }
 $stageDir = Join-Path $env:USERPROFILE ('calcio-report-maintenance-candidate-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
 New-Item -ItemType Directory -Path $stageDir -ErrorAction Stop | Out-Null
 $files = @(
