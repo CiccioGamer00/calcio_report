@@ -325,6 +325,23 @@ Comando di deploy da eseguire sul PC autenticato; esito ancora pendente.
 Nessuna migrazione D1, apertura gate Apple, merge o App Review inclusi.
 Dopo l'esito verificare versione distribuita e pausa, senza ripetere i test chiusi.
 
+## Deploy manutenzione completato — 24 ottobre
+
+- Proprietario conferma upload e deploy triggers riusciti tramite npx.cmd
+  wrangler@4.152.0 deploy --config wrangler.maintenance.json --keep-vars.
+  npx.ps1 era stato bloccato da ExecutionPolicy PRIMA di avviare il deploy;
+  risolto usando npx.cmd senza modificare policy di sistema.
+- Version ID: 1bf92e06-81d2-45f7-aac9-387a60266449.
+  Custom domain api.calcioreport.com, production enabled, previews disabled.
+  Bundle 102.70 KiB / gzip 23.73 KiB.
+- Output conferma DB live corretto, tre variabili preesistenti conservate,
+  APPLE_PRODUCTION_ENABLED=0, PRO_LEDGER_ENABLED=0, PRO_WRITES_PAUSED=1,
+  ambiente Production e verifier dedicato. Nessuna migrazione D1 eseguita.
+- NON ripetere il deploy o chiedere nuovamente il relativo consenso.
+  Prossimo passo: controllo HTTP pubblico non autenticato di pausa/gate.
+  Questo controllo non prova da solo drenaggio delle richieste già in corso.
+  Migrazione D1, apertura Apple, merge e App Review restano non autorizzati.
+
 ## Attività ancora APERTE — solo il blocco App Store
 
 1. **Inventario READ-ONLY della produzione:** identificare branch/commit candidati,
