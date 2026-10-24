@@ -500,12 +500,17 @@ Dopo l'esito verificare versione distribuita e pausa, senza ripetere i test chiu
   Primo tentativo senza -i fallito (publickey); secondo trasferimento e formato riusciti.
 - Eseguito consapevolmente wrangler 4.152.0 secret put APPLE_VERIFIER_SECRET
   con wrangler.pro-ledger.json: output Success! Uploaded secret.
-  Il comando pubblica una nuova versione: b9021019 è quindi la versione precedente;
-  identificativo successivo ancora da acquisire. Nessun valore segreto esposto.
+  Deployment Secret Change confermato dal proprietario: 2026-10-24T12:44:25.655Z,
+  versione b2d20f2b-9f9a-4294-b042-705888e93cf4 al 100%.
+  b9021019 è la versione precedente. Nessun valore segreto esposto.
 - Proprietario conferma eliminazione delle copie temporanee sul PC e su OVH.
   Configurazione persistente del servizio conservata. Apple resta disabilitato.
-- Prossimo passo read-only: acquisire versione/deployment successivo al secret put.
-  Non ripetere test HTTP già chiusi. Worker->verifier, API Apple Production e
+- Identificazione deployment conclusa, non ripeterla. Codice Apple ispezionato:
+  gate flag e sorgente precedono la chiamata al verifier, quindi una richiesta
+  pubblica a gate chiuso non collauda Worker->verifier. Nessun gate rimosso.
+  Prossimo passo: chiamata read-only getNotificationHistory Production da OVH
+  per verificare credenziali API Apple, con output solo esito/codici numerici.
+  Comando fornito, non ancora eseguito. Worker->verifier, API Apple Production e
   isolamento review sul pubblico restano da completare; nessuna apertura gate autorizzata.
 
 ## Attività ancora APERTE — solo il blocco App Store
@@ -557,9 +562,9 @@ Dopo l'esito verificare versione distribuita e pausa, senza ripetere i test chiu
 7. Non inventare esiti di test, deploy o collegamenti a database. Non inserire
    segreti, password, token o chiavi in GitHub, nei log o in chat.
 
-**Prossimo intervento:** acquisire con deployments list l'identificativo della versione
-pubblicata da secret put, poi preparare la verifica Worker->verifier e l'isolamento
-review. Schema D1 e registro PRO sono già attivi; trasferimento/installazione segreto
+**Prossimo intervento:** ottenere esito read-only getNotificationHistory Production
+su OVH; poi preparare verifica Worker->verifier e isolamento review. Deployment
+Secret Change b2d20f2b-9f9a-4294-b042-705888e93cf4 confermato al 100%. Schema D1 e registro PRO sono già attivi; trasferimento/installazione segreto
 e pulizia copie temporanee completati. Non ripetere manutenzione, migrazione, cutover,
 backup o test chiusi. Gate Apple ancora chiuso; Telegram ancora da configurare.
 Nessun ulteriore deploy, apertura Apple, merge o invio App Review senza autorizzazione.
