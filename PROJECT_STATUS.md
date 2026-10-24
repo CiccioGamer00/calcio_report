@@ -526,12 +526,18 @@ Dopo l'esito verificare versione distribuita e pausa, senza ripetere i test chiu
 - Query SELECT mirata al solo account review sul DB review eseguita con Wrangler:
   email acquisita e salvata nel candidato locale, senza mostrarla in chat.
   Nessuna scrittura D1 o deploy. Account esistente non ricreato.
-- Restano APP_REVIEW_LICENSE_SECRET dedicato al percorso pubblico e
-  APP_REVIEW_VERIFIER_SECRET del verifier Sandbox. Preparare copie protette,
-  mai inserire valori in Git/chat. Non ruotare segreti del Worker review esistente.
-- Prossimo passo manuale: export protetto del solo HMAC Sandbox su OVH,
-  seguito da trasferimento SSH e generazione locale del segreto sessione.
-  Nessun secret review ancora installato sul Worker pubblico.
+- Proprietario conferma export temporaneo HMAC Sandbox mode 0600 su OVH,
+  trasferimento SCP con chiave esplicita e preparazione di review-secrets.json
+  in nuova cartella Windows con ACL riservata. HMAC grezzo locale eliminato.
+  Nuovo APP_REVIEW_LICENSE_SECRET casuale 32 byte per il percorso pubblico;
+  APP_REVIEW_VERIFIER_SECRET copiato dal Sandbox. Nessun valore esposto.
+  Credenziali del Worker review esistente non ruotate.
+- Variabili PowerShell: calcioReviewSecretsDir e calcioReviewSecretsFile.
+  Copia temporanea OVH .calcio-report-apple-review-hmac ancora da eliminare,
+  insieme al JSON locale dopo installazione riuscita.
+- Prossimo passo: candidato locale wrangler.app-review.json con review=1,
+  Apple Production=0, binding review distinto e bundle invariato; dry-run.
+  Nessun secret review installato sul pubblico; nessun deploy review autorizzato.
 
 ## Attività ancora APERTE — solo il blocco App Store
 
