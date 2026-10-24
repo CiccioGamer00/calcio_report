@@ -42,6 +42,7 @@ mai un rilancio alla cieca. Il test SQLite già superato non è una migrazione D
 | APPLE_PRODUCTION_ENABLED | 0; resta anche il gate sorgente APPLE_PRODUCTION_NOT_READY |
 | APPLE_VERIFIER_URL | https://apple.calcioreport.com |
 | APPLE_VERIFIER_SECRET | Segreto HMAC dedicato già sul server; trasferimento protetto ancora da predisporre, mai in Git/chat |
+| PRO_WRITES_PAUSED | 0 normalmente; 1 solo nella finestra autorizzata, con candidato effettivamente distribuito |
 | PRO_LEDGER_ENABLED | 1 soltanto nel cutover autorizzato, dopo schema e riconciliazione |
 | PRO_LEDGER_CUTOVER_MS | Istante positivo non futuro fissato al cutover, poi immutato; non inventare ora |
 | STRIPE_PRO_PAYMENT_LINK_ID | plink_1T6a4ZLCMe9gtpTW2ticsWmF |
@@ -79,12 +80,17 @@ atteso; serve riconciliazione esplicita, senza creare account automaticamente.
 Il nuovo registro controlla Payment Link, livemode, pagamento una tantum pagato,
 data checkout successiva al cutover e identità operazione stripe:sessionId.
 Un retry usa la stessa operazione e non deve aggiungere altri 30 giorni.
-Il codice letto NON verifica esplicitamente currency o amount_total:
-l'allowlist del link non equivale a un controllo di 499 EUR centesimi.
-Prima del cutover definire e implementare la politica importo/valuta, compresi
-eventuali sconti del checkout; non aggiungere un vincolo 999 né assumere coupon
-Stripe attivi. I coupon PRO del cruscotto sono un percorso distinto.
-Questa è una verifica statica, non un pagamento remoto collaudato.
+Il candidato ora richiede currency='eur' e amount_total numerico esattamente 499
+nel registro Production (f46ec5e). Importi diversi, scontati, convertiti o mancanti
+generano PRO_STRIPE_AMOUNT_RECONCILIATION_REQUIRED prima di accedere al DB.
+Il webhook restituisce il generico PAYMENT_DELIVERY_UNAVAILABLE 503, non un
+falso accredito riuscito: il solo retry non risolve un importo da riconciliare.
+La policy Sandbox non è modificata. Test mirati nuovi superati: 20 test inclusi
+15 sottocasi monetari, confine prima della persistenza, unpaid e controlli precedenti.
+Non è una prova di accredito remoto. Prima di distribuire, il proprietario deve
+confermare se usa promozioni/sconti Stripe o conversione automatica valuta:
+il vincolo candidato esclude queste varianti. I coupon PRO del cruscotto
+restano un percorso distinto; non ne è stata rimossa la gestione.
 
 ## Riconciliazione prima del cutover
 
@@ -103,11 +109,34 @@ Questa è una verifica statica, non un pagamento remoto collaudato.
 - PRO da pulsante admin e nuovi coupon restano previsti. I casi remoti non ancora
   accettati vanno verificati sul candidato isolato, senza ripetere il grant già chiuso.
 
+## Sospensione candidata — inattiva sul live
+
+worker/pro-production-maintenance.mjs, collegato soltanto al ramo Production
+di apple-production-entry.mjs (01fc96a), legge PRO_WRITES_PAUSED='1'.
+Rifiuta con 503 PRO_MAINTENANCE, Retry-After 60 e no-store:
+POST /stripe/webhook, /license/redeem, /admin/grant, /admin/adjust,
+/auth/delete, /admin/disable; GET /admin/mint.
+Login, letture cruscotto, football e preflight rimangono delegati.
+Review autenticata viene instradata prima della guardia e conserva il DB separato.
+Cinque nuovi test locali passati, inclusa integrazione router review con handler
+simulati. Nessun test remoto né suite accettata rieseguiti.
+
+Il flag non ha effetto sul vecchio codice live: serve prima distribuire il
+candidato completo con pause=1, ledger=0 e Apple Production=0, SOLO previa
+autorizzazione. Non aprire Apple durante questa finestra. La guardia non annulla
+richieste in corso o vecchie versioni ancora raggiungibili: prima di migrare
+occorrono evidenza del completamento del rollout, assenza di writer legacy
+concorrenti e drenaggio delle richieste precedenti. Non considerare un'attesa
+arbitraria una prova. I webhook respinti richiedono successiva gestione dei retry.
+Questa è una sospensione PRO, non un blocco totale del DB: nuove registrazioni
+e attività non finanziarie possono continuare; confronti post-migrazione devono
+preservare gli account preesistenti senza assumere conteggi globali immutabili.
+
 ## Sequenza da rendere eseguibile e autorizzare
 
-1. Chiudere politica Stripe importo/account e inventario dei casi pendenti.
-   Definire il meccanismo concreto di sospensione dei writer legacy
-   (Stripe, redeem, admin), compresi richieste in corso e retry.
+1. Confermare eventuali sconti/conversioni Stripe e completare inventario dei casi
+   pendenti e associazione email. Preparare modalità verificabile di rollout e
+   drenaggio del Worker corrente, usando la guardia candidata sopra.
 2. Preparare bundle identificato da commit e configurazione completa; PR #16
    aperta/draft/mergeable al controllo, nessuna integrazione implicita.
 3. Solo con autorizzazione: sospendere i writer, applicare lo schema al DB live
@@ -117,7 +146,7 @@ Questa è una verifica statica, non un pagamento remoto collaudato.
 5. Eseguire soltanto accettazioni ancora aperte e verifica firmata Worker-verifier;
    apertura gate Apple e release finale richiedono una decisione separata.
 
-Finché sospensione writer e gestione Stripe sono aperte, non fornire un comando
+Finché rollout/drenaggio e inventario Stripe sono aperti, non fornire un comando
 di migrazione come se il cutover fosse già pronto.
 
 ## Recupero e chiusura
