@@ -508,10 +508,15 @@ Dopo l'esito verificare versione distribuita e pausa, senza ripetere i test chiu
 - Identificazione deployment conclusa, non ripeterla. Codice Apple ispezionato:
   gate flag e sorgente precedono la chiamata al verifier, quindi una richiesta
   pubblica a gate chiuso non collauda Worker->verifier. Nessun gate rimosso.
-  Prossimo passo: chiamata read-only getNotificationHistory Production da OVH
-  per verificare credenziali API Apple, con output solo esito/codici numerici.
-  Comando fornito, non ancora eseguito. Worker->verifier, API Apple Production e
-  isolamento review sul pubblico restano da completare; nessuna apertura gate autorizzata.
+  getNotificationHistory Production eseguito: HTTP 401, nessun codice Apple numerico.
+  Orologio OVH sincronizzato NTP (2026-10-24 12:48:29 UTC).
+  Confronto locale: KEY_ID, ISSUER_ID e byte chiave privata coincidono col Sandbox;
+  formato Key ID OK. Non emerge errore di copia; causa del 401 non determinata.
+  Non dichiarare credenziali Production accettate o attribuire con certezza il 401
+  all'app non pubblicata. Non rigenerare chiavi o ripetere richieste senza nuovo motivo.
+  Worker->verifier e isolamento review sul pubblico restano da completare.
+  Prossimo passo: preparare config locale review con binding dedicato e flag 0,
+  senza deploy. Email riservata e due segreti review ancora da configurare.
 
 ## Attività ancora APERTE — solo il blocco App Store
 
@@ -562,8 +567,10 @@ Dopo l'esito verificare versione distribuita e pausa, senza ripetere i test chiu
 7. Non inventare esiti di test, deploy o collegamenti a database. Non inserire
    segreti, password, token o chiavi in GitHub, nei log o in chat.
 
-**Prossimo intervento:** ottenere esito read-only getNotificationHistory Production
-su OVH; poi preparare verifica Worker->verifier e isolamento review. Deployment
+**Prossimo intervento:** predisporre configurazione locale per isolamento review,
+inizialmente disabilitata. API Apple Production risponde 401: causa ancora aperta,
+orologio sincronizzato e credenziali uguali al Sandbox. Non ripetere chiamate senza
+nuova evidenza. Verifica Worker->verifier ancora aperta. Deployment
 Secret Change b2d20f2b-9f9a-4294-b042-705888e93cf4 confermato al 100%. Schema D1 e registro PRO sono già attivi; trasferimento/installazione segreto
 e pulizia copie temporanee completati. Non ripetere manutenzione, migrazione, cutover,
 backup o test chiusi. Gate Apple ancora chiuso; Telegram ancora da configurare.
