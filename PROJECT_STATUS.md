@@ -245,9 +245,19 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   candidato in pausa, ledger=0, Apple=0, completamento rollout e drenaggio
   verificabile dei writer legacy; la guardia non annulla richieste già in corso.
   Schema/migrazione/Worker live/backup invariati. Nessuna suite accettata ripetuta.
-- Residui: confermare con proprietario eventuali sconti/promozioni Stripe e
-  conversione valuta (vincolo candidato EUR499 li esclude); inventario checkout/
-  coupon pendenti, bundle completo e modalità rollout/drenaggio da verificare.
+- Proprietario 24 ottobre: nessun codice sconto; screenshot conferma promozioni No.
+  Conversione non attestata, ma documentazione Stripe chiarisce Adaptive Pricing
+  nei Payment Links: webhook mantiene valuta/importo originali, presentment_details
+  separato. Corretto il precedente assunto che EUR499 escludesse ogni conversione.
+  Nuovo test mirato a7dbc18 passato; nessuna suite precedente ripetuta.
+- Bundle completo costruito con script versionato ed esbuild 0.28.2 dal commit
+  runtime b356307: 105160 byte, SHA256 in docs/production-cutover.md.
+  Smoke bundle passato: pausa Stripe 503 e gate Apple 0 503 senza accessi DB/rete.
+  Non equivale a deploy/dry-run Wrangler/verifica binding. PR16 non integrata.
+- Screenshot Stripe: imposte automatiche Sì; conferma ancora su vecchio GitHub
+  Pages /calcio_report/?stripe=success, da verificare prima della release.
+- Residui: inventario checkout/coupon pendenti e modalità rollout/drenaggio;
+  configurazione completa/segreti/binding remoti da preparare senza esporre valori.
   Non chiedere di nuovo backup, ID, HTTPS, grant TEST o acquisto TestFlight.
 - Telegram resta da configurare prima della pubblicazione.
 
@@ -300,8 +310,8 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
 7. Non inventare esiti di test, deploy o collegamenti a database. Non inserire
    segreti, password, token o chiavi in GitHub, nei log o in chat.
 
-**Prossimo intervento:** confermare varianti Stripe (sconti/conversione), poi
-completare bundle e piano eseguibile di rollout/drenaggio Worker-D1.
+**Prossimo intervento:** inventario checkout/coupon pendenti e piano eseguibile
+di rollout/drenaggio Worker-D1; bundle candidato già costruito e smoke locale passato.
 Controllo EUR499 e sospensione PRO già nel candidato, non sul live. Verifier OVH attivo, enabled,
 TLS e rifiuto richieste anonime confermati. Non richiedere di nuovo il backup.
 Telegram resta un requisito aperto prima della pubblicazione.
