@@ -1,8 +1,10 @@
 import { registerPlugin, Capacitor } from '@capacitor/core';
+import { resolveBuildProfile } from './build-profile.mjs';
 import { createPurchases } from './purchases.mjs';
 
-// Fixed isolated backend. The server's explicit Sandbox switch gates purchases.
-const base = 'https://calcio-report-test.stemoro84.workers.dev';
+// Compiled profile is shared by authentication, data and purchase requests.
+const profile = resolveBuildProfile(__CR_MOBILE_PROFILE__);
+const base = profile.baseUrl;
 export function installPurchases(session) {
   const native = registerPlugin('CRStoreKit');
   const notice = text => window.showToast({ title: 'PRO 30 giorni', text, allowDisable: false });
@@ -19,7 +21,8 @@ export function installPurchases(session) {
     if (!response.ok) throw Error('PURCHASES_UNAVAILABLE');
     return response.json();
   };
-  const manager = createPurchases({ native, session, request,
+  const manager = createPurchases({ native, session, request, environment: profile.purchaseEnvironment,
+    allowAppReview: ['production', 'review'].includes(profile.name),
     onApplied: async () => { await window.refreshTopAuthUI?.(); } });
   let opening = false;
   window.CRNativePurchase = async () => {

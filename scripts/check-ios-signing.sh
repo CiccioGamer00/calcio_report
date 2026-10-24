@@ -103,7 +103,11 @@ with zipfile.ZipFile(ipas[0]) as z:
     assert info['CFBundleIdentifier'] == 'com.calcioreport.app'
     app = infos[0].removesuffix('Info.plist')
     config = z.read(app + 'public/config.js').decode()
-    assert 'https://calcio-report-test.stemoro84.workers.dev' in config
+    profile = os.environ.get('CR_MOBILE_PROFILE', 'sandbox')
+    origins = {'sandbox': 'https://calcio-report-test.stemoro84.workers.dev',
+               'review': 'https://calcio-report-review.stemoro84.workers.dev'}
+    assert profile in origins, 'Internal build profile required'
+    assert origins[profile] in config
     assert 'https://api.calcioreport.com' not in config
     assert '"paymentUrl": ""' in config and '"paypalUrl": ""' in config
 out = Path(os.environ['RUNNER_TEMP']) / 'calcio-ipa'
@@ -114,7 +118,7 @@ shutil.copyfile(ipas[0], target)
     'commit': os.environ['GITHUB_SHA'], 'bundleId': info['CFBundleIdentifier'],
     'version': info['CFBundleShortVersionString'], 'build': info['CFBundleVersion'],
     'sha256': hashlib.sha256(target.read_bytes()).hexdigest(),
-    'backend': 'test', 'payments': 'disabled', 'appleUpload': False,
+    'backend': 'review' if profile == 'review' else 'test', 'mobileProfile': profile, 'payments': 'disabled', 'appleUpload': False,
 }, indent=2) + '\n')
 print('IPA export verified: correct bundle, test backend and disabled payment URLs.')
 PYVERIFY

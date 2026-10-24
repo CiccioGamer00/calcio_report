@@ -1,8 +1,10 @@
+import { resolveBuildProfile } from './build-profile.mjs';
 import { Capacitor } from '@capacitor/core';
 import { SecureStorage, KeychainAccess } from '@aparajita/capacitor-secure-storage';
 import { createSession, recoveryToken } from './session.mjs';
 import { installPurchases } from './purchase-ui.mjs';
 
+const profile = resolveBuildProfile(__CR_MOBILE_PROFILE__);
 window.CRNativeRecoveryToken = recoveryToken;
 window.CRNativeStorageError = () => {
   let notice = document.getElementById('nativeStorageError');
@@ -23,7 +25,7 @@ if (Capacitor.getPlatform() !== 'ios' || !Capacitor.isPluginAvailable('SecureSto
     get: key => SecureStorage.get(key, false, false),
     set: (key, value) => SecureStorage.set(key, value, false, false, KeychainAccess.whenUnlockedThisDeviceOnly),
     remove: key => SecureStorage.remove(key, false),
-  }, window.localStorage);
+  }, window.localStorage, Date.now, profile.sessionNamespace);
 }
 window.CRSession.ready.catch(() => window.CRNativeStorageError());
 if (window.CRSession.save) {

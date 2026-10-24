@@ -1,5 +1,5 @@
 // Internal accounting API: inputs must come from authenticated, trusted adapters.
-// Not enabled in worker.js. No HTTP request may supply arbitrary events.
+// Only trusted payment adapters may supply events; never raw HTTP event objects.
 const sources = new Set(['apple', 'stripe', 'admin', 'redeem']);
 const positive = n => Number.isSafeInteger(n) && n > 0;
 const identifier = s => typeof s === 'string' && /^[A-Za-z0-9:_-]{1,180}$/.test(s);
@@ -8,10 +8,16 @@ function fail(code) { throw new Error(code); }
 export function canonicalProEvent(event) {
   if (!event || !identifier(event.id) || !sources.has(event.source) ||
       !positive(event.at)) fail('PRO_EVENT_INVALID');
+  if (event.order !== undefined && (!Number.isSafeInteger(event.order) || event.order < 1 || event.source === 'apple')) fail('PRO_EVENT_INVALID');
+  const ordering = event.order === undefined ? {} : {order:event.order};
   if (event.kind === 'grant' && positive(event.durationMs) &&
       event.durationMs <= 365 * 86400000) {
     return { id: event.id, kind: 'grant', source: event.source,
-      at: event.at, durationMs: event.durationMs };
+      at: event.at, durationMs: event.durationMs, ...ordering };
+  }
+  if (event.kind === 'adjust' && event.source === 'admin' &&
+      Number.isSafeInteger(event.deltaMs) && Math.abs(event.deltaMs) <= 365 * 86400000) {
+    return { id: event.id, kind: 'adjust', source: 'admin', at: event.at, deltaMs: event.deltaMs, ...ordering };
   }
   if (event.kind === 'status' && event.source === 'apple' &&
       identifier(event.targetId) && typeof event.revoked === 'boolean') {
@@ -41,11 +47,13 @@ export function projectProUntil(baselineUntil, rawEvents) {
     if (!old || e.at > old.at || (e.at === old.at && e.revoked)) statuses.set(e.targetId, e);
   }
   let until = baselineUntil;
-  const grants = events.filter(e => e.kind === 'grant').sort((a, b) =>
-    a.at - b.at || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const grants = events.filter(e => e.kind === 'grant' || e.kind === 'adjust').sort((a, b) =>
+    a.at - b.at || (a.order || 0) - (b.order || 0) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   for (const e of grants) {
     if (e.source === 'apple' && statuses.get(e.id)?.revoked) continue;
-    until = Math.max(until, e.at) + e.durationMs;
+    until = e.kind === 'adjust'
+      ? (e.deltaMs < 0 ? Math.max(0, until + e.deltaMs) : Math.max(until, e.at) + e.deltaMs)
+      : Math.max(until, e.at) + e.durationMs;
     if (!Number.isSafeInteger(until)) fail('PRO_EXPIRY_OVERFLOW');
   }
   return until;
@@ -101,6 +109,8 @@ export async function applyProEvents(db, accountId, config, inputEvents, now) {
     }
     const all = stored.results.filter(r => r.account_id === accountId).map(r => JSON.parse(r.event_json));
     const until = projectProUntil(state.baseline_until, [...all, ...pending]);
+    const activate = state.projected_until <= now && until > now &&
+      pending.some(e => e.kind === 'grant' || (e.kind === 'adjust' && e.deltaMs > 0));
     const operation = crypto.randomUUID();
     const result = batchRows(await db.batch([
       db.prepare(`UPDATE pro_entitlement_accounts SET projected_until=?, revision=?
@@ -115,10 +125,10 @@ export async function applyProEvents(db, accountId, config, inputEvents, now) {
         SELECT environment,account_id,?,?,? FROM pro_entitlement_accounts
         WHERE environment=? AND account_id=? AND revision=?`)
         .bind(e.id, JSON.stringify(e), now, env, accountId, operation)),
-      db.prepare(`UPDATE users SET paid_until=? WHERE id=? AND created_at=?
+      db.prepare(`UPDATE users SET paid_until=?, paid_activated_at=CASE WHEN ? THEN ? ELSE paid_activated_at END WHERE id=? AND created_at=?
         AND EXISTS(SELECT 1 FROM pro_entitlement_accounts
           WHERE environment=? AND account_id=? AND revision=?)`)
-        .bind(until, accountId, state.account_created_at, env, accountId, operation),
+        .bind(until, activate ? 1 : 0, now, accountId, state.account_created_at, env, accountId, operation),
     ]));
     if (result[0].meta.changes === 1) return Object.freeze({ state: 'applied',
       paidUntil: until, duplicate: pending.length === 0 });
