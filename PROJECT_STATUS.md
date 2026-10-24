@@ -543,7 +543,10 @@ Dopo l'esito verificare versione distribuita e pausa, senza ripetere i test chiu
   --keep-vars e --secrets-file del JSON protetto per aggiungere due segreti review
   e binding review insieme. Nessuna migrazione, apertura Apple Production, merge
   o invio App Review inclusi. Non ripetere dry-run/build o test accettati.
-  Consenso a questo deploy ancora pendente; pubblico invariato.
+  Consenso ricevuto dal proprietario: "autorizzo tutto quello che serve".
+  Procedere al deploy review proposto, senza richiedere nuovamente consenso.
+  Non interpretare il consenso come evidenza tecnica per aprire Apple Production
+  con API ancora 401. Nessun esito deploy review ancora ricevuto.
 
 ## Attività ancora APERTE — solo il blocco App Store
 
@@ -594,11 +597,18 @@ Dopo l'esito verificare versione distribuita e pausa, senza ripetere i test chiu
 7. Non inventare esiti di test, deploy o collegamenti a database. Non inserire
    segreti, password, token o chiavi in GitHub, nei log o in chat.
 
-**Prossimo intervento:** predisporre configurazione locale per isolamento review,
-inizialmente disabilitata. API Apple Production risponde 401: causa ancora aperta,
-orologio sincronizzato e credenziali uguali al Sandbox. Non ripetere chiamate senza
-nuova evidenza. Verifica Worker->verifier ancora aperta. Deployment
-Secret Change b2d20f2b-9f9a-4294-b042-705888e93cf4 confermato al 100%. Schema D1 e registro PRO sono già attivi; trasferimento/installazione segreto
-e pulizia copie temporanee completati. Non ripetere manutenzione, migrazione, cutover,
-backup o test chiusi. Gate Apple ancora chiuso; Telegram ancora da configurare.
-Nessun ulteriore deploy, apertura Apple, merge o invio App Review senza autorizzazione.
+**PUNTO DI RIPRESA — 24 ottobre:** proprietario autorizza completamento delle
+operazioni necessarie. Fornito blocco PowerShell per singolo deploy del candidato
+review già dry-run verificato, con --keep-vars e --secrets-file.
+Attendere output/versione: NON dichiarare deploy completato, NON rilanciarlo alla
+cieca. Dopo successo pulizia copie temporanee prevista nello stesso blocco;
+eventuale errore SSH di pulizia NON significa fallimento del deploy.
+Candidato PC wrangler.app-review.json; segreti protetti indicati dalle variabili
+calcioReviewSecretsFile / calcioReviewSecretsDir della PowerShell corrente.
+Prima versione live nota b2d20f2b-9f9a-4294-b042-705888e93cf4.
+API Apple Production 401 ancora irrisolto, NTP OK, credenziali uguali al Sandbox:
+nessuna apertura gate prima di risolvere e completare accettazioni.
+Restano verifica pubblica del nuovo percorso review senza ripetere acquisti già
+accettati, Worker->verifier Production, casi residui di accettazione, build finale,
+metadati/review e Telegram. Non rileggere archivi/core-v2 o ripetere migrazione,
+cutover, backup e test chiusi. Main e PR non merged.
