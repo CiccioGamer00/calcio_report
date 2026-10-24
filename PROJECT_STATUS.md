@@ -342,6 +342,20 @@ Dopo l'esito verificare versione distribuita e pausa, senza ripetere i test chiu
   Questo controllo non prova da solo drenaggio delle richieste già in corso.
   Migrazione D1, apertura Apple, merge e App Review restano non autorizzati.
 
+## Verifica pubblica manutenzione — 24 ottobre, 14:25 Europe/Rome
+
+- Output curl del proprietario: POST /stripe/webhook non autenticato -> HTTP 503
+  PRO_MAINTENANCE, Retry-After 60, no-store (12:25:32 UTC).
+  GET /apple/token -> HTTP 503 APPLE_PURCHASES_DISABLED (12:25:33 UTC).
+- Pausa e gate verificati sul dominio api.calcioreport.com. Controllo chiuso;
+  non ripetere queste richieste senza regressione pertinente.
+- Prossimo controllo read-only: deployments list del Worker per verificare
+  assegnazione del traffico alla versione 1bf92e06-81d2-45f7-aac9-387a60266449.
+  Due risposte HTTP non certificano da sole il completamento del rollout globale
+  o il drenaggio di richieste legacy in corso.
+- D1 ancora invariato; migrazione non autorizzata. Prima del consenso rendere
+  disponibile lo schema candidato e la verifica post-migrazione.
+
 ## Attività ancora APERTE — solo il blocco App Store
 
 1. **Inventario READ-ONLY della produzione:** identificare branch/commit candidati,
