@@ -518,6 +518,21 @@ Dopo l'esito verificare versione distribuita e pausa, senza ripetere i test chiu
   Prossimo passo: preparare config locale review con binding dedicato e flag 0,
   senza deploy. Email riservata e due segreti review ancora da configurare.
 
+## Candidato isolamento review sul PC — 24 ottobre
+
+- Proprietario conferma creazione locale wrangler.app-review-preparation.json
+  dalla config pro-ledger: aggiunto APP_REVIEW_DB con UUID review già noto,
+  account ID riservato e URL verifier Sandbox; APP_REVIEW_ENABLED=0, Apple=0.
+- Query SELECT mirata al solo account review sul DB review eseguita con Wrangler:
+  email acquisita e salvata nel candidato locale, senza mostrarla in chat.
+  Nessuna scrittura D1 o deploy. Account esistente non ricreato.
+- Restano APP_REVIEW_LICENSE_SECRET dedicato al percorso pubblico e
+  APP_REVIEW_VERIFIER_SECRET del verifier Sandbox. Preparare copie protette,
+  mai inserire valori in Git/chat. Non ruotare segreti del Worker review esistente.
+- Prossimo passo manuale: export protetto del solo HMAC Sandbox su OVH,
+  seguito da trasferimento SSH e generazione locale del segreto sessione.
+  Nessun secret review ancora installato sul Worker pubblico.
+
 ## Attività ancora APERTE — solo il blocco App Store
 
 1. **Inventario READ-ONLY della produzione:** identificare branch/commit candidati,
