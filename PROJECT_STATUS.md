@@ -389,6 +389,22 @@ Dopo l'esito verificare versione distribuita e pausa, senza ripetere i test chiu
   Su errore fermarsi e diagnosticare; non ripetere automaticamente la migrazione.
   Non richiedere nuovamente questo consenso.
 
+## Migrazione D1 applicata — 24 ottobre
+
+- Proprietario conferma import remoto riuscito dello schema autorizzato su DB
+  45681187-3565-4d36-8627-131c18ff1885: 12 query, 4.38 ms,
+  8 righe lette / 25 scritte secondo contatori D1, dimensione 0.10 MB.
+  I contatori non rappresentano automaticamente utenti modificati.
+- Bookmark restituito:
+  0000334f-00000007-0000510e-510019ba1cfe03f56e6dce4618634619.
+- Migrazione conclusa: NON ripetere l'import. Pausa PRO rimane attiva;
+  PRO_LEDGER_ENABLED=0 e APPLE_PRODUCTION_ENABLED=0 invariati.
+- Prossimo passo: unica verifica read-only post-migrazione di strutture,
+  registri vuoti e aggregati users/scadenze; esito ancora pendente.
+  La verifica precedente dello schema assente non viene ripetuta: è verifica
+  del nuovo stato conseguente all'import autorizzato.
+- Attivazione registro/cutover, apertura Apple, merge e review non autorizzati.
+
 ## Attività ancora APERTE — solo il blocco App Store
 
 1. **Inventario READ-ONLY della produzione:** identificare branch/commit candidati,
