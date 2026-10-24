@@ -62,3 +62,17 @@ test('Sandbox monetary policy is unchanged by Production-only restriction',async
     error=>error===h.stop);
   assert.equal(h.attempts(),1);
 });
+
+test('Adaptive Pricing presentment does not replace original EUR price',async()=>{
+  const h=harness();
+  await assert.rejects(h.payments.stripe(account,session({
+    presentment_details:{presentment_currency:'usd',presentment_amount:550},
+  }),now),error=>error===h.stop);
+  assert.equal(h.attempts(),1);
+  const invalid=harness();
+  await assert.rejects(invalid.payments.stripe(account,session({
+    currency:'usd',amount_total:550,
+    presentment_details:{presentment_currency:'eur',presentment_amount:499},
+  }),now),{message:'PRO_STRIPE_AMOUNT_RECONCILIATION_REQUIRED'});
+  assert.equal(invalid.attempts(),0);
+});
