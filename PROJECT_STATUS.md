@@ -478,6 +478,21 @@ Dopo l'esito verificare versione distribuita e pausa, senza ripetere i test chiu
   Trasferimento protetto del segreto al Worker e isolamento review restano aperti.
   Non riaprire provisioning/TLS o test anonimi già superati.
 
+## Verifier Production: richiesta firmata accettata — 24 ottobre
+
+- Proprietario conferma esito atteso del comando OVH: HTTP 400 BAD_INPUT
+  su /v1/transaction con HMAC corretto e corpo {} attraverso HTTPS pubblico.
+  Segreto letto localmente da service.env, mai stampato.
+- Verificato passaggio autenticazione HMAC e rifiuto payload incompleto.
+  Nessuna chiamata API Apple o scrittura D1. Non prova ancora Worker->verifier
+  né autorizzazione delle credenziali alle API Apple Production.
+  Controllo chiuso: non ripeterlo.
+- Prossimo passo: predisporre sul server file temporaneo HMAC mode 0600,
+  proprietario ubuntu, per trasferimento SSH al PC e successiva configurazione
+  protetta APPLE_VERIFIER_SECRET sul Worker. Nessun valore in Git/chat/log.
+  File non ancora creato; secret Worker non ancora configurato.
+  Apple rimane disabilitato. Eliminare copie temporanee dopo trasferimento.
+
 ## Attività ancora APERTE — solo il blocco App Store
 
 1. **Inventario READ-ONLY della produzione:** identificare branch/commit candidati,
