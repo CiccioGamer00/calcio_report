@@ -447,6 +447,24 @@ Dopo l'esito verificare versione distribuita e pausa, senza ripetere i test chiu
   Esito ancora pendente: non dichiarare attivazione effettuata prima dell'output.
   Nessuna nuova migrazione o rigenerazione cutover necessaria.
 
+## Registro PRO attivato — 24 ottobre
+
+- Proprietario conferma deploy autorizzato riuscito con wrangler.pro-ledger.json,
+  versione b9021019-3b86-4b16-954c-93315a84f3cf.
+  Custom domain api.calcioreport.com, production enabled, previews disabled.
+- Output conferma DB live corretto, PRO_LEDGER_ENABLED=1, PRO_WRITES_PAUSED=0,
+  PRO_LEDGER_CUTOVER_MS=1792845158779 invariato, APPLE_PRODUCTION_ENABLED=0.
+  Variabili live preesistenti conservate; bundle invariato 102.70 KiB.
+- Non ripetere deploy o richiedere nuovamente consenso al cutover.
+  Verifica HTTP successiva ancora pendente: richiesta Stripe senza firma deve
+  essere respinta (400 Invalid signature), non più PRO_MAINTENANCE.
+  Nessun acquisto/accredito reale eseguito o dichiarato collaudato da questo output.
+- Da questo punto preservare ogni nuova scrittura nel registro: nessun ritorno
+  automatico al writer legacy o ripristino del vecchio dump D1.
+- Restano percorso firmato/verifier Production, isolamento review sul pubblico,
+  casi di accettazione ancora aperti e gate Apple sorgente/flag chiusi.
+  Nessuna autorizzazione ad abilitare Apple, fare merge o inviare App Review.
+
 ## Attività ancora APERTE — solo il blocco App Store
 
 1. **Inventario READ-ONLY della produzione:** identificare branch/commit candidati,
