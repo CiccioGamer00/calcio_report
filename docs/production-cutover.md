@@ -99,6 +99,38 @@ Fonte: https://docs.stripe.com/payments/currencies/localize-prices/adaptive-pric
 Non è una verifica di un evento reale del nostro account/versione API. I coupon PRO del cruscotto
 restano un percorso distinto; non ne è stata rimossa la gestione.
 
+## Inventario pagamenti — conferma del proprietario 24 ottobre
+
+Il proprietario conferma che nessuno ha acquistato: app non ancora promossa/
+distribuita; i PRO esistenti sono test. Screenshot: sola creazione Payment Link,
+statistiche ultimi tre mesi con volume 0 EUR, sessioni 0 e nessuna attività.
+Non emerge un pagamento da riconciliare. L'aggregato non è un elenco esaustivo
+di ogni checkout: mantenere la gestione pre-cutover nel codice, senza richiedere
+gli stessi screenshot o trasformare l'inventario in un ulteriore blocco.
+Preservare comunque utenti e diritti test, senza cancellazioni.
+
+## Preparazione della prima fase
+
+deploy/apple-worker-maintenance-vars.json (e623951) è SOLO l'insieme delle
+variabili da aggiungere/aggiornare nella futura finestra autorizzata.
+Non è una configurazione completa e NON deve sostituire tutte le variabili.
+Conservare binding, route, compatibility date/flags e segreti già presenti.
+Non impostare il cutover né abilitare il registro in questa prima fase.
+Review mantiene le impostazioni esistenti; quelle future richiedono configurazione
+dedicata, non sono implicitamente abilitate da questo file.
+
+scripts/manual/export-live-worker.ps1 (f09b073) scarica una copia locale del
+Worker live con configurazione effettiva, senza deploy né accesso ai dati D1.
+Usa Wrangler 4.152.0, init --from-dash con --delegate-c3=false.
+Esaminato il codice installato di tale versione: questo ramo esegue il download
+dei moduli e scrive wrangler.jsonc come JSON; non passa al wizard C3/deploy.
+Cartella nuova con timestamp sul PC; il riepilogo stampa soltanto nomi variabili,
+chiavi configurazione, compatibility date/flags, UUID binding e numero moduli.
+Non inviare il file completo di configurazione/codice in chat: conservarlo localmente.
+Script predisposto, non ancora eseguito sul PC; nessun download live dichiarato.
+Questo passaggio recupera la configurazione realmente distribuita e il codice
+precedente; non ripete il backup D1 né le accettazioni applicative.
+
 ## Riconciliazione prima del cutover
 
 - I sei paid_until positivi sono test secondo il proprietario; preservarli.
