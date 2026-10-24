@@ -51,6 +51,13 @@ export function createLegacyPayments(db, config, {cutover, stripePaymentLink} = 
         throw Error('PRO_STRIPE_SESSION_INVALID');
       }
       if (session.created*1000 < cutover) throw Error('PRO_PRE_CUTOVER_RECONCILIATION_REQUIRED');
+      // Production web price is EUR 4.99, independent of Apple's EUR 9.99.
+      // Discounted/converted checkouts need explicit reconciliation; never
+      // grant silently for a changed price or malformed monetary fields.
+      if (config.deployment === 'production' &&
+          (session.currency !== 'eur' || session.amount_total !== 499)) {
+        throw Error('PRO_STRIPE_AMOUNT_RECONCILIATION_REQUIRED');
+      }
       const id = `stripe:${session.id}`;
       return apply(account,id,{source:'stripe',sessionId:session.id,created:session.created,
         paymentLink:stripePaymentLink}, {id,source:'stripe',kind:'grant',at:now,durationMs:30*day},now);
