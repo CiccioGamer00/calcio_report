@@ -493,6 +493,21 @@ Dopo l'esito verificare versione distribuita e pausa, senza ripetere i test chiu
   File non ancora creato; secret Worker non ancora configurato.
   Apple rimane disabilitato. Eliminare copie temporanee dopo trasferimento.
 
+## Segreto Worker Production configurato — 24 ottobre
+
+- Proprietario ha trasferito il file HMAC temporaneo tramite SCP usando la chiave
+  SSH calcio_report_ovh, in cartella Windows con ACL limitata al proprio utente.
+  Primo tentativo senza -i fallito (publickey); secondo trasferimento e formato riusciti.
+- Eseguito consapevolmente wrangler 4.152.0 secret put APPLE_VERIFIER_SECRET
+  con wrangler.pro-ledger.json: output Success! Uploaded secret.
+  Il comando pubblica una nuova versione: b9021019 è quindi la versione precedente;
+  identificativo successivo ancora da acquisire. Nessun valore segreto esposto.
+- Proprietario conferma eliminazione delle copie temporanee sul PC e su OVH.
+  Configurazione persistente del servizio conservata. Apple resta disabilitato.
+- Prossimo passo read-only: acquisire versione/deployment successivo al secret put.
+  Non ripetere test HTTP già chiusi. Worker->verifier, API Apple Production e
+  isolamento review sul pubblico restano da completare; nessuna apertura gate autorizzata.
+
 ## Attività ancora APERTE — solo il blocco App Store
 
 1. **Inventario READ-ONLY della produzione:** identificare branch/commit candidati,
@@ -542,13 +557,9 @@ Dopo l'esito verificare versione distribuita e pausa, senza ripetere i test chiu
 7. Non inventare esiti di test, deploy o collegamenti a database. Non inserire
    segreti, password, token o chiavi in GitHub, nei log o in chat.
 
-**Prossimo intervento:** ottenere autorizzazione esplicita per il SOLO deploy
-di manutenzione del candidato già preparato e verificato sul PC. Build/config/
-dry-run completati: non ripeterli. Migrazione D1 non inclusa nel consenso. Nessun acquisto
-da riconciliare secondo conferma proprietario; non riaprire la stessa domanda.
-Bundle candidato già costruito e smoke locale passato.
-Controllo EUR499 e sospensione PRO già nel candidato, non sul live. Verifier OVH attivo, enabled,
-TLS e rifiuto richieste anonime confermati. Non richiedere di nuovo il backup.
-Telegram resta un requisito aperto prima della pubblicazione.
-Nessuna migrazione, nuovo acquisto, merge o ulteriore deploy senza autorizzazione
-esplicita. Avvio verifier e HTTPS OVH già autorizzati ed eseguiti.
+**Prossimo intervento:** acquisire con deployments list l'identificativo della versione
+pubblicata da secret put, poi preparare la verifica Worker->verifier e l'isolamento
+review. Schema D1 e registro PRO sono già attivi; trasferimento/installazione segreto
+e pulizia copie temporanee completati. Non ripetere manutenzione, migrazione, cutover,
+backup o test chiusi. Gate Apple ancora chiuso; Telegram ancora da configurare.
+Nessun ulteriore deploy, apertura Apple, merge o invio App Review senza autorizzazione.
