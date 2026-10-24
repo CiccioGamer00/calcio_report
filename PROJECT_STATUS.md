@@ -296,6 +296,25 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   Non chiedere di nuovo backup, ID, HTTPS, grant TEST o acquisto TestFlight.
 - Telegram resta da configurare prima della pubblicazione.
 
+## Candidato pronto per autorizzazione manutenzione — 24 ottobre
+
+- Proprietario ha eseguito prepare-worker-maintenance.ps1: tutte e quattro le
+  fasi riuscite, incluso dry-run Wrangler con configurazione realmente scaricata.
+- Directory PC: C:\Users\stefa\calcio-report-maintenance-candidate-20261024-103247.
+  Sorgenti: 8dd45006cdd3e447d4d1dc2c4943cf7d563f9296.
+  SHA256 bundle: ed9d15719b2a0e9b4291fa1c0a8fd4f8c9f88cac4b8e67ea2c934054c187871c.
+  compatibility_date conservata: 2026-02-10.
+- Config candidata wrangler.maintenance.json: pausa=1, registro=0, Apple=0.
+  Configurazione live invariata; nessun deploy o migrazione D1.
+  Wrapper PowerShell ora eseguito con successo sul PC; chiuso il relativo pending.
+  Non ripetere build, export o dry-run senza cambiamenti pertinenti.
+- Prossima azione subordinata a consenso esplicito: deploy SOLO del candidato
+  di manutenzione sul Worker calcio-report-proxy. Effetto previsto: sospensione
+  temporanea accrediti Stripe/redeem/admin, emissione coupon e delete/disable;
+  login/consultazione disponibili. Apple e registro restano disabilitati.
+  Nessuna migrazione, merge o invio App Review inclusi in questa autorizzazione.
+  Dopo deploy verificare versione/pausa e completamento rollout prima dello schema.
+
 ## Attività ancora APERTE — solo il blocco App Store
 
 1. **Inventario READ-ONLY della produzione:** identificare branch/commit candidati,
@@ -345,9 +364,9 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
 7. Non inventare esiti di test, deploy o collegamenti a database. Non inserire
    segreti, password, token o chiavi in GitHub, nei log o in chat.
 
-**Prossimo intervento:** eseguire scripts/manual/prepare-worker-maintenance.ps1
-sul PC usando la copia live già scaricata. Solo build/config locale/dry-run;
-poi valutare autorizzazione della prima fase, senza migrare automaticamente. Nessun acquisto
+**Prossimo intervento:** ottenere autorizzazione esplicita per il SOLO deploy
+di manutenzione del candidato già preparato e verificato sul PC. Build/config/
+dry-run completati: non ripeterli. Migrazione D1 non inclusa nel consenso. Nessun acquisto
 da riconciliare secondo conferma proprietario; non riaprire la stessa domanda.
 Bundle candidato già costruito e smoke locale passato.
 Controllo EUR499 e sospensione PRO già nel candidato, non sul live. Verifier OVH attivo, enabled,
