@@ -405,6 +405,25 @@ Dopo l'esito verificare versione distribuita e pausa, senza ripetere i test chiu
   del nuovo stato conseguente all'import autorizzato.
 - Attivazione registro/cutover, apertura Apple, merge e review non autorizzati.
 
+## Verifica post-migrazione CHIUSA — 24 ottobre
+
+- Elenco sqlite_master fornito dal proprietario conferma tutte le cinque nuove
+  tabelle, indice e sei trigger. Primo comando multilinea ha mostrato solo schema;
+  completati i conteggi con unica SELECT su una riga (nessuna nuova migrazione).
+- Registri tutti vuoti: token_apple=0, acquisti_apple=0, account_registro=0,
+  eventi_pro=0, operazioni_pro=0.
+- Aggregati users coincidono col checkpoint precedente: 23 utenti, 1 disabilitato,
+  6 paid_until positivi; min 1774800857114, max 1796750470265.
+  È confronto aggregato, non confronto individuale del dump.
+- Migrazione e verifica concluse; non rieseguire import o controlli già chiusi.
+- Prossimo passo: preparare SOLO configurazione locale wrangler.pro-ledger.json
+  dalla maintenance, con PRO_LEDGER_ENABLED=1, PRO_WRITES_PAUSED=0,
+  PRO_LEDGER_CUTOVER_MS fissato una volta e APPLE_PRODUCTION_ENABLED=0.
+  Non modificare bundle/binding/segreti. Non distribuire prima del consenso
+  esplicito al cutover. Vecchi coupon richiedono riemissione v2 come già documentato.
+  Nessun acquisto pregresso da riconciliare secondo il proprietario.
+- Produzione attuale ancora in manutenzione, registro=0, Apple=0.
+
 ## Attività ancora APERTE — solo il blocco App Store
 
 1. **Inventario READ-ONLY della produzione:** identificare branch/commit candidati,
