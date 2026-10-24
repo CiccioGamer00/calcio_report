@@ -376,6 +376,19 @@ Dopo l'esito verificare versione distribuita e pausa, senza ripetere i test chiu
   Non include cutover, abilitazione Apple, acquisti, merge o App Review.
   Backup del 23 ottobre già sul PC; nessuna nuova esportazione richiesta.
 
+## Autorizzazione migrazione D1 — 24 ottobre
+
+- Proprietario risponde "si procedi" alla proposta dello schema al commit
+  023403445853231bc88cf2ec3a673c0f4f26192d: autorizzata applicazione di
+  deploy/production-initial.sql SOLO a calcio_users
+  (45681187-3565-4d36-8627-131c18ff1885).
+- Consenso non include cutover/attivazione registro, apertura Apple, merge o review.
+  Pausa PRO=1, registro=0, Apple=0 rimangono attivi come configurati.
+- Esecuzione da PowerShell autenticata, con verifica hash SQL e binding DB.
+  Comando fornito; esito ancora pendente. NON dichiarare lo schema applicato.
+  Su errore fermarsi e diagnosticare; non ripetere automaticamente la migrazione.
+  Non richiedere nuovamente questo consenso.
+
 ## Attività ancora APERTE — solo il blocco App Store
 
 1. **Inventario READ-ONLY della produzione:** identificare branch/commit candidati,
