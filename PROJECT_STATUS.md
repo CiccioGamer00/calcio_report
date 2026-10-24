@@ -1,6 +1,6 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
-_Aggiornato: 2026-10-23 (inventario produzione e ripresa dal checkpoint del 22 ottobre)._
+_Aggiornato: 2026-10-24 (matrice Worker e condizioni del cutover)._
 _Questo è il PUNTO DI INGRESSO per le prossime sessioni Work. Leggerlo una sola volta a inizio attività._
 
 ## Obiettivo unico attuale
@@ -219,6 +219,27 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   Prossimo blocco: completare configurazione/cutover Worker e piano migrazione D1,
   verificando coerenza importo web 499 centesimi, associazione account e gestione
   pagamenti/coupon pre-cutover. Migrazione e deploy Worker non autorizzati né eseguiti.
+
+## Ripresa 24 ottobre — piano Worker/D1 aggiornato
+
+- PR #16 verificata: open, draft, non merged, mergeable=true. HEAD operativo
+  confrontato con checkpoint dc9f9a2: identico prima del lavoro.
+- Aggiornato docs/production-cutover.md (a53e4eb): rimossi prerequisiti ormai
+  completati, riportati UUID/endpoint e matrice Worker con gate Apple chiuso.
+- Lettura mirata del candidato: Stripe associa per email checkout; account
+  assente/ricreato dopo checkout riceve 200 senza accredito. Nessun binding
+  tramite client_reference_id in questo percorso.
+- Registro controlla link/live/paid/data e ID sessione ma NON amount_total/currency.
+  Prezzo web confermato 499 centesimi EUR, Apple 999: nessun prezzo modificato.
+  Politica importo/valuta ed eventuali sconti da definire prima del cutover.
+- Piano esplicita riconciliazione checkout precedenti e asincroni, coupon legacy
+  da riemettere solo dopo verifica, e necessità di sospendere tutti i writer.
+  Gate Apple 0 non sospende Stripe/redeem/admin.
+- Solo documentazione modificata; nessun test già passato ripetuto, nessun
+  deploy/migrazione/merge o pagamento eseguito.
+- Prossimo blocco: chiudere politica Stripe (499 EUR, eventuali sconti,
+  associazione email/account) e preparare controlli mirati sul candidato;
+  poi rendere concreta la sospensione writer. Cutover non ancora pronto.
 
 ## Attività ancora APERTE — solo il blocco App Store
 
