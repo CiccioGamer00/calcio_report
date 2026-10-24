@@ -268,9 +268,31 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   Worker distribuito/configurazione e riepilogo senza valori delle variabili.
   Wrangler 4.152.0 --delegate-c3=false esaminato localmente: download-only,
   niente wizard C3/deploy. Script non ancora eseguito dal proprietario.
-- Residui: recupero configurazione reale/copia codice live dal PC autenticato,
-  poi configurazione candidata conservativa e rollout/drenaggio. Il backup
-  D1 è già completato e non va ripetuto.
+- Download live completato dal proprietario 24 ottobre: Worker calcio-report-proxy,
+  compatibility_date 2026-02-10, nessun compatibility flag (riepilogo [null]).
+  Variabili: ACCOUNT_DELETION_ENABLED, AUTH_PASSWORD_V2, CR_RELAY_URL.
+  Binding unico DB -> 45681187-3565-4d36-8627-131c18ff1885; 1 modulo scaricato.
+  Copia locale C:\\Users\\stefa\\calcio-report-worker-copy-20261024-101546\\calcio-report-proxy.
+  Chiavi config includono routes, workers_dev, preview_urls, observability;
+  valori conservati localmente, non pubblicati. Non ripetere questo download.
+- Preparatore offline scripts/prepare-worker-maintenance.mjs (b4a2efc):
+  clona configurazione scaricata, conserva route/vars/binding/runtime,
+  aggiunge solo overlay di manutenzione e seleziona bundle verificato SHA256.
+  Rifiuta identità/DB/nomi variabili/flag o chiavi inattesi; non modifica la copia.
+  keep_vars=true, no_bundle=true, nessun cutover impostato o review abilitata.
+- Quattro nuovi test preparatore passati (8dd4500).
+  Wrangler 4.152.0 deploy --dry-run eseguito localmente sul bundle e configurazione
+  sintetica coerente con inventario: exit 0, 102.70 KiB, gzip 23.73 KiB.
+  Non è verifica della configurazione reale sul PC, né deploy né accesso D1.
+- Script PC scripts/manual/prepare-worker-maintenance.ps1 (95b1d20) predisposto:
+  scarica solo 12 moduli pertinenti e 2 script dal commit 8dd4500, installa
+  esbuild 0.28.2 in cartella isolata, compila e controlla hash, prepara config dalla
+  copia live ed esegue esclusivamente dry-run. Log/config restano sul PC.
+  Wrapper PowerShell non eseguito qui (pwsh assente); helper Node e dry-run
+  Linux verificati. Prossimo passo: esecuzione sul PC, non nuova esportazione.
+- Residui: esito dry-run con impostazioni reali, poi proposta concreta di deploy
+  della sola manutenzione e modalità rollout/drenaggio. Migrazione e deploy
+  restano non autorizzati. Backup D1 già completato, non ripeterlo.
   Non chiedere di nuovo backup, ID, HTTPS, grant TEST o acquisto TestFlight.
 - Telegram resta da configurare prima della pubblicazione.
 
@@ -323,9 +345,9 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
 7. Non inventare esiti di test, deploy o collegamenti a database. Non inserire
    segreti, password, token o chiavi in GitHub, nei log o in chat.
 
-**Prossimo intervento:** eseguire SOLO il download read-only del Worker live
-con scripts/manual/export-live-worker.ps1 sul PC autenticato, raccogliere il
-riepilogo non segreto, poi finalizzare configurazione/rollout. Nessun acquisto
+**Prossimo intervento:** eseguire scripts/manual/prepare-worker-maintenance.ps1
+sul PC usando la copia live già scaricata. Solo build/config locale/dry-run;
+poi valutare autorizzazione della prima fase, senza migrare automaticamente. Nessun acquisto
 da riconciliare secondo conferma proprietario; non riaprire la stessa domanda.
 Bundle candidato già costruito e smoke locale passato.
 Controllo EUR499 e sospensione PRO già nel candidato, non sul live. Verifier OVH attivo, enabled,
