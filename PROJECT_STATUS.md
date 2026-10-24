@@ -597,18 +597,28 @@ Dopo l'esito verificare versione distribuita e pausa, senza ripetere i test chiu
 7. Non inventare esiti di test, deploy o collegamenti a database. Non inserire
    segreti, password, token o chiavi in GitHub, nei log o in chat.
 
-**PUNTO DI RIPRESA — 24 ottobre:** proprietario autorizza completamento delle
-operazioni necessarie. Fornito blocco PowerShell per singolo deploy del candidato
-review già dry-run verificato, con --keep-vars e --secrets-file.
-Attendere output/versione: NON dichiarare deploy completato, NON rilanciarlo alla
-cieca. Dopo successo pulizia copie temporanee prevista nello stesso blocco;
-eventuale errore SSH di pulizia NON significa fallimento del deploy.
-Candidato PC wrangler.app-review.json; segreti protetti indicati dalle variabili
-calcioReviewSecretsFile / calcioReviewSecretsDir della PowerShell corrente.
-Prima versione live nota b2d20f2b-9f9a-4294-b042-705888e93cf4.
-API Apple Production 401 ancora irrisolto, NTP OK, credenziali uguali al Sandbox:
-nessuna apertura gate prima di risolvere e completare accettazioni.
-Restano verifica pubblica del nuovo percorso review senza ripetere acquisti già
-accettati, Worker->verifier Production, casi residui di accettazione, build finale,
-metadati/review e Telegram. Non rileggere archivi/core-v2 o ripetere migrazione,
-cutover, backup e test chiusi. Main e PR non merged.
+**PUNTO DI RIPRESA — 24 ottobre, deploy review COMPLETATO:**
+Il proprietario conferma Current Version ID
+143ec334-8f10-4afa-a2dd-e663fb2b5002 sul Worker calcio-report-proxy,
+tramite wrangler.app-review.json --keep-vars --secrets-file.
+APP_REVIEW_ENABLED=1, binding DB live e APP_REVIEW_DB distinti, due segreti review
+installati insieme al deploy; APPLE_PRODUCTION_ENABLED=0, PRO_LEDGER_ENABLED=1,
+PRO_WRITES_PAUSED=0, cutover invariato 1792845158779.
+Proprietario conferma PULIZIA COMPLETATA: JSON temporaneo PC e file HMAC OVH
+eliminati. Non richiedere trasferimenti o rigenerazione dei segreti già installati.
+Non ripetere il deploy. Questo esito NON è collaudo funzionale del login review
+sul dominio pubblico né del percorso Worker->verifier.
+
+Prossimo blocco: verifica mirata login/account review sul Worker pubblico e
+isolamento dal live, senza ripetere acquisti Sandbox/TestFlight o test chiusi.
+API Apple Production getNotificationHistory ha restituito HTTP 401:
+NTP sincronizzato, KEY_ID/ISSUER_ID/chiave privata identici al Sandbox,
+causa non determinata; non dichiarare accesso Production riuscito né imputare
+con certezza il 401 all'app non pubblicata. Non rigenerare chiavi alla cieca.
+Restano Worker->verifier Production, accettazioni residue realmente scoperte,
+build finale, metadati e invio App Review, link Telegram prima della pubblicazione.
+Autorizzazione operativa del proprietario già ricevuta: "autorizzo tutto quello
+che serve". Non ripetere consensi già concessi; non aprire gate senza requisiti
+tecnici risolti. Nessun merge o invio App Review eseguito; PR15/16 non merged.
+Main invariato. Non rileggere archivi/core-v2/allegati obsoleti o ripetere backup,
+migrazione D1, cutover PRO e test accettati.
