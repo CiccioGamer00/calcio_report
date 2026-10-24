@@ -315,6 +315,16 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   Nessuna migrazione, merge o invio App Review inclusi in questa autorizzazione.
   Dopo deploy verificare versione/pausa e completamento rollout prima dello schema.
 
+## Autorizzazione ricevuta — 24 ottobre
+
+Il proprietario autorizza il SOLO deploy di manutenzione precedentemente proposto
+("Se tutto questo è necessario per procedere fai quello che devi fare").
+Usare il candidato già verificato nella directory PC terminante 20261024-103247,
+pause=1, registro=0, Apple=0. Non richiedere nuovamente questo consenso.
+Comando di deploy da eseguire sul PC autenticato; esito ancora pendente.
+Nessuna migrazione D1, apertura gate Apple, merge o App Review inclusi.
+Dopo l'esito verificare versione distribuita e pausa, senza ripetere i test chiusi.
+
 ## Attività ancora APERTE — solo il blocco App Store
 
 1. **Inventario READ-ONLY della produzione:** identificare branch/commit candidati,
