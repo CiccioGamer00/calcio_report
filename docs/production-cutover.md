@@ -127,9 +127,32 @@ dei moduli e scrive wrangler.jsonc come JSON; non passa al wizard C3/deploy.
 Cartella nuova con timestamp sul PC; il riepilogo stampa soltanto nomi variabili,
 chiavi configurazione, compatibility date/flags, UUID binding e numero moduli.
 Non inviare il file completo di configurazione/codice in chat: conservarlo localmente.
-Script predisposto, non ancora eseguito sul PC; nessun download live dichiarato.
+Download completato dal proprietario il 24 ottobre: 1 modulo, DB live corretto,
+compatibility_date 2026-02-10 e nessun flag; tre variabili live attese.
+Copia locale: C:\\Users\\stefa\\calcio-report-worker-copy-20261024-101546\\calcio-report-proxy.
 Questo passaggio recupera la configurazione realmente distribuita e il codice
 precedente; non ripete il backup D1 né le accettazioni applicative.
+
+## Preparazione locale con configurazione reale
+
+scripts/prepare-worker-maintenance.mjs clona il JSON scaricato: conserva route,
+binding, osservabilità, workers_dev, preview_urls, data compatibilità e valori
+delle variabili. Aggiunge overlay manutenzione e keep_vars=true/no_bundle=true,
+seleziona bundle con SHA256 già verificato. Non cambia copia live o segreti remoti.
+Blocca configurazioni diverse dall'inventario e non sovrascrive un output esistente.
+
+scripts/manual/prepare-worker-maintenance.ps1 prepara una cartella nuova sul PC
+dal commit 8dd45006cdd3e447d4d1dc2c4943cf7d563f9296: solo dipendenze runtime del
+Worker e script necessari, nessun archivio. esbuild 0.28.2 installato isolatamente.
+L'unico comando Wrangler è deploy --dry-run; nessun upload, migrazione, secret
+put o attivazione remota. Output finale limitato ai metadati; log completo locale.
+La config reale resta sul PC. Non usarla per un deploy prima dell'autorizzazione.
+
+Validazione locale del preparatore: quattro test passati, conservazione impostazioni
+e rifiuto di identità/configurazione inattese. Dry-run Wrangler 4.152.0 con fixture
+sintetica e bundle reale exit 0 (102.70 KiB / gzip 23.73 KiB).
+Non confondere la fixture con la configurazione remota effettiva.
+PowerShell non disponibile nell'ambiente agente: esecuzione wrapper sul PC pendente.
 
 ## Riconciliazione prima del cutover
 
