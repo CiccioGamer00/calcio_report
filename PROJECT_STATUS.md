@@ -424,6 +424,18 @@ Dopo l'esito verificare versione distribuita e pausa, senza ripetere i test chiu
   Nessun acquisto pregresso da riconciliare secondo il proprietario.
 - Produzione attuale ancora in manutenzione, registro=0, Apple=0.
 
+## Configurazione cutover preparata sul PC — 24 ottobre
+
+- Proprietario conferma creazione locale wrangler.pro-ledger.json nella directory
+  candidata già verificata. PRO_LEDGER_CUTOVER_MS=1792845158779 fissato:
+  non rigenerare o abbassare questo valore per tentare di accreditare vecchi checkout.
+- Config candidata: registro=1, pausa=0, Apple=0. Nessun deploy eseguito.
+- Prossima autorizzazione: deploy di questo file per riaprire accrediti web,
+  admin e redeem attraverso il registro, con bundle/binding invariati.
+  Coupon legacy da riemettere v2; eventuali checkout pre-cutover richiedono
+  riconciliazione. Apple resta disabilitato; nessun merge o App Review incluso.
+- Stato live resta manutenzione, registro=0, Apple=0 finché non arriva esito deploy.
+
 ## Attività ancora APERTE — solo il blocco App Store
 
 1. **Inventario READ-ONLY della produzione:** identificare branch/commit candidati,
