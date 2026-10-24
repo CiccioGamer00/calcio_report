@@ -535,9 +535,15 @@ Dopo l'esito verificare versione distribuita e pausa, senza ripetere i test chiu
 - Variabili PowerShell: calcioReviewSecretsDir e calcioReviewSecretsFile.
   Copia temporanea OVH .calcio-report-apple-review-hmac ancora da eliminare,
   insieme al JSON locale dopo installazione riuscita.
-- Prossimo passo: candidato locale wrangler.app-review.json con review=1,
-  Apple Production=0, binding review distinto e bundle invariato; dry-run.
-  Nessun secret review installato sul pubblico; nessun deploy review autorizzato.
+- Proprietario conferma wrangler.app-review.json creato e dry-run superato.
+  Hash bundle invariato ed9d15719b2a0e9b4291fa1c0a8fd4f8c9f88cac4b8e67ea2c934054c187871c;
+  binding live/review verificati contro UUID noti. Candidato review=1, Apple=0,
+  registro PRO=1, pausa=0. Nessun upload o deploy eseguito.
+- Proposta pronta per consenso: singolo deploy con wrangler.app-review.json,
+  --keep-vars e --secrets-file del JSON protetto per aggiungere due segreti review
+  e binding review insieme. Nessuna migrazione, apertura Apple Production, merge
+  o invio App Review inclusi. Non ripetere dry-run/build o test accettati.
+  Consenso a questo deploy ancora pendente; pubblico invariato.
 
 ## Attività ancora APERTE — solo il blocco App Store
 
