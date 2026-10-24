@@ -465,6 +465,19 @@ Dopo l'esito verificare versione distribuita e pausa, senza ripetere i test chiu
   casi di accettazione ancora aperti e gate Apple sorgente/flag chiusi.
   Nessuna autorizzazione ad abilitare Apple, fare merge o inviare App Review.
 
+## Webhook dopo cutover verificato — 24 ottobre, 14:36 Europe/Rome
+
+- Proprietario conferma POST pubblico /stripe/webhook senza firma -> HTTP 400
+  Invalid signature alle 12:36:08 UTC. Manutenzione rimossa e controllo firma
+  raggiunto. Nessun pagamento/accredito eseguito; non è collaudo Stripe reale.
+- Questo controllo è chiuso, non ripeterlo. Schema e registro Production attivi
+  come documentato; Apple rimane disabilitato.
+- Prossimo blocco: verifier Production con richiesta HMAC firmata e corpo {}
+  (atteso 400 BAD_INPUT dopo autenticazione). Usare segreto già su OVH senza
+  stamparlo. Non coinvolge API Apple o D1; non prova ancora Worker->verifier.
+  Trasferimento protetto del segreto al Worker e isolamento review restano aperti.
+  Non riaprire provisioning/TLS o test anonimi già superati.
+
 ## Attività ancora APERTE — solo il blocco App Store
 
 1. **Inventario READ-ONLY della produzione:** identificare branch/commit candidati,
