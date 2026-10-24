@@ -436,6 +436,17 @@ Dopo l'esito verificare versione distribuita e pausa, senza ripetere i test chiu
   riconciliazione. Apple resta disabilitato; nessun merge o App Review incluso.
 - Stato live resta manutenzione, registro=0, Apple=0 finché non arriva esito deploy.
 
+## Autorizzazione attivazione registro PRO — 24 ottobre
+
+- Proprietario risponde "si andiamo avanti" alla proposta concreta di deploy
+  wrangler.pro-ledger.json: autorizzata attivazione PRO_LEDGER_ENABLED=1 e
+  rimozione pausa PRO_WRITES_PAUSED=0, con cutover fisso 1792845158779.
+- APPLE_PRODUCTION_ENABLED resta 0. Nessun consenso a merge o App Review.
+  Non richiedere nuovamente questa autorizzazione.
+- Comando di deploy da eseguire sul PC nella directory candidata già verificata.
+  Esito ancora pendente: non dichiarare attivazione effettuata prima dell'output.
+  Nessuna nuova migrazione o rigenerazione cutover necessaria.
+
 ## Attività ancora APERTE — solo il blocco App Store
 
 1. **Inventario READ-ONLY della produzione:** identificare branch/commit candidati,
