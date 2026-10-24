@@ -34,6 +34,10 @@ export function createAppleHandler(core, deployment, dependencies = {}) {
   const ensureToken = dependencies.ensureToken || ensureAppleAccountToken;
   const reconcile = dependencies.reconcile || fetchReconciledAppleTransaction;
   const deliver = dependencies.deliver || deliverReconciledApplePurchase;
+  const logNotification = dependencies.logNotification || (entry => console.log(JSON.stringify(entry)));
+  const audit = entry => {
+    try { logNotification({event:'apple_notification', ...entry}); } catch {}
+  };
   return {
   async fetch(request,env,ctx) {
     const path=new URL(request.url).pathname;
@@ -61,18 +65,29 @@ export function createAppleHandler(core, deployment, dependencies = {}) {
     if(production)return json({error:'APPLE_PRODUCTION_NOT_READY'},503);
     if(!((path==='/apple/token' && request.method==='GET') ||
          (['/apple/transaction','/apple/notifications'].includes(path) && request.method==='POST')))return json({error:'NOT_FOUND'},404);
+    let notificationStage='payload';
+    const notificationContext={environment:config.environment};
     try {
       if(path==='/apple/notifications') {
         const signedPayload=await readPayload(request);
+        notificationStage='verification';
         const transaction=await reconcile({url:env.APPLE_VERIFIER_URL,
           secret:env.APPLE_VERIFIER_SECRET},signedPayload,'notification');
-        if(transaction===null)return json({ok:true,ignored:true});
+        if(transaction===null){audit({...notificationContext,result:'ignored',reason:'no_transaction'});return json({ok:true,ignored:true});}
         if(typeof transaction.appAccountToken!=='string' || transaction.environment!==config.environment) {
+          audit({...notificationContext,result:'error',stage:'verification',reason:'account_invalid'});
           return json({error:'APPLE_NOTIFICATION_ACCOUNT_INVALID'},503);
         }
+        if(typeof transaction.transactionId==='string' && /^[0-9]{1,64}$/.test(transaction.transactionId)) {
+          notificationContext.transactionId=transaction.transactionId;
+        }
+        notificationStage='routing';
         const {db,owner}=await resolveNotificationOwner(env,config,transaction);
-        if(owner.retired_at!==null)return json({ok:true,ignored:true});
+        notificationContext.database=db===env.APP_REVIEW_DB?'review':'test';
+        if(owner.retired_at!==null){audit({...notificationContext,result:'ignored',reason:'retired_account'});return json({ok:true,ignored:true});}
+        notificationStage='delivery';
         await deliver(db,owner.account_id,transaction,config,Date.now());
+        audit({...notificationContext,result:'processed'});
         return json({ok:true});
       }
       const account=await core.authenticatePurchaseAccount(request,env);
@@ -88,6 +103,7 @@ export function createAppleHandler(core, deployment, dependencies = {}) {
       const outcome=await deliver(env.DB,account.id,transaction,config,Date.now());
       return json({ok:true,...outcome});
     } catch(error) {
+      if(path==='/apple/notifications')audit({...notificationContext,result:'error',stage:notificationStage});
       if(error.message==='BODY_TOO_LARGE')return json({error:'BODY_TOO_LARGE'},413);
       if(error instanceof SyntaxError || error.message==='BAD_INPUT')return json({error:'BAD_INPUT'},400);
       // Errors never acknowledge delivery or finish the native transaction.
