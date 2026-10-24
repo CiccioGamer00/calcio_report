@@ -220,26 +220,36 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
   verificando coerenza importo web 499 centesimi, associazione account e gestione
   pagamenti/coupon pre-cutover. Migrazione e deploy Worker non autorizzati né eseguiti.
 
-## Ripresa 24 ottobre — piano Worker/D1 aggiornato
+## Ripresa 24 ottobre — candidato Stripe e sospensione PRO
 
-- PR #16 verificata: open, draft, non merged, mergeable=true. HEAD operativo
-  confrontato con checkpoint dc9f9a2: identico prima del lavoro.
-- Aggiornato docs/production-cutover.md (a53e4eb): rimossi prerequisiti ormai
-  completati, riportati UUID/endpoint e matrice Worker con gate Apple chiuso.
-- Lettura mirata del candidato: Stripe associa per email checkout; account
-  assente/ricreato dopo checkout riceve 200 senza accredito. Nessun binding
-  tramite client_reference_id in questo percorso.
-- Registro controlla link/live/paid/data e ID sessione ma NON amount_total/currency.
-  Prezzo web confermato 499 centesimi EUR, Apple 999: nessun prezzo modificato.
-  Politica importo/valuta ed eventuali sconti da definire prima del cutover.
-- Piano esplicita riconciliazione checkout precedenti e asincroni, coupon legacy
-  da riemettere solo dopo verifica, e necessità di sospendere tutti i writer.
-  Gate Apple 0 non sospende Stripe/redeem/admin.
-- Solo documentazione modificata; nessun test già passato ripetuto, nessun
-  deploy/migrazione/merge o pagamento eseguito.
-- Prossimo blocco: chiudere politica Stripe (499 EUR, eventuali sconti,
-  associazione email/account) e preparare controlli mirati sul candidato;
-  poi rendere concreta la sospensione writer. Cutover non ancora pronto.
+- PR #16 verificata: open, draft, non merged, mergeable=true. Nessun merge.
+- Piano docs/production-cutover.md aggiornato con destinazioni confermate,
+  matrice Worker, riconciliazione pre-cutover e rollout/drenaggio ancora da completare.
+- Stripe conserva associazione tramite email checkout; nessun client_reference_id.
+  Account assente/ricreato dopo checkout: 200 senza accredito; riconciliare i casi
+  anomali, non creare automaticamente account.
+- Nuovo controllo Production (f46ec5e): currency eur e amount_total numerico 499
+  prima di qualsiasi accesso DB. Altri importi richiedono riconciliazione; webhook
+  risponde 503 generico, non successo. Prezzo Apple 999 distinto. Sandbox invariato.
+  Non cambia il fingerprint delle operazioni esistenti.
+- Nuovi test prezzo (49e9721): 20 pass, inclusi 15 sottocasi monetari; verificato
+  blocco prima della persistenza, accettazione EUR499 fino al confine DB simulato,
+  unpaid/asincrono, link/ambiente/cutover e compatibilità Sandbox.
+  Non è collaudo di accredito reale o persistenza D1.
+- Guardia PRO_WRITES_PAUSED candidata (0f4ca17, collegata al ramo Production
+  01fc96a): 503 su Stripe/redeem/admin grant-adjust-mint e delete/disable;
+  login, dashboard in lettura, football e review isolata restano disponibili.
+  Cinque nuovi test passati (d4172cd), inclusa integrazione del router review
+  con handler simulati. Il flag non è stato configurato sul live.
+- Piano aggiornato b2c02cb: prima dello schema serve deploy autorizzato del
+  candidato in pausa, ledger=0, Apple=0, completamento rollout e drenaggio
+  verificabile dei writer legacy; la guardia non annulla richieste già in corso.
+  Schema/migrazione/Worker live/backup invariati. Nessuna suite accettata ripetuta.
+- Residui: confermare con proprietario eventuali sconti/promozioni Stripe e
+  conversione valuta (vincolo candidato EUR499 li esclude); inventario checkout/
+  coupon pendenti, bundle completo e modalità rollout/drenaggio da verificare.
+  Non chiedere di nuovo backup, ID, HTTPS, grant TEST o acquisto TestFlight.
+- Telegram resta da configurare prima della pubblicazione.
 
 ## Attività ancora APERTE — solo il blocco App Store
 
@@ -290,8 +300,9 @@ Nessuna pubblicazione, migrazione su database live o invio ad App Review senza a
 7. Non inventare esiti di test, deploy o collegamenti a database. Non inserire
    segreti, password, token o chiavi in GitHub, nei log o in chat.
 
-**Prossimo intervento:** completare configurazione candidata/cutover Worker-D1,
-con Payment Link acquisito e prezzo web 4,99 EUR da rispettare. Verifier OVH attivo, enabled,
+**Prossimo intervento:** confermare varianti Stripe (sconti/conversione), poi
+completare bundle e piano eseguibile di rollout/drenaggio Worker-D1.
+Controllo EUR499 e sospensione PRO già nel candidato, non sul live. Verifier OVH attivo, enabled,
 TLS e rifiuto richieste anonime confermati. Non richiedere di nuovo il backup.
 Telegram resta un requisito aperto prima della pubblicazione.
 Nessuna migrazione, nuovo acquisto, merge o ulteriore deploy senza autorizzazione
