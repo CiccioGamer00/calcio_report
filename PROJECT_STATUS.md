@@ -888,3 +888,31 @@ migrazione D1, cutover PRO e test accettati.
   con ADMIN_KEY inserita localmente in prompt protetto, mai comunicata in chat.
   Atteso HTTP 200 e {ok:true,verifier:HMAC_OK_BAD_INPUT,upstreamStatus:400}.
   Il 400 è del verifier dopo HMAC e prima di Apple/D1; esito ancora pendente.
+
+## Worker→verifier Production CHIUSO — 26 ottobre
+
+- Proprietario conferma dal POST admin sul Worker pubblico:
+  {ok:true,verifier:HMAC_OK_BAD_INPUT,upstreamStatus:400}.
+  Collegamento firmato accettato; il verifier ha rifiutato {} prima di Apple/D1.
+  Non ripetere diagnostica/deploy a4e384d4. Non equivale a API Apple Production OK.
+
+## Gate Production candidato preparato — 26 ottobre
+
+- Nel solo candidato sostituito blocco sorgente assoluto con prerequisiti espliciti:
+  registro 1, pausa 0, cutover valido, Payment Link, DB non alias review,
+  origine/segreto verifier Production. Flag Apple e controlli ambiente restano.
+- 27 test mirati passati, inclusi quattro nuovi casi con SQLite reale per il
+  percorso Production (risposta verifier simulata), accredito/retry, baseline,
+  rimborso, proprietario cancellato, schema assente e ambiente errato.
+  NON collaudo API Apple o acquisti reali. Smoke flag 0 e flag 1 incompleto chiusi.
+- Bundle deploy/apple-activation-worker-candidate.mjs, 110761 byte,
+  SHA256 9bcbc82eb0e1794432eba130116162f31269a0a605b70b82d141e1e42777a599. NON distribuito.
+  Live ancora versione a4e384d4 con blocco sorgente precedente e Apple flag 0.
+- Piano candidato docs/apple-first-activation.md: metadati/privacy, uploader
+  Production dedicato, URL notifiche V2 da verificare, deploy futuro a flag 0,
+  rilascio manuale e decisione separata per eventuale finestra TRIAL iniziale.
+  Non assumere API disponibili alla sola approvazione e non accendere flag ora.
+- Prossimo passo con proprietario: leggere stato attuale della versione 1.0
+  in App Store Connect (build selezionata, metadati e campi mancanti), senza
+  invio. IPA 29.1 non richiede ricompilazione per queste sole modifiche server.
+  Main/Pages invariati; nessun upload/merge/App Review autorizzato o eseguito.

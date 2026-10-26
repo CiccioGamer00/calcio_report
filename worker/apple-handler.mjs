@@ -3,6 +3,7 @@ import { ensureAppleAccountToken } from './apple-purchase-ledger.mjs';
 import { fetchReconciledAppleTransaction } from './apple-verifier-client.mjs';
 import { deliverReconciledApplePurchase } from './apple-pro-delivery.mjs';
 import { resolveNotificationOwner } from './apple-notification-owner.mjs';
+import { productionAppleReady } from './apple-activation.mjs';
 
 const headers = { 'content-type':'application/json', 'cache-control':'no-store',
   'Access-Control-Allow-Origin':'*', 'Access-Control-Allow-Methods':'GET,POST,OPTIONS',
@@ -39,7 +40,7 @@ export function createAppleHandler(core, deployment, dependencies = {}) {
     const path=new URL(request.url).pathname;
     if(!path.startsWith('/apple/')) {
       // The sandbox accounting candidate cannot coexist with legacy direct
-      // paid_until writers. Production migration of those writers is pending.
+      // paid_until writers. Production uses the migrated unified ledger.
       if(!production && env.PRO_LEDGER_ENABLED!=='1' && env[enabledKey]==='1' && ['/stripe/webhook','/license/redeem','/admin/grant','/admin/adjust'].includes(path)) {
         return json({error:'SANDBOX_LEGACY_PAYMENT_DISABLED'},503);
       }
@@ -56,9 +57,9 @@ export function createAppleHandler(core, deployment, dependencies = {}) {
     if(request.method==='OPTIONS')return new Response(null,{status:204,headers});
     if(env[enabledKey]!=='1')return json({error:'APPLE_PURCHASES_DISABLED'},503);
     if(env.APPLE_DEPLOYMENT!==config.deployment || env.APPLE_ENVIRONMENT!==config.environment)return json({error:'APPLE_CONFIG_INVALID'},503);
-    // Deliberate source gate: deployment must not accidentally disable web payments.
-    // Remove only with tested migration of ALL existing paid_until writers.
-    if(production)return json({error:'APPLE_PRODUCTION_NOT_READY'},503);
+    // Migration/cutover is complete. Activation still requires the explicit flag
+    // above plus coherent ledger, pause, binding and Production verifier settings.
+    if(production && !productionAppleReady(env))return json({error:'APPLE_PRODUCTION_NOT_READY'},503);
     if(!((path==='/apple/token' && request.method==='GET') ||
          (['/apple/transaction','/apple/notifications'].includes(path) && request.method==='POST')))return json({error:'NOT_FOUND'},404);
     try {
