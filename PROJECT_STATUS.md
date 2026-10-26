@@ -854,3 +854,23 @@ migrazione D1, cutover PRO e test accettati.
   Production al primo rilascio, percorso Worker->verifier/gate sorgente e flag,
   accettazioni ancora scoperte, metadati/privacy e caricamento finale.
   Nessun nuovo consenso a merge, upload o App Review implicito nella conferma UI.
+
+## Preparazione diagnostica Worker→verifier — 26 ottobre
+
+- Aggiunto POST /admin/apple-readiness, protetto dalla consueta ADMIN_KEY,
+  solo nel ramo pubblico Production e fuori dal percorso review.
+- Firma condivisa col client transazioni: corpo {} su /v1/transaction,
+  esito atteso 400 BAD_INPUT dopo autenticazione HMAC. Nessuna chiamata API
+  Apple né lettura/scrittura D1. Non è un collaudo di pagamenti Production.
+- Trenta test mirati passati, incluso server verifier reale su loopback:
+  corretta firma, nessun reconciler/DB, rifiuto admin/HMAC errati, redirect,
+  risposte inattese/eccessive e rete. Regressione review/isolation/community OK.
+- Bundle deploy/apple-readiness-worker-candidate.mjs: 110122 byte,
+  SHA256 dd2dc9ff804c12df859a3fd4935acd62a8400cad23e30287e20ff521df3e7c1b. Smoke: admin assente 403,
+  community senza login 401, gate Apple chiuso 503.
+- Nessun deploy eseguito. Prossimo passo: copia configurazione locale
+  wrangler.community-interest.json, verificare UUID/flag/cutover, sostituire
+  solo main, dry-run e deploy --keep-vars; poi singolo POST admin di verifica.
+  Nessuna migrazione o reinstallazione di segreti. Dettagli docs/apple-readiness.md.
+- Gate sorgente e flag Apple=0 invariati. IPA 29.1 non richiede ricompilazione
+  per questa diagnostica solo server. Nessun upload/merge/App Review.
