@@ -715,3 +715,25 @@ migrazione D1, cutover PRO e test accettati.
   Procedura e limiti in docs/app-store-candidate.md.
 - Backend live, gate Apple, DB e main invariati. Restano Telegram/supporto,
   accettazioni residue e piano attivazione acquisti al primo rilascio.
+
+## IPA Production 28.1 compilato e firmato — 26 ottobre
+
+- Workflow iOS signing check run 40362687965 sul commit e66a0ffff13d47cb6508585d85e16c1d2bb953a0:
+  job archive SUCCESS. Nove test Python e 152 test Node passati su runner macOS;
+  packaging production, compilazione Xcode, codesign ed export completati.
+- Verificatore dell'IPA esportato ha confermato backend Production, bundle/build
+  attesi e link di pagamento web disabilitati. Build 28.1, profilo production.
+- Artifact GitHub calcio-report-production-ipa-28-1, ID 12669196406,
+  799675 byte, scadenza 2026-10-29T16:50:36Z (ZIP artifact, non hash IPA).
+  Digest ZIP sha256:5763f5f3cf59f175067ef11f8e9b928dacdadc9018e08197558a28553a4679d4.
+  Include IPA e manifest commit/versione/build/hash. Non confondere la
+  conservazione su GitHub con un caricamento su App Store Connect.
+- Step Apple validation/upload SKIPPED. Nessun nuovo TestFlight/App Review,
+  merge, deploy backend o modifica DB. Gate Apple Production invariato e chiuso.
+- PR15 aggiornata allo stato corrente; PR15/16 rimangono draft, open, non merged.
+- Prossimo passo: acquisire URL Telegram definitivo, richiesto dal proprietario,
+  e completare i contatti mobili. Il packaging attuale azzera telegramUrl e
+  supportEmail: correggere il solo percorso contatti senza introdurre pagamenti
+  esterni in iOS. Supporto web già configurato support@calcioreport.com.
+  La 28.1 prova la procedura di firma Production, non è ancora la build finale
+  completa di contatti da caricare. Non rifare acquisti o controlli accettati.
