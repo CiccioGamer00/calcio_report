@@ -932,3 +932,18 @@ migrazione D1, cutover PRO e test accettati.
 - Dopo successo preparare consenso al solo caricamento 29.1; nessuna App Review
   o pubblicazione inclusa. Live a4e384d4/Apple=0 invariato; gate candidato 8ebdca7
   ancora NON distribuito. Non ripetere test acquisto o migrazioni.
+
+## Validazione Apple della 29.1 RIUSCITA — 26 ottobre
+
+- Workflow iOS App Store delivery run 40379596702, commit 2ad1c1d, mode validate,
+  job 121771924643 SUCCESS. Sei test Python passati; origine e IPA 1.0 (29.1)
+  verificati dopo download dell'artefatto originale 12672364036.
+- altool --validate-app ha restituito "VERIFY SUCCEEDED with no errors"
+  alle 18:40:43 UTC. Non è upload né approvazione App Review.
+- IPA originale non ricompilato/rifirmato; nessuna modifica ad app/live/DB/gate.
+  La sezione Build in App Store Connect resta senza associazione finché non
+  si carica ed elabora la candidata. Non selezionare una vecchia build interna.
+- Proposta concreta pronta: SOLO upload della stessa Production 29.1 tramite
+  workflow già verificato, senza invio review, pubblicazione o gate Apple.
+  Attendere consenso del proprietario a questo caricamento; non richiedere
+  nuovo consenso alle prove/delivery software già completate.
