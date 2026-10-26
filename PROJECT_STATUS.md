@@ -947,3 +947,11 @@ migrazione D1, cutover PRO e test accettati.
   workflow già verificato, senza invio review, pubblicazione o gate Apple.
   Attendere consenso del proprietario a questo caricamento; non richiedere
   nuovo consenso alle prove/delivery software già completate.
+
+## Upload Production 29.1 autorizzato — 26 ottobre
+
+- Proprietario conferma «si certo autorizzo» al SOLO caricamento della stessa
+  IPA 1.0 (29.1) già validata. Nessuna nuova compilazione o firma.
+- Avvio workflow delivery in modalità upload, con origine e digest invariati.
+  Esito remoto ancora pendente: non dichiarare caricamento completato.
+- Nessun invio App Review, pubblicazione, merge main o apertura gate Apple.

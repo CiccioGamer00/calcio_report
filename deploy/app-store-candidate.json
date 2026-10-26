@@ -9,5 +9,6 @@
   "artifactDigest": "sha256:6f2c004cb5d85f5805d565eb6c80b2d18396988b90140b63406b35199f14dd03",
   "bundleId": "com.calcioreport.app",
   "version": "1.0",
-  "build": "29.1"
+  "build": "29.1",
+  "deliveryRequest": "owner-approved-upload-2026-10-26"
 }
