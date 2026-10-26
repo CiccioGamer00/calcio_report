@@ -777,3 +777,19 @@ migrazione D1, cutover PRO e test accettati.
 - Realizzazione/attivazione contatore già autorizzata con "ok procedi";
   non richiedere nuovamente consenso. Non include apertura gate Apple,
   merge main o invio App Review. Deploy community ancora pendente.
+
+## Backend community distribuito — 26 ottobre
+
+- Proprietario conferma upload/deploy calcio-report-proxy su api.calcioreport.com,
+  production enabled, previews disabled. Versione 618af24a-d0bf-4c30-8ef9-a9c87d318e53.
+- Comando eseguito prevedeva verifica hash del bundle 19692a5, UUID live/review,
+  Apple=0, review=1, ledger=1, pausa=0, cutover invariato e --keep-vars.
+  Nessuna nuova installazione di segreti. Non ripetere deploy/schema.
+- Tentativo HTTP da ambiente Work senza credenziali ha ricevuto Cloudflare
+  403/error 1010: non prova la risposta dell'handler né una regressione dell'app.
+  Non cambiare WAF/protezioni per questo esito dell'ambiente di esecuzione.
+- Verifica funzionale interesse ancora pendente dal PC proprietario con account
+  live normale (non review); due richieste devono confermare recorded:true senza
+  duplicare il record. Quindi contatore aggregato e frontend/admin aggiornati.
+- Frontend ancora solo nel branch release; main/Pages e IPA 28.1 non includono
+  il nuovo pulsante. Preparare nuova candidata iOS dopo conferma funzionale.
