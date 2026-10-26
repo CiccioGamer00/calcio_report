@@ -808,3 +808,22 @@ migrazione D1, cutover PRO e test accettati.
   ancora pendente; la 28.1 precedente non contiene il nuovo pulsante.
 - Admin aggiornato nel branch release già al commit 19692a5; fornire copia locale
   al proprietario per visualizzare Community · interessati. Main/Pages invariati.
+
+## Candidata iOS community 29.1 firmata — 26 ottobre
+
+- Run 40372908094 SUCCESS, commit 047c45140d350b81c17a637dd843d02e9a3247d8.
+  159 test Node e 9 Python passati; compilazione/firma/export Production riusciti.
+  Verifica IPA: backend Production, bundle/build e link pagamento web corretti.
+- Include pulsante Community Telegram · In arrivo e supportEmail web conservata.
+  Backend 618af24a già distribuito; due POST proprietario -> un interessato.
+- Artifact calcio-report-production-ipa-29-1, ID 12672364036, 800331 byte,
+  scadenza 2026-10-29T17:56:56Z; digest ZIP
+  sha256:6f2c004cb5d85f5805d565eb6c80b2d18396988b90140b63406b35199f14dd03.
+  IPA e manifest conservati su GitHub. Step Apple validation/upload SKIPPED.
+  Nessun nuovo TestFlight/App Review o modifica dei gate Apple.
+- Prossimo passo: aprire copia locale admin.html del commit 19692a5 per vedere
+  Community · interessati=1 con la consueta ADMIN_KEY, senza comunicarla in chat.
+  Il contatore tramite API admin non è ancora stato confermato dal proprietario.
+- Main/Pages invariati. Non riaprire migrazione, deploy community o deduplica.
+  Restano piano attivazione Apple al primo rilascio, verifiche residue realmente
+  necessarie, metadati/privacy e caricamento/review finale da autorizzare.
