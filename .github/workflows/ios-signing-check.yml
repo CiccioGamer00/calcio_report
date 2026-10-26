@@ -5,6 +5,8 @@ on:
     paths:
       - '.github/workflows/ios-signing-check.yml'
       - 'scripts/check-ios-signing.sh'
+      - 'scripts/verify-ios-artifact.py'
+      - 'tests/test_ios_artifact.py'
       - 'scripts/apple-testflight.sh'
       - 'scripts/build-mobile.mjs'
       - 'scripts/install-storekit.mjs'
@@ -12,9 +14,9 @@ on:
   workflow_dispatch:
     inputs:
       mobile_profile:
-        description: 'Internal build backend'
+        description: 'Build backend (production exports locally; never uploads)'
         type: choice
-        options: [sandbox, review]
+        options: [sandbox, review, production]
         default: sandbox
         required: true
       upload_testflight:
@@ -31,7 +33,10 @@ jobs:
   archive:
     if: github.repository == 'CiccioGamer00/calcio_report' && (github.ref == 'refs/heads/mobile/ios-preparation' || github.ref == 'refs/heads/release/apple-production-preparation')
     env:
-      CR_MOBILE_PROFILE: ${{ github.event_name == 'workflow_dispatch' && inputs.mobile_profile || (github.ref == 'refs/heads/release/apple-production-preparation' && 'review' || 'sandbox') }}
+      CR_MOBILE_PROFILE: >-
+        ${{ github.event_name == 'workflow_dispatch' && inputs.mobile_profile || (github.event.head_commit.message == 'release: build App Store candidate' && 'production' || (github.ref == 'refs/heads/release/apple-production-preparation' && 'review' || 'sandbox')) }}
+      CR_IOS_RELEASE_CANDIDATE: >-
+        ${{ ((github.event_name == 'workflow_dispatch' && inputs.mobile_profile == 'production') || (github.event_name == 'push' && github.event.head_commit.message == 'release: build App Store candidate' && github.run_attempt == 1)) && 'true' || 'false' }}
     runs-on: macos-26
     timeout-minutes: 25
     steps:
@@ -41,26 +46,29 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24'
+      - name: Verify IPA backend and artifact rejection cases
+        run: python3 -m unittest discover -s tests -p 'test_ios_artifact.py'
       - run: node --test tests/*.test.mjs
       - run: npm ci
         working-directory: mobile
       - run: npm run build:web && npx cap add ios
         working-directory: mobile
       - run: node scripts/install-storekit.mjs
-      - name: Archive and export test IPA (no Apple upload)
+      - name: Archive and export verified IPA (no Apple upload)
         env:
           IOS_DISTRIBUTION_P12_BASE64: ${{ secrets.IOS_DISTRIBUTION_P12_BASE64 }}
           IOS_DISTRIBUTION_P12_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_P12_PASSWORD }}
           IOS_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}
         run: bash scripts/check-ios-signing.sh
-      - name: Keep test IPA for review (one day)
+      - name: Keep verified IPA and source manifest
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: calcio-report-test-ipa-${{ github.run_number }}-${{ github.run_attempt }}
+          name: calcio-report-${{ env.CR_MOBILE_PROFILE == 'production' && 'production' || 'test' }}-ipa-${{ github.run_number }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/calcio-ipa/
           if-no-files-found: error
-          retention-days: 1
+          retention-days: ${{ env.CR_MOBILE_PROFILE == 'production' && 3 || 1 }}
       - name: Validate with Apple and process explicit upload request
+        if: env.CR_MOBILE_PROFILE != 'production'
         env:
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
@@ -73,3 +81,4 @@ jobs:
           else
             bash scripts/apple-testflight.sh validate
           fi
+

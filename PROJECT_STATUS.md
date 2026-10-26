@@ -696,3 +696,22 @@ migrazione D1, cutover PRO e test accettati.
   finché non è definito un piano di attivazione coerente con il primo rilascio.
 - Restano percorso Worker->verifier Production, gate sorgente/flag, accettazioni
   residue, build finale, Telegram e metadati/review. Nessun deploy/merge/invio.
+
+## Preparazione IPA Production — 26 ottobre
+
+- Esteso il workflow iOS signing check al profilo production sul branch release;
+  backend pubblico, namespace Production già esistente, export App Store locale.
+  Profili interni Sandbox/review mantenuti; numerazione nello stesso workflow.
+- Production richiede selezione esplicita o commit di avvio esatto, guardie di
+  repository/branch/evento; nessuno step Apple validation/upload viene eseguito.
+  Export interno rimane internal-testing-only; candidata Production no.
+- Verifica dell'IPA esportato tramite scripts/verify-ios-artifact.py:
+  bundle, numero build, URL esatto nel JSON e assenza pagamenti web/header.
+  Manifest Production separato e rifiutato dall'uploader interno esistente.
+- Nove test Python mirati passati localmente; sintassi Bash e YAML verificate.
+  Test con IPA sintetici: NON provano compilazione Xcode o firma reale.
+- Commit di questo blocco avvia la compilazione firmata Production senza upload.
+  Esito workflow ancora pendente; nessun IPA firmato dichiarato disponibile.
+  Procedura e limiti in docs/app-store-candidate.md.
+- Backend live, gate Apple, DB e main invariati. Restano Telegram/supporto,
+  accettazioni residue e piano attivazione acquisti al primo rilascio.
