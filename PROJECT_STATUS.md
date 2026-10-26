@@ -916,3 +916,19 @@ migrazione D1, cutover PRO e test accettati.
   in App Store Connect (build selezionata, metadati e campi mancanti), senza
   invio. IPA 29.1 non richiede ricompilazione per queste sole modifiche server.
   Main/Pages invariati; nessun upload/merge/App Review autorizzato o eseguito.
+
+## Preparazione consegna App Store 29.1 — 26 ottobre
+
+- Screenshot Distribuzioni/iOS 1.0: sezione Build senza build associata.
+  La 29.1 non è ancora su Apple; non selezionare vecchie build internal-only.
+- Preparato workflow ios-app-store-delivery.yml, con modalità validate/upload
+  separate e sorgente fissata in deploy/app-store-candidate.json (run 40372908094,
+  commit 047c451, artifact 12672364036). Riusa l'IPA firmato, non ricompila.
+- Controlli repo/run/fork/branch/commit/digest/scadenza e manifest/IPA effettivo:
+  bundle, versione 1.0, build 29.1, Production, hash e pagamenti web disabilitati.
+  Sei test locali superati; sintassi Bash/YAML valida. Nessuna chiave nuova.
+- Questo commit avvia SOLO validate-app con Apple. Nessun upload richiesto.
+  Esito remoto pendente; dettagli in docs/app-store-delivery.md.
+- Dopo successo preparare consenso al solo caricamento 29.1; nessuna App Review
+  o pubblicazione inclusa. Live a4e384d4/Apple=0 invariato; gate candidato 8ebdca7
+  ancora NON distribuito. Non ripetere test acquisto o migrazioni.

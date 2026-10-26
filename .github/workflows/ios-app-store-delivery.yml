@@ -1,0 +1,54 @@
+name: iOS App Store delivery
+on:
+  push:
+    branches: [release/apple-production-preparation]
+    paths:
+      - '.github/workflows/ios-app-store-delivery.yml'
+      - 'scripts/apple-app-store.sh'
+      - 'scripts/prepare-ios-upload.py'
+      - 'deploy/app-store-candidate.json'
+      - 'tests/test_ios_upload.py'
+  workflow_dispatch:
+    inputs:
+      delivery_mode:
+        description: 'Validate only, or explicitly upload the pinned Production candidate (no review submission)'
+        type: choice
+        options: [validate, upload]
+        default: validate
+        required: true
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ios-app-store-delivery
+  cancel-in-progress: false
+jobs:
+  deliver:
+    if: >-
+      github.repository == 'CiccioGamer00/calcio_report' &&
+      github.ref == 'refs/heads/release/apple-production-preparation' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event_name == 'push' && github.run_attempt == 1 &&
+        (github.event.head_commit.message == 'release: validate App Store candidate 29.1' ||
+         github.event.head_commit.message == 'release: upload App Store candidate 29.1')))
+    runs-on: macos-26
+    timeout-minutes: 20
+    env:
+      DELIVERY_MODE: >-
+        ${{ github.event_name == 'workflow_dispatch' && inputs.delivery_mode || (github.event.head_commit.message == 'release: upload App Store candidate 29.1' && 'upload' || 'validate') }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Verify delivery rejection cases
+        run: python3 -m unittest discover -s tests -p 'test_ios_upload.py'
+      - name: Download and verify pinned Production candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/prepare-ios-upload.py --output "$RUNNER_TEMP/calcio-production-delivery"
+      - name: Validate or explicitly upload existing IPA with Apple
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+        run: bash scripts/apple-app-store.sh "$DELIVERY_MODE"
