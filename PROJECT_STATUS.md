@@ -841,3 +841,16 @@ migrazione D1, cutover PRO e test accettati.
   la stessa chiave appena verificata e premere Carica Utenti. Visualizzazione
   della scheda ancora da confermare; nessuna nuova prova API necessaria.
 - Nessun nuovo deploy/rotazione chiavi o modifica dati in questa verifica.
+
+## Blocco community CHIUSO — 26 ottobre
+
+- Proprietario conferma "si ok ora funziona" dopo aver reinserito nella pagina
+  admin locale la chiave già verificata. Visualizzazione admin accettata.
+- Chiusi: backend pubblico, registrazione interesse, deduplica remota (2 POST,
+  1 account), API admin e pagina admin. Non ripetere test, schema o deploy.
+- Frontend Community · In arrivo incluso nella candidata Production 29.1
+  firmata (run 40372908094), non caricata su Apple. Main/Pages invariati.
+- Riprendere la release App Store dai requisiti residui: piano di attivazione
+  Production al primo rilascio, percorso Worker->verifier/gate sorgente e flag,
+  accettazioni ancora scoperte, metadati/privacy e caricamento finale.
+  Nessun nuovo consenso a merge, upload o App Review implicito nella conferma UI.
