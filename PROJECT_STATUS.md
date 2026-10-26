@@ -874,3 +874,17 @@ migrazione D1, cutover PRO e test accettati.
   Nessuna migrazione o reinstallazione di segreti. Dettagli docs/apple-readiness.md.
 - Gate sorgente e flag Apple=0 invariati. IPA 29.1 non richiede ricompilazione
   per questa diagnostica solo server. Nessun upload/merge/App Review.
+
+## Diagnostica Apple distribuita — 26 ottobre
+
+- Proprietario conferma deploy calcio-report-proxy su api.calcioreport.com,
+  production enabled, previews disabled, versione
+  a4e384d4-50d7-4927-8243-670d4abc183f.
+- Bundle dal commit 564f99a, verificato dal comando con SHA256
+  dd2dc9ff804c12df859a3fd4935acd62a8400cad23e30287e20ff521df3e7c1b.
+  Config clonata dalla community: controlli UUID/flag/cutover, --keep-vars,
+  nessuna migrazione o reinstallazione segreti. Gate Apple invariati.
+- Non ripetere deploy. Prossimo passo: singolo POST /admin/apple-readiness
+  con ADMIN_KEY inserita localmente in prompt protetto, mai comunicata in chat.
+  Atteso HTTP 200 e {ok:true,verifier:HMAC_OK_BAD_INPUT,upstreamStatus:400}.
+  Il 400 è del verifier dopo HMAC e prima di Apple/D1; esito ancora pendente.
