@@ -793,3 +793,18 @@ migrazione D1, cutover PRO e test accettati.
   duplicare il record. Quindi contatore aggregato e frontend/admin aggiornati.
 - Frontend ancora solo nel branch release; main/Pages e IPA 28.1 non includono
   il nuovo pulsante. Preparare nuova candidata iOS dopo conferma funzionale.
+
+## Conteggio community verificato sul live — 26 ottobre
+
+- Proprietario conferma due POST autenticati: interesse confermato entrambe.
+  Query remota su calcio_users mostra interessati=1. Registrazione e deduplica
+  remota chiuse; non ripetere schema, deploy o questi clic di prova.
+- Il singolo interesse è quello espresso dall'account usato dal proprietario.
+  Non è un iscritto Telegram né un download o un acquisto.
+- Preparata nuova compilazione Production con il pulsante Community · In arrivo;
+  supportEmail mobile ora conserva support@calcioreport.com già configurato web,
+  telegramUrl e link di pagamento web rimangono vuoti. Non è prova della casella.
+- Questo commit avvia il workflow di firma senza upload Apple. Esito build
+  ancora pendente; la 28.1 precedente non contiene il nuovo pulsante.
+- Admin aggiornato nel branch release già al commit 19692a5; fornire copia locale
+  al proprietario per visualizzare Community · interessati. Main/Pages invariati.

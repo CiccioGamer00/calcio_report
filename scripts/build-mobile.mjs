@@ -15,7 +15,7 @@ for (const file of ['index.html', 'style.css', 'app.js', 'js']) {
 }
 await writeFile(path.join(output, 'config.js'), `window.API_CONFIG = ${JSON.stringify({
   baseUrl: profile.baseUrl,
-  headers: {}, telegramUrl: '', supportEmail: '', paymentUrl: '', paypalUrl: ''
+  headers: {}, telegramUrl: '', supportEmail: 'support@calcioreport.com', paymentUrl: '', paypalUrl: ''
 }, null, 2)};\n`);
 await cp(path.join(root, 'mobile/assets'), path.join(output, 'native'), { recursive: true });
 await build({ entryPoints: [path.join(root, 'mobile/src/bootstrap.js')], bundle: true,
