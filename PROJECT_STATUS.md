@@ -672,3 +672,27 @@ migrazione D1, cutover PRO e test accettati.
   JWT. Nuova motivazione: isolare il rifiuto per ambiente, non ripetere
   acquisti o accettazioni notifiche storiche. Nessun retry automatico.
   Causa 401 ancora aperta; gate Apple Production chiuso.
+
+## Confronto autenticazione Apple e vincolo primo rilascio — 26 ottobre
+
+- Proprietario conferma nuova diagnostica: Production HTTP 401 senza codice
+  Apple; Sandbox HTTP 200 usando esattamente lo stesso JWT e la stessa
+  richiesta di storia notifiche. Nessun acquisto o scrittura account.
+  La chiave è accettata da Apple Sandbox: non rigenerarla né ripetere la
+  diagnostica JWT/identificativi già conclusa senza nuovi elementi.
+- Trovato chiarimento di alexanderjordanbaker, Collaborator nel repository
+  ufficiale Apple (4 maggio 2024): senza un primo rilascio Production dell'app
+  non è consentito usare le API Production.
+  Fonte: https://github.com/apple/app-store-server-library-java/issues/92
+  Il requisito documentato è coerente col caso Calcio Report non ancora
+  pubblicata e col confronto 401/200. È una spiegazione supportata del blocco,
+  NON una nuova accettazione API Production né prova certa della causa interna.
+- Superato il precedente vuoto di evidenze sull'ipotesi app non pubblicata:
+  ora c'è una fonte primaria pertinente, con il limite temporale del 2024.
+  Non dichiarare Production funzionante o sbloccare i gate sulla sola ipotesi.
+- Pianificare separatamente build/review e attivazione al primo rilascio:
+  il collaudo API Production non va preteso come prerequisito impossibile della
+  prima submission. Mantenere review Sandbox isolata e gate Production chiuso
+  finché non è definito un piano di attivazione coerente con il primo rilascio.
+- Restano percorso Worker->verifier Production, gate sorgente/flag, accettazioni
+  residue, build finale, Telegram e metadati/review. Nessun deploy/merge/invio.
