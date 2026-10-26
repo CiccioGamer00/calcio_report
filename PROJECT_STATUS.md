@@ -972,3 +972,22 @@ migrazione D1, cutover PRO e test accettati.
   Non scegliere 27.1 internal-only, non ripetere upload per la sola attesa.
 - Nessun invio App Review o pubblicazione; main/Pages, live a4e384d4,
   Apple flag 0 e gate candidato non distribuito restano invariati.
+
+## Scheda App Store e nuova icona — 26 ottobre
+
+- Proprietario ha associato 29.1 alla versione 1.0; avviso crittografia risolto.
+  Conferma inserimento credenziali review, contatti, note inglesi, rilascio manuale,
+  descrizione italiana/parole chiave/copyright. Nessun invio alla review.
+- Screenshot reali dell'app ancora mancanti (sezione media vuota). Intestazione
+  e risultati ricerca sono risorse creative facoltative, lasciate vuote.
+- URL assistenza ancora da completare: support@calcioreport.com configurata;
+  accesso ai domini tramite ricerca web non riuscito, nessuna pagina verificata.
+- Nuova icona pallone/barre verde smeraldo su blu notte approvata dal proprietario.
+  Asset assets/branding/calcio-report-icon.png RGB 1024x1024 senza alpha;
+  scripts/install-app-icon.mjs invocato dall'installazione iOS già esistente.
+  Installazione catalogo e riesecuzione verificate localmente su fixture;
+  compilazione Xcode/IPA della nuova icona ancora da eseguire.
+- Commit con skip ci per raccogliere modifiche prima di UNA nuova build Production.
+  29.1 contiene ancora l'icona predefinita; dovrà essere sostituita nella scheda.
+- Prossimi passi: completare assistenza/privacy e asset, nuova build con icona,
+  upload e associazione; restano prerequisiti Production del checkpoint precedente.
