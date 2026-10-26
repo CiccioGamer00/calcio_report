@@ -656,3 +656,19 @@ migrazione D1, cutover PRO e test accettati.
 - Nessun acquisto, modifica scadenze, deploy o merge in questo blocco.
   Prossimo blocco: diagnosi motivata del 401 API Apple Production;
   non ripetere login/isolamento né rigenerare chiavi senza causa individuata.
+
+## Diagnostica credenziali Production offline — 26 ottobre
+
+- Screenshot App Store Connect: chiave Calcio Report acquisti attiva nella
+  sezione Acquisti in-app. Proprietario conferma KEY_ID e ISSUER_ID del file
+  env Production coincidenti con la pagina Apple; valori non riportati qui.
+- Intercettato offline il JWT generato dalla libreria installata sul server:
+  ambiente Production, algoritmo/identificativi, bundle/audience, validità
+  temporale e firma crittografica locale tutti OK secondo output del proprietario.
+  Nessuna richiesta Apple, modifica servizi o chiavi durante questa verifica.
+  La verifica locale della firma non prova che Apple riconosca la chiave.
+- Prossimo controllo mirato: storia notifiche Production con diagnostica sicura
+  della risposta; solo se 401 confronto Sandbox usando esattamente lo stesso
+  JWT. Nuova motivazione: isolare il rifiuto per ambiente, non ripetere
+  acquisti o accettazioni notifiche storiche. Nessun retry automatico.
+  Causa 401 ancora aperta; gate Apple Production chiuso.
