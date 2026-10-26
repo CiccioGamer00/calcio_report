@@ -644,3 +644,15 @@ migrazione D1, cutover PRO e test accettati.
 - Serve verificare il corpo JSON: token review con prefisso -> ok:true;
   stesso token senza prefisso -> ok:false nel percorso Production. Nessun
   cambiamento runtime o deploy necessario; login UI già accettato resta chiuso.
+
+## Isolamento sessione review verificato — 26 ottobre
+
+- Proprietario conferma dal controllo corretto sul Worker pubblico:
+  "ISOLAMENTO OK: review accettata, percorso live rifiutato".
+- /auth/me con token cr-review restituisce ok:true; lo stesso token senza
+  prefisso, instradato al contesto Production, restituisce ok:false.
+  Chiusa questa accettazione del confine di autenticazione; non equivale a
+  un audit completo DB o al collaudo Worker->verifier Production.
+- Nessun acquisto, modifica scadenze, deploy o merge in questo blocco.
+  Prossimo blocco: diagnosi motivata del 401 API Apple Production;
+  non ripetere login/isolamento né rigenerare chiavi senza causa individuata.
