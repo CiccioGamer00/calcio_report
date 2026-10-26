@@ -762,3 +762,18 @@ migrazione D1, cutover PRO e test accettati.
   Poi distribuire il bundle preservando gate Apple=0 e configurazione corrente;
   verificare contatore con account live del proprietario, non con account review.
   Nessun esito remoto ricevuto: non dichiarare attivato o ripetere vecchie migrazioni.
+
+## Tabella interesse community creata sul live — 26 ottobre
+
+- Proprietario riporta Wrangler 4.152.0: eseguito 1 comando, 0.37 ms,
+  su calcio_users (45681187-3565-4d36-8627-131c18ff1885).
+  Confermata esecuzione della CREATE TABLE community_interest autorizzata.
+  Non ripetere questa creazione o le precedenti migrazioni PRO/Apple.
+- Prossimo passo: scaricare bundle dal commit 19692a568742dcf171478c1eb83377e2f3894575,
+  verificarne hash cdf050b645fd3c2cdd1299800cba9c806292144ad707420dd5014c49f6c7ae8a,
+  creare copia wrangler.community-interest.json dalla config locale review,
+  cambiare solo main, verificare i due UUID e flag/cutover, dry-run e deploy
+  --keep-vars. Nessuna nuova installazione o rotazione dei segreti.
+- Realizzazione/attivazione contatore già autorizzata con "ok procedi";
+  non richiedere nuovamente consenso. Non include apertura gate Apple,
+  merge main o invio App Review. Deploy community ancora pendente.
