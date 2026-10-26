@@ -634,3 +634,13 @@ migrazione D1, cutover PRO e test accettati.
   cancellazioni o modifiche alle scadenze. Apple Production resta disabilitato.
 - Credenziali recuperate dal documento privato Calcio_Report_Credenziali_Review.md;
   nessuna credenziale riportata nel repository. Nessun deploy o merge eseguito.
+
+## Correzione diagnostica isolamento — 26 ottobre
+
+- Script manuale ha riportato review ACCETTATA e isolamento live NON SUPERATO,
+  ma controllava solo lo status HTTP. Ispezione handleMe in worker/worker.js:
+  una sessione non valida restituisce HTTP 200 con {ok:false}. Il risultato
+  NON dimostra accesso al DB live né un difetto di isolamento.
+- Serve verificare il corpo JSON: token review con prefisso -> ok:true;
+  stesso token senza prefisso -> ok:false nel percorso Production. Nessun
+  cambiamento runtime o deploy necessario; login UI già accettato resta chiuso.
