@@ -566,9 +566,9 @@ Dopo l'esito verificare versione distribuita e pausa, senza ripetere i test chiu
 5. **Release App Store:** bundle/build firmata corretta, metadati/screenshot,
    privacy/supporto, istruzioni e account di revisione, approvazione proprietario
    prima di deploy pubblico o invio alla review.
-6. **Telegram — richiesto dal proprietario il 23 ottobre:** configurare il link
-   attualmente non attivo e verificarne l’apertura prima della pubblicazione.
-   Acquisire URL/canale definitivo quando si affronta questo blocco.
+6. **Telegram — rinviato dal proprietario il 26 ottobre:** nessun gruppo/canale
+   necessario per il rilascio. Preparare pulsante “Community · In arrivo” con
+   conteggio univoco degli account interessati, visibile soltanto in admin.
 
 ## Documenti di dettaglio SOLO SE pertinenti al blocco
 
@@ -737,3 +737,28 @@ migrazione D1, cutover PRO e test accettati.
   esterni in iOS. Supporto web già configurato support@calcioreport.com.
   La 28.1 prova la procedura di firma Production, non è ancora la build finale
   completa di contatti da caricare. Non rifare acquisti o controlli accettati.
+
+## Community in arrivo e contatore — 26 ottobre
+
+- Proprietario rinvia Telegram e autorizza pulsante in preparazione + contatore
+  account unici. Non è requisito di rilascio aprire un gruppo o fornire un URL.
+- Implementati UI con messaggio reale dopo conferma server, POST autenticato
+  /community/interest, aggregato admin e scheda Community · interessati.
+  Deduplica per account, review/Sandbox esclusi, disabilitati esclusi dal totale;
+  FK cascade elimina la preferenza alla cancellazione. Nessun dato email/IP.
+- Nuovo schema additivo/ripetibile worker/schema/community-interest.sql,
+  solo sul DB live già identificato. NON ancora applicato.
+- Bundle pronto deploy/community-worker-candidate.mjs, 108055 byte,
+  SHA256 cdf050b645fd3c2cdd1299800cba9c806292144ad707420dd5014c49f6c7ae8a. Non ancora distribuito.
+  Config/binding/segreti/flag Apple e registro PRO da preservare invariati.
+- 32 test mirati superati; SQLite reale e autenticazione firmata, concorrenza,
+  cancellazione, admin, review e messaggi UI. Patch nativa e smoke bundle passati.
+  Non sono nuove prove su iPhone o sul DB live.
+- Main/GitHub Pages invariati; frontend candidato sul branch release.
+  IPA 28.1 precedente al pulsante: ricompilare dopo l'attivazione backend.
+  Dettagli e piano operativo in docs/community-interest.md.
+- Prossimo passo manuale: creare SOLO tabella community_interest su calcio_users,
+  UUID 45681187-3565-4d36-8627-131c18ff1885, con config locale review verificata.
+  Poi distribuire il bundle preservando gate Apple=0 e configurazione corrente;
+  verificare contatore con account live del proprietario, non con account review.
+  Nessun esito remoto ricevuto: non dichiarare attivato o ripetere vecchie migrazioni.

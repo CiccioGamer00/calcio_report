@@ -223,6 +223,7 @@
           <div class="dashcard"><div class="k">Attivi (24h)</div><div class="v">${fmtN(s.active24h)}</div></div>
           <div class="dashcard"><div class="k">Attivi (7d)</div><div class="v">${fmtN(s.active7d)}</div></div>
           <div class="dashcard"><div class="k">Nuovi PRO (24h)</div><div class="v">${fmtN(s.newPro24h)}</div></div>
+          <div class="dashcard"><div class="k">Community · interessati</div><div class="v">${Number.isSafeInteger(s.communityInterested) && s.communityInterested >= 0 ? fmtN(s.communityInterested) : "Non disponibile"}</div><div class="k">Account unici, esclusi disabilitati e cancellati</div></div>
           <div class="dashcard" style="display:flex; align-items:center; gap:10px;">
             <button id="btnRefreshDash">Aggiorna dashboard</button>
             <span class="muted">${new Date(s.now).toLocaleString()}</span>
@@ -468,3 +469,4 @@
     </script>
   </body>
 </html>
+

@@ -59,6 +59,10 @@ export function createAppReviewRouter(production, sandbox, core) {
           ['/apple/notifications','/auth/reset','/auth/register','/auth/forgot','/auth/login'].includes(path)) {
         return json({error:'REVIEW_ROUTE_UNAVAILABLE'},403);
       }
+      // Review activity must never enter the public community-interest metric.
+      if (path === '/community/interest' && request.method === 'POST') {
+        return json({ok:true,recorded:false});
+      }
       const response = await sandbox.fetch(routed,reviewEnv,ctx);
       if (path === '/apple/token' && response.ok) {
         const body = await response.json();

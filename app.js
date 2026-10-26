@@ -549,14 +549,52 @@ function setupProLockCTA() {
 function setupTelegramHeader() {
   const a = document.getElementById("btnTelegramHeader");
   if (!a) return;
-  a.addEventListener("click", (e) => {
+  const url = window.API_CONFIG?.telegramUrl || "";
+  a.textContent = url ? "📣 Community Telegram" : "📣 Community Telegram · In arrivo";
+  let pending = false;
+  a.addEventListener("click", async (e) => {
     e.preventDefault();
-    const url = window.API_CONFIG?.telegramUrl || "";
-    if (!url) {
-      alert("Link Telegram non configurato in config.js");
+    if (pending) return;
+    if (url) {
+      window.open(url, "_blank", "noopener");
       return;
     }
-    window.open(url, "_blank", "noopener");
+    const token = getToken();
+    const intro = "Stiamo preparando la community di Calcio Report, dove potrai condividere analisi, fare domande e proporre miglioramenti.";
+    if (!token) {
+      showToast({title:"Community Telegram · In arrivo", text:intro + "\n\nAccedi per segnalarci il tuo interesse.",
+        allowDisable:false, ctaLabel:"Accedi", ctaAction:() => openAuthModal()});
+      return;
+    }
+    pending = true;
+    a.setAttribute("aria-busy", "true");
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+      const response = await fetch((window.API_CONFIG?.baseUrl || "") + "/community/interest", {
+        method:"POST", headers:{Authorization:"Bearer " + token}, signal:controller.signal
+      });
+      const data = await response.json().catch(() => null);
+      if (getToken() !== token) return;
+      if (!response.ok || data?.ok !== true || typeof data.recorded !== "boolean") {
+        showToast({title:"Community Telegram · In arrivo",
+          text:intro + (response.status === 401 ? "\n\nAccedi nuovamente per segnalare il tuo interesse." :
+            "\n\nNon siamo riusciti a confermare la registrazione del tuo interesse. Puoi riprovare."),
+          allowDisable:false});
+        return;
+      }
+      showToast({title:"Community Telegram · In arrivo",
+        text:intro + (data.recorded ? "\n\nIl tuo interesse è registrato. Grazie!" : ""),
+        allowDisable:false});
+    } catch {
+      if (getToken() === token) showToast({title:"Community Telegram · In arrivo",
+        text:intro + "\n\nNon siamo riusciti a confermare la registrazione del tuo interesse. Puoi riprovare.",
+        allowDisable:false});
+    } finally {
+      clearTimeout(timeout);
+      pending = false;
+      a.removeAttribute("aria-busy");
+    }
   });
 }
 function setupTabsStage() {
