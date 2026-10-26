@@ -1,6 +1,6 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
-_Aggiornato: 2026-10-24 (matrice Worker e condizioni del cutover)._
+_Aggiornato: 2026-10-26 (login review sul sito pubblico confermato)._
 _Questo è il PUNTO DI INGRESSO per le prossime sessioni Work. Leggerlo una sola volta a inizio attività._
 
 ## Obiettivo unico attuale
@@ -622,3 +622,15 @@ che serve". Non ripetere consensi già concessi; non aprire gate senza requisiti
 tecnici risolti. Nessun merge o invio App Review eseguito; PR15/16 non merged.
 Main invariato. Non rileggere archivi/core-v2/allegati obsoleti o ripetere backup,
 migrazione D1, cutover PRO e test accettati.
+
+## Login review sul sito pubblico confermato — 26 ottobre
+
+- Proprietario conferma accesso con account review su app.calcioreport.com:
+  badge PRO, 25 giorni rimasti; aperte alcune schede con funzionamento regolare.
+- Accettazione manuale del login e delle schede provate conclusa; non ripeterla
+  senza regressione. Non è prova indipendente del database usato o del verifier.
+- Prossimo passo: controllo mirato instradamento della sessione review sul Worker
+  pubblico e rifiuto della stessa firma nel contesto live, senza acquisti,
+  cancellazioni o modifiche alle scadenze. Apple Production resta disabilitato.
+- Credenziali recuperate dal documento privato Calcio_Report_Credenziali_Review.md;
+  nessuna credenziale riportata nel repository. Nessun deploy o merge eseguito.
