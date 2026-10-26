@@ -827,3 +827,17 @@ migrazione D1, cutover PRO e test accettati.
 - Main/Pages invariati. Non riaprire migrazione, deploy community o deduplica.
   Restano piano attivazione Apple al primo rilascio, verifiche residue realmente
   necessarie, metadati/privacy e caricamento/review finale da autorizzare.
+
+## Contatore admin live confermato — 26 ottobre
+
+- Pagina admin locale inizialmente mostrava HTTP 403 FORBIDDEN su /admin/users.
+  Elenco segreti del proprietario conferma ADMIN_KEY presente, insieme agli
+  altri segreti attesi; nessun valore esposto o ruotato.
+- GET /admin/stats con chiave inserita localmente in prompt protetto ha
+  restituito al proprietario: "Accesso admin OK — interessati: 1".
+  Autenticazione admin e aggregato community sul Worker pubblico verificati.
+  Il 403 precedente non dimostra perdita del segreto o difetto del contatore.
+- Ultimo passo UI: svuotare Admin Key nella pagina locale aggiornata, inserire
+  la stessa chiave appena verificata e premere Carica Utenti. Visualizzazione
+  della scheda ancora da confermare; nessuna nuova prova API necessaria.
+- Nessun nuovo deploy/rotazione chiavi o modifica dati in questa verifica.
