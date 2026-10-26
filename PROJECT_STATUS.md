@@ -955,3 +955,20 @@ migrazione D1, cutover PRO e test accettati.
 - Avvio workflow delivery in modalità upload, con origine e digest invariati.
   Esito remoto ancora pendente: non dichiarare caricamento completato.
 - Nessun invio App Review, pubblicazione, merge main o apertura gate Apple.
+
+## Upload Apple Production 29.1 RIUSCITO — 26 ottobre
+
+- Dopo consenso esplicito del proprietario, workflow iOS App Store delivery
+  run 40382507054, commit d542173f134a2aa739843986b514fd9ec1112466,
+  job 121782169791 SUCCESS in modalità upload. Sei test Python e controlli
+  origine/digest/manifest/IPA passati prima del trasferimento.
+- Riutilizzata la stessa IPA Production 1.0 (29.1), sorgente 047c451,
+  artifact 12672364036: nessuna ricompilazione/rifirma o modifica al contenuto.
+- Apple: VERIFY SUCCEEDED senza errori alle 18:59:41 UTC e
+  UPLOAD SUCCEEDED senza errori alle 19:00:51 UTC. Trasferimento confermato,
+  NON conferma dell'elaborazione Apple o dell'idoneità/selezione della build.
+- Prossimo passo: proprietario aggiorna App Store Connect, sezione Build,
+  Aggiungi build; verificare presenza Production 29.1 dopo elaborazione.
+  Non scegliere 27.1 internal-only, non ripetere upload per la sola attesa.
+- Nessun invio App Review o pubblicazione; main/Pages, live a4e384d4,
+  Apple flag 0 e gate candidato non distribuito restano invariati.
