@@ -11,8 +11,20 @@
 - Restano conservazione/log effettivi, assistenza, ricerche e fornitori; base
   giuridica analisi da definire con conseguenze tecniche, non confondere con
   finalità selezionate nell'etichetta Apple.
-- Prossimo passo manuale: leggere impostazioni log/Observability del Worker
-  live senza modificarle, poi configurazione server e conservazioni.
+- Cloudflare Production: screenshot conferma Logs e persistenza attivi,
+  campionamento 100%, Traces/Issues spenti, nessuna esportazione. Piano Free:
+  retention Workers Logs attuale 3 giorni (documentazione Cloudflare).
+- Un evento web /telemetry/ping conteneva IP, geolocalizzazione da IP, user-agent
+  e tempi CPU/wall; Authorization mascherata. Non copiare il JSON con dati
+  personali nel repo. Non è una prova specifica del client nativo.
+- Proprietario conferma disattivazione Include Invocation logs il 27 ottobre;
+  Logs/persistenza restano attivi. Verifica post-modifica ancora da fare.
+  Nei prossimi deploy preservare observability.logs.invocation_logs=false
+  anche nella configurazione Wrangler locale: --keep-vars non garantisce
+  preservazione delle impostazioni Observability. Nessun file locale PC
+  modificato da questa sessione.
+- Prossimo passo: leggere direttive log Caddy effettive su OVH e conservazione.
+  Esempio repo include log su file, non prova della configurazione installata.
 - Nessun deploy/merge/upload/review; build con nuova icona ancora da eseguire.
 
 

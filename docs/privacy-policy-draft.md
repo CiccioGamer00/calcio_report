@@ -73,9 +73,15 @@ Potremo chiedere le informazioni necessarie per verificare la tua identità.
 - Cronologia ricerche: il Worker contiene cancellazione di tabelle storiche
   trial_search_log/trial_usage, ma ciò non dimostra che la release vi scriva.
   Non dichiarare una raccolta né una sua assenza sulla sola base dei nomi.
-- Log: verificare configurazione effettiva Cloudflare e OVH (campi, accessi,
-  durata); il sorgente relay esaminato non stampa richieste, ma non esclude
-  log del reverse proxy o della piattaforma.
+- Workers Logs: piano Free, conservazione documentata attuale 3 giorni.
+  Invocation logs prima attivi con IP/geolocalizzazione di rete/browser/tempi;
+  proprietario conferma disattivazione il 27 ottobre. Logs applicativi e
+  persistenza rimangono attivi. Controllare risultato e preservare il flag
+  invocation_logs=false nei futuri deploy. Nessuna copia di log personali qui.
+- Rimangono da verificare contenuto dei log applicativi e raccolta degli altri
+  servizi Cloudflare/OVH. L'esempio Caddy del repo abilita un access log su file:
+  leggere configurazione installata, rotazione e journal prima di concludere.
+  Disattivare Invocation logs non dimostra assenza di altra raccolta.
 - Inventario delle dipendenze e manifest del binario finale.
 - Etichette Apple preliminari: email, ID utente e acquisti per Funzionalità;
   interazione prodotto per Analisi; tutti collegati, nessun tracking dichiarato.
@@ -85,3 +91,5 @@ Potremo chiedere le informazioni necessarie per verificare la tua identità.
 Riferimenti di lavoro:
 https://developer.apple.com/app-store/app-privacy-details/
 https://eur-lex.europa.eu/eli/reg/2016/679/oj/ita
+
+Fonte tecnica log: https://developers.cloudflare.com/workers/observability/logs/workers-logs/
