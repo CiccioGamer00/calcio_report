@@ -1,10 +1,22 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
+## Checkpoint di pausa — 27 ottobre 2026
+Proprietario chiede STOP per crediti quasi esauriti. Riprendere da questo blocco;
+non rifare test accettati, configurazioni log o domande già risolte.
+Ultimo output: unico file /var/log/caddy/calcio-report-relay.log, 5488926 byte.
+File NON cancellato; nessuna autorizzazione alla cancellazione richiesta/ottenuta.
+Prossima ripresa: decidere smaltimento di questo preciso file, poi completare
+privacy (conservazione registri/backup, base analisi, log residui/fornitori),
+pubblicare pagine solo dopo revisione/autorizzazione, nuova build con icona e
+manifest verificati. Supporto e policy non pubblicati; ASC non inviata.
+Apple Production resta disabilitato; non anticipare attivazione o merge main.
+
 ## Checkpoint privacy — 27 ottobre 2026, pomeriggio
 
 - Proprietario conferma casella support@calcioreport.com operativa e accessibile.
 - App Store Connect: salvate quattro categorie preliminari (email, ID utente,
-  acquisti, interazione prodotto); prime tre Funzionalità, interazione Analisi,
+  acquisti, interazione prodotto); email/ID Funzionalità + Analisi,
+  acquisti Funzionalità, interazione Analisi,
   dati collegati all'utente, nessun tracking. NON pubblicate; verifica incompleta.
 - docs/privacy-policy-draft.md contiene bozza concreta e punti da completare;
   non è informativa pubblicabile. support.html già preparata, non pubblicata.
@@ -38,8 +50,8 @@
   né eliminazione di email eseguita. Bozza aggiornata.
 - Verifica sorgente: handleTelemetryPing sovrascrive last_seen_at dell'utente
   tramite email; non conserva ogni ping. ID usato per deduplica community.
-  Correzione da fare in ASC: aggiungere Analisi anche a email e ID utente,
-  mantenendo Funzionalità, collegamento Sì e tracking No. Non ancora confermata.
+  Proprietario conferma correzione ASC completata: Analisi aggiunta a email
+  e ID utente, mantenendo Funzionalità, collegamento Sì e tracking No.
 - Nel bundle live apple-readiness e nei percorsi ricerca esaminati non risultano
   scritture a trial_search_log/trial_usage: riferimenti solo alla cancellazione.
   Non equivale ad assenza di cache/log dei fornitori o dati storici.
