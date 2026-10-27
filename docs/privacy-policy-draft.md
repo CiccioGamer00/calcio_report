@@ -78,10 +78,12 @@ Potremo chiedere le informazioni necessarie per verificare la tua identità.
   proprietario conferma disattivazione il 27 ottobre. Logs applicativi e
   persistenza rimangono attivi. Controllare risultato e preservare il flag
   invocation_logs=false nei futuri deploy. Nessuna copia di log personali qui.
-- Rimangono da verificare contenuto dei log applicativi e raccolta degli altri
-  servizi Cloudflare/OVH. L'esempio Caddy del repo abilita un access log su file:
-  leggere configurazione installata, rotazione e journal prima di concludere.
-  Disattivare Invocation logs non dimostra assenza di altra raccolta.
+- Access log relay OVH: il 27 ottobre il proprietario ha autorizzato e
+  confermato rimozione del relativo blocco Caddy, validazione e reload riusciti.
+  Esempio repo allineato. I vecchi file sono conservati e richiedono una
+  decisione di smaltimento; non presumere che vengano cancellati senza rotazione.
+- Rimangono da verificare log applicativi/journal e altri servizi Cloudflare/OVH.
+  Queste modifiche non dimostrano assenza di ogni altra raccolta.
 - Inventario delle dipendenze e manifest del binario finale.
 - Etichette Apple preliminari: email, ID utente e acquisti per Funzionalità;
   interazione prodotto per Analisi; tutti collegati, nessun tracking dichiarato.

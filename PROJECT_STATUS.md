@@ -23,9 +23,18 @@
   anche nella configurazione Wrangler locale: --keep-vars non garantisce
   preservazione delle impostazioni Observability. Nessun file locale PC
   modificato da questa sessione.
-- Prossimo passo: leggere direttive log Caddy effettive su OVH e conservazione.
-  Esempio repo include log su file, non prova della configurazione installata.
-- Nessun deploy/merge/upload/review; build con nuova icona ancora da eseguire.
+- OVH: Caddyfile importa /etc/caddy/sites/*.caddy. Il proprietario ha
+  autorizzato rimozione del solo blocco access log in calcio-report.caddy.
+  Confermati backup /root/caddy-backup-379ys6d6/calcio-report.caddy,
+  validazione, reload e servizio attivo. Non ripetere questa operazione.
+- Vecchi file /var/log/caddy/calcio-report-relay*.log* NON cancellati:
+  definire smaltimento; senza nuove rotazioni non presumere scadenza automatica.
+  Log operativi/journal e altri servizi non ancora caratterizzati.
+  Esempio relay/deploy/Caddyfile.example allineato senza access log.
+- Prossimo dato dal proprietario: provider effettivo della casella supporto
+  ed eventuale inoltro; proseguire bozza privacy e conservazione.
+- Nessun deploy Worker/merge/upload/review; solo reload Caddy autorizzato.
+  Build con nuova icona ancora da eseguire.
 
 
 _Aggiornato: 2026-10-26 (login review sul sito pubblico confermato)._
