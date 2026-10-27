@@ -31,8 +31,13 @@
   definire smaltimento; senza nuove rotazioni non presumere scadenza automatica.
   Log operativi/journal e altri servizi non ancora caratterizzati.
   Esempio relay/deploy/Caddyfile.example allineato senza access log.
-- Prossimo dato dal proprietario: provider effettivo della casella supporto
-  ed eventuale inoltro; proseguire bozza privacy e conservazione.
+- Supporto: proprietario conferma Cloudflare Email Routing con inoltro a
+  casella Libero personale. Non pubblicare l'indirizzo personale nel repo/policy.
+  Approvati 12 mesi dalla chiusura della richiesta, salvo contestazioni/obblighi
+  specifici, con pulizia manuale periodica; nessun automatismo configurato
+  né eliminazione di email eseguita. Bozza aggiornata.
+- Proseguire verifiche tecniche privacy residue senza richiedere di nuovo
+  provider email, operatività casella o durata assistenza già confermati.
 - Nessun deploy Worker/merge/upload/review; solo reload Caddy autorizzato.
   Build con nuova icona ancora da eseguire.
 

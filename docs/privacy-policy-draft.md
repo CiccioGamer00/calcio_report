@@ -41,8 +41,13 @@ La scelta Analisi in App Store Connect non costituisce una base giuridica GDPR.]
 ## Assistenza
 Se scrivi all'assistenza, trattiamo l'indirizzo del mittente e le informazioni
 che includi per gestire la richiesta. Non inviare password o dati delle carte.
-[DA COMPLETARE: provider della casella, conservazione dei messaggi e valutazione
-della categoria Assistenza clienti nell'etichetta Apple.]
+I messaggi a support@calcioreport.com sono inoltrati tramite Cloudflare
+Email Routing alla casella Libero usata dal gestore per l'assistenza.
+Il periodo concordato per la corrispondenza è di 12 mesi dalla chiusura della
+richiesta, salvo necessità legate a contestazioni o obblighi specifici.
+La pulizia è gestita manualmente; non è attiva una cancellazione automatica.
+[DA COMPLETARE: valutazione categoria Assistenza clienti nell'etichetta Apple;
+verifica condizioni/ruoli dei fornitori e gestione delle copie e del cestino.]
 
 ## Fornitori e comunicazioni
 L'infrastruttura utilizza Cloudflare per API/database e OVH per i servizi
@@ -58,7 +63,7 @@ confermando la password e digitando ELIMINA. Il record dell'interesse community
 viene eliminato insieme all'account. La cancellazione fa perdere l'accesso e
 i giorni residui; non comporta automaticamente un rimborso Apple.
 [DA COMPLETARE: periodi o criteri concreti per account inattivi, ultima attività,
-interesse, acquisti, assistenza, log e backup. Verificare il comportamento dei
+interesse, acquisti, log e backup. Verificare il comportamento dei
 registri Apple/PRO e dei backup: non promettere cancellazione totale immediata.]
 
 ## Diritti
