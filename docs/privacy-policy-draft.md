@@ -24,12 +24,16 @@ delle transazioni e del prodotto, date, stato dei diritti e collegamento
 all'account. I pagamenti nell'app iOS sono gestiti da Apple: Calcio Report non
 riceve il numero della carta o le credenziali di pagamento.
 Apple tratta inoltre dati secondo la propria informativa.
-[DA COMPLETARE: eventuali obblighi di conservazione effettivamente applicabili,
-ruoli dei soggetti e sorte dei registri dopo cancellazione account.]
+La cancellazione dell'account disattiva il collegamento operativo del token
+Apple, ma conserva i registri tecnici degli acquisti e dei diritti PRO, con
+identificativi pseudonimi, per impedire riutilizzi e gestire le transazioni.
+Questi registri non devono essere descritti come anonimi.
+[DA COMPLETARE: periodo/criteri di conservazione e procedura applicabile a
+questi registri; eventuali obblighi effettivi e ruoli dei soggetti.]
 
 ## Attività e interesse per la community
 Il server conserva l'ultima attività dell'account per le statistiche
-amministrative. Quando esprimi interesse per la futura community, registra
+amministrative, aggiornando un unico valore; non memorizza una riga per ogni ping. Quando esprimi interesse per la futura community, registra
 l'identificativo dell'account e la data: questo permette di contare una sola
 manifestazione per account. Il totale mostrato all'amministratore non rende
 anonimo il record originario.
@@ -75,9 +79,11 @@ dei dati personali: https://www.garanteprivacy.it/.
 Potremo chiedere le informazioni necessarie per verificare la tua identità.
 
 ## Verifiche tecniche da chiudere
-- Cronologia ricerche: il Worker contiene cancellazione di tabelle storiche
-  trial_search_log/trial_usage, ma ciò non dimostra che la release vi scriva.
-  Non dichiarare una raccolta né una sua assenza sulla sola base dei nomi.
+- Cronologia ricerche: nessuna scrittura a trial_search_log/trial_usage nel
+  bundle live apple-readiness esaminato; riferimenti soltanto alla cancellazione.
+  I percorsi app/searchController/teamFlow/api esaminati non aggiungono un
+  registro server delle ricerche. Cache delle richieste e log dei fornitori
+  vanno valutati separatamente, come gli eventuali record storici.
 - Workers Logs: piano Free, conservazione documentata attuale 3 giorni.
   Invocation logs prima attivi con IP/geolocalizzazione di rete/browser/tempi;
   proprietario conferma disattivazione il 27 ottobre. Logs applicativi e
@@ -89,10 +95,15 @@ Potremo chiedere le informazioni necessarie per verificare la tua identità.
   decisione di smaltimento; non presumere che vengano cancellati senza rotazione.
 - Rimangono da verificare log applicativi/journal e altri servizi Cloudflare/OVH.
   Queste modifiche non dimostrano assenza di ogni altra raccolta.
-- Inventario delle dipendenze e manifest del binario finale.
-- Etichette Apple preliminari: email, ID utente e acquisti per Funzionalità;
-  interazione prodotto per Analisi; tutti collegati, nessun tracking dichiarato.
-  Verificare l'eventuale uso di ID/email anche per analisi prima di pubblicare.
+- Dipendenze dirette iOS: Capacitor core/ios 8.5.3 e secure-storage 8.0.1;
+  dipendenze transitive includono Capacitor app/keyboard. Sessione in vault nativo,
+  con scadenza 6 ore e rimozione dei vecchi token plaintext dal localStorage.
+  Nessun SDK pubblicitario nelle dipendenze dirette censite. Verifica manifest
+  del binario finale ancora necessaria; non dedurre conformità dal package.json.
+- Etichette Apple: email e ID utente per Funzionalità E Analisi (ultima
+  attività legata all'email e deduplica interesse per ID); acquisti per
+  Funzionalità, interazione per Analisi; tutti collegati, nessun tracking.
+  Correzione email/ID da applicare in ASC, non ancora confermata dal proprietario.
 - URL pubblico, link nell'app, accessibilità della policy senza autenticazione.
 
 Riferimenti di lavoro:

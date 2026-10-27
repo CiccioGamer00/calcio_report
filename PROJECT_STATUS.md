@@ -36,8 +36,22 @@
   Approvati 12 mesi dalla chiusura della richiesta, salvo contestazioni/obblighi
   specifici, con pulizia manuale periodica; nessun automatismo configurato
   né eliminazione di email eseguita. Bozza aggiornata.
-- Proseguire verifiche tecniche privacy residue senza richiedere di nuovo
-  provider email, operatività casella o durata assistenza già confermati.
+- Verifica sorgente: handleTelemetryPing sovrascrive last_seen_at dell'utente
+  tramite email; non conserva ogni ping. ID usato per deduplica community.
+  Correzione da fare in ASC: aggiungere Analisi anche a email e ID utente,
+  mantenendo Funzionalità, collegamento Sì e tracking No. Non ancora confermata.
+- Nel bundle live apple-readiness e nei percorsi ricerca esaminati non risultano
+  scritture a trial_search_log/trial_usage: riferimenti solo alla cancellazione.
+  Non equivale ad assenza di cache/log dei fornitori o dati storici.
+- Schema acquisti: cancellazione users ritira il token Apple, non cancella
+  ledger/eventi PRO. Registri pseudonimi conservati per anti-riutilizzo;
+  durata e procedura di conservazione da definire, non dichiarare anonimizzazione.
+- Dipendenze iOS censite da lockfile; manifest del binario finale da verificare.
+- Riparato asset icona troncato nel precedente trasferimento (blob 66749f8,
+  786444 byte). Rigenerato solo formato RGB 1024 dal medesimo originale
+  approvato, PNG verificato; 1201283 byte, blob d202a44f4032f7aa48bb8eb773ca4d84c8b3e687.
+  Installer controlla SHA256 per bloccare file incompleti; installazione locale
+  riuscita e PNG troncato rifiutato. Nessuna nuova build Xcode o upload.
 - Nessun deploy Worker/merge/upload/review; solo reload Caddy autorizzato.
   Build con nuova icona ancora da eseguire.
 
