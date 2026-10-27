@@ -1,5 +1,21 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
+## Checkpoint privacy — 27 ottobre 2026, pomeriggio
+
+- Proprietario conferma casella support@calcioreport.com operativa e accessibile.
+- App Store Connect: salvate quattro categorie preliminari (email, ID utente,
+  acquisti, interazione prodotto); prime tre Funzionalità, interazione Analisi,
+  dati collegati all'utente, nessun tracking. NON pubblicate; verifica incompleta.
+- docs/privacy-policy-draft.md contiene bozza concreta e punti da completare;
+  non è informativa pubblicabile. support.html già preparata, non pubblicata.
+- Restano conservazione/log effettivi, assistenza, ricerche e fornitori; base
+  giuridica analisi da definire con conseguenze tecniche, non confondere con
+  finalità selezionate nell'etichetta Apple.
+- Prossimo passo manuale: leggere impostazioni log/Observability del Worker
+  live senza modificarle, poi configurazione server e conservazioni.
+- Nessun deploy/merge/upload/review; build con nuova icona ancora da eseguire.
+
+
 _Aggiornato: 2026-10-26 (login review sul sito pubblico confermato)._
 _Questo è il PUNTO DI INGRESSO per le prossime sessioni Work. Leggerlo una sola volta a inizio attività._
 
