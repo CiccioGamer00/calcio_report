@@ -991,3 +991,21 @@ migrazione D1, cutover PRO e test accettati.
   29.1 contiene ancora l'icona predefinita; dovrà essere sostituita nella scheda.
 - Prossimi passi: completare assistenza/privacy e asset, nuova build con icona,
   upload e associazione; restano prerequisiti Production del checkpoint precedente.
+
+## Preparazione autonoma assistenza/privacy — 27 ottobre
+
+- Proprietario autorizza avanzamento mentre lavora, conclusione insieme la sera.
+- Preparata support.html con email configurata, FAQ accesso/PRO/ripristino,
+  cancellazione e community. HTML parsato, asset locale presente, nessuno script,
+  form o iframe; NON pubblicata né verificata visualmente in browser.
+- docs/app-store-final-preparation.md raccoglie evidenze privacy e residui.
+  Interesse community è collegato ad account anche se admin mostra aggregato.
+  Consultate guide ufficiali Apple; nessuna etichetta o policy pubblicata.
+- Blocco concreto per completare privacy: recuperare policy pubblica attuale e
+  schermata App Privacy già configurata; conservazione log/partner e operatività
+  supporto da verificare. Non inventare URL, dichiarazioni o tempi conservazione.
+- Nuova build non avviata per includere eventuali link/privacy necessari una sola
+  volta. Uploader ancora fissato a 29.1; non usarlo per altra candidata.
+- Primo passo proprietario stasera: URL policy attuale + schermata App Privacy.
+  Poi pubblicazione pagine, build con icona, screenshot reali e associazione;
+  restano tutti i prerequisiti Production precedenti. Nessun invio review.
