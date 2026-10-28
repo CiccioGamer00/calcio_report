@@ -109,8 +109,13 @@ Potremo chiedere le informazioni necessarie per verificare la tua identità.
 - Workers Logs: piano Free, conservazione documentata attuale 3 giorni.
   Invocation logs prima attivi con IP/geolocalizzazione di rete/browser/tempi;
   proprietario conferma disattivazione il 27 ottobre. Logs applicativi e
-  persistenza rimangono attivi. Controllare risultato e preservare il flag
-  invocation_logs=false nei futuri deploy. Nessuna copia di log personali qui.
+  persistenza rimangono attivi. Verifica operativa post-modifica del 28 ottobre:
+  schermata Observability Last 1 hour senza eventi; successiva schermata Metrics
+  Last 1 hour con 93 invocazioni, 0 errori runtime e versione a4e384d4 al 100%.
+  Finestre mobili sovrapposte, non identiche: riscontro coerente con disattivazione,
+  non prova di assenza globale di log, né del contenuto/esito HTTP delle richieste.
+  Controllo operativo chiuso; preservare invocation_logs=false nei futuri deploy.
+  Nessuna copia di log personali qui.
 - Access log relay OVH: il 27 ottobre il proprietario ha autorizzato e
   confermato rimozione del relativo blocco Caddy, validazione e reload riusciti.
   Esempio repo allineato. Il 28 ottobre il proprietario conferma eliminazione
