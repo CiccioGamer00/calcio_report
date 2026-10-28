@@ -1,5 +1,24 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
+## PAUSA richiesta dal proprietario — 28 ottobre 2026, dopo test 32.1
+
+- Proprietario sospende per crediti esauriti; non avviare modifiche/build/deploy.
+- 32.1 installata su iPhone, conferma utente e sei screenshot IMG_4659–4664:
+  barra sistema scura, contenuti non si sovrappongono più a orologio/batteria.
+  Correzione safe area verificata visivamente dopo scroll. Tastiera/rotazione
+  non documentate da questi screenshot.
+- PRIMO PUNTO alla ripresa: layout Indisponibili (IMG_4662.PNG).
+  Ampio spazio vuoto a sinistra; giocatori spostati a destra e descrizioni
+  tagliate fuori viewport. Diagnosticare CSS/struttura, non attribuire ancora causa.
+- IMG_4659 mostra diagnostica tecnica fase/searchId/http/cache/relay nel Match:
+  verificare e disattivare la visualizzazione nella candidata finale.
+- IMG_4663/4664 mostrano spiegazioni Tiri/Corner aperte; non sono screenshot
+  Store definitivi. Nei nuovi scatti è visibile indicatore rosso registrazione.
+- Allegati preservati in conversazione. Screenshot finali e associazione 32.1
+  alla versione Store ancora pendenti; non assumere sostituita la 31.1 in ASC.
+  Privacy pubblicata chiusa. Non ripetere acquisti o prove precedenti.
+- Nessuna correzione Indisponibili eseguita. Review non inviata, gate invariati.
+
 ## Correzione area sicura iOS — 28 ottobre 2026
 
 - Proprietario conferma installazione 31.1 da gruppo Test interno. Cinque
