@@ -1,5 +1,16 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
+## Verifica pagine pubbliche — 28 ottobre 2026
+
+- GET HTTPS senza autenticazione: https://app.calcioreport.com/support.html
+  HTTP 200, 3438 byte; https://app.calcioreport.com/privacy.html HTTP 200,
+  10058 byte. Entrambi identici byte per byte ai candidati della release.
+  Pagine già pubblicate, nessun nuovo deploy eseguito in questa ripresa.
+  Questo supera le precedenti note di pubblicazione ancora pendente.
+- Prossimo passo proprietario: inserire URL assistenza nella scheda iOS 1.0
+  e salvare; URL privacy da inserire in App Privacy nel passo successivo.
+  Screenshot reali e allineamento dichiarazioni ancora da completare.
+
 ## Ripresa verificata e candidata 31.1 — 28 ottobre 2026
 
 - Verificato stato remoto oltre il precedente messaggio interrotto: correzione
