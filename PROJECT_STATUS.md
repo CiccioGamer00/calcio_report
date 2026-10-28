@@ -1,15 +1,25 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
-## Checkpoint di pausa — 27 ottobre 2026
-Proprietario chiede STOP per crediti quasi esauriti. Riprendere da questo blocco;
-non rifare test accettati, configurazioni log o domande già risolte.
-Ultimo output: unico file /var/log/caddy/calcio-report-relay.log, 5488926 byte.
-File NON cancellato; nessuna autorizzazione alla cancellazione richiesta/ottenuta.
-Prossima ripresa: decidere smaltimento di questo preciso file, poi completare
-privacy (conservazione registri/backup, base analisi, log residui/fornitori),
-pubblicare pagine solo dopo revisione/autorizzazione, nuova build con icona e
-manifest verificati. Supporto e policy non pubblicati; ASC non inviata.
-Apple Production resta disabilitato; non anticipare attivazione o merge main.
+## Ripresa e autorizzazione — 28 ottobre 2026
+
+- Proprietario autorizza le operazioni necessarie per portare l'app sullo Store,
+  inclusi i passaggi di rilascio descritti in sessione. Non richiedere nuovamente
+  consenso per gli stessi passaggi; restano obbligatori prerequisiti tecnici,
+  verifiche residue e ordine di attivazione. Rilascio manuale mantenuto.
+- Proprietario conferma esito "Vecchio log eliminato" dopo il comando mirato
+  su /var/log/caddy/calcio-report-relay.log (prima 5488926 byte), con verifica
+  di assenza. Evidenza riferita dal proprietario, non accesso diretto al server.
+  Smaltimento di questo file CHIUSO; non ripetere cancellazione o configurazione
+  access log già disattivati. Non equivale ad assenza di altri log o copie.
+- Prossimo passo: caratterizzare conservazione journal/log operativi residui
+  senza esporne il contenuto, poi chiudere conservazione registri/backup,
+  base analisi e fornitori nella privacy. Pubblicare pagine completate,
+  nuova build con icona/manifest verificati, screenshot reali e consegna Apple.
+- Supporto e policy ancora non pubblicati; App Review non inviata.
+  Apple Production ancora disabilitato: autorizzazione non equivale ad
+  attivazione eseguita. Non ripetere test accettati o riaprire Core V2.
+- Questo blocco supera lo STOP e la mancanza di autorizzazione del checkpoint
+  del 27 ottobre; le evidenze tecniche sottostanti restano valide.
 
 ## Checkpoint privacy — 27 ottobre 2026, pomeriggio
 
