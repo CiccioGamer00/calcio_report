@@ -70,6 +70,23 @@ i giorni residui; non comporta automaticamente un rimborso Apple.
 interesse, acquisti, log e backup. Verificare il comportamento dei
 registri Apple/PRO e dei backup: non promettere cancellazione totale immediata.]
 
+## Copie di sicurezza — evidenze verificate il 28 ottobre
+- Database live calcio_users: schermata Cloudflare D1 Time Travel conferma
+  finestra di ripristino di 7 giorni. Nessun ripristino eseguito. Dati rimossi
+  dal database operativo possono rimanere recuperabili nella finestra storica;
+  non promettere cancellazione immediata da ogni copia.
+- VPS OVH: Standard attivo, snapshot disattivato, copia giornaliera alle
+  19:04 UTC. Schermata mostra copia del 27 ottobre. Retention Standard
+  documentata 24 ore; 7 giorni solo Premium. Non è prova di eliminazione
+  fisica già avvenuta della copia contenente il vecchio access log.
+  Fonte: https://www.ovhcloud.com/it/vps/vps-backup/
+- Dump manuale del database esportato sul PC il 23 ottobre: conservazione,
+  eventuali copie/sincronizzazione e procedura di smaltimento da definire.
+- In caso di ripristino, prevedere riconciliazione delle cancellazioni account
+  intervenute dopo la copia e dei diritti PRO successivi; non ripristinare
+  automaticamente una copia vecchia sul live.
+Queste evidenze non coprono eventuali ulteriori backup o archivi dei fornitori.
+
 ## Diritti
 Puoi contattarci per esercitare, nei casi previsti, i diritti di accesso,
 rettifica, cancellazione, limitazione, opposizione e portabilità. Se un
