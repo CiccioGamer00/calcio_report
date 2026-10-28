@@ -12,6 +12,8 @@ on:
       - 'privacy.html'
       - 'support.html'
       - 'tests/test_ios_artifact.py'
+      - 'tests/test_ios_release_resources.py'
+      - 'tests/storekit-install.test.mjs'
       - 'scripts/apple-testflight.sh'
       - 'scripts/build-mobile.mjs'
       - 'scripts/install-storekit.mjs'
