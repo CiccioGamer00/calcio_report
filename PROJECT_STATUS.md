@@ -1,5 +1,18 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
+## Correzione area sicura iOS — 28 ottobre 2026
+
+- Proprietario conferma installazione 31.1 da gruppo Test interno. Cinque
+  screenshot reali ricevuti: contenuti sovrapposti a orologio/batteria scorrendo.
+- CRBridgeViewController ora contiene WKWebView in una UIView separata,
+  vincolata sui quattro lati alla safe area iOS; fondo scuro nelle aree sistema.
+  Disabilitato l'inset automatico della scroll view per evitare doppio margine.
+- Nuova compilazione Production firmata avviata da questo commit. Esito remoto
+  pendente; uploader ancora fissato alla 31.1, da aggiornare solo dopo successo.
+- Necessaria verifica reale della nuova build in alto, dopo scroll e con tastiera
+  prima di screenshot definitivi. Privacy pubblicata già chiusa, nessun nuovo
+  test acquisti richiesto. Gate Apple Production invariato.
+
 ## App Privacy pubblicata — conferma proprietario 28 ottobre 2026
 
 - Proprietario conferma salvataggio URL assistenza e privacy già verificati:
