@@ -15,9 +15,9 @@
   Versione 1.0 PREPARE_FOR_SUBMISSION, rilascio MANUAL; selezionata ancora 29.1.
   Descrizione e parole chiave italiane presenti; screenshot assenti,
   supportUrl e privacyPolicyUrl null. Nessuna mutazione ASC dall'audit.
-- Prossimo passo proprietario: sostituire la build selezionata 29.1 con 31.1
-  e gestire l'eventuale dichiarazione crittografia secondo quella già verificata.
-  Poi completare pubblicazione/verifica URL, screenshot reali, App Privacy
+- Proprietario conferma «FATTO» alla sostituzione della build con 31.1.
+  Selezione registrata come conferma utente; nessun nuovo audit ASC eseguito.
+  Prossimo passo: completare pubblicazione/verifica URL, screenshot reali, App Privacy
   e prerequisiti backend/notifiche prima dell'invio. Review NON inviata.
 - Questa sezione aggiorna gli esiti pendenti sottostanti; Apple Production
   resta disabilitato. Autorizzazione generale già acquisita, non richiederla.
