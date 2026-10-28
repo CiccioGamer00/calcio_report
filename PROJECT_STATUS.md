@@ -10,7 +10,10 @@
 - Compilazione Production 32.1 firmata SUCCESS: run 40714282107, job
   122907590497; test e controlli IPA/manifest/icona/pagine legali passati.
   Uploader fissato a questa origine e digest, invio Apple avviato separatamente.
-  Esito upload ancora pendente.
+  Delivery run 40714804368, job 122909466259 SUCCESS: validazione e upload
+  Apple riusciti. Elaborazione/distribuzione ai tester ancora da verificare.
+  Prossimo passo: assegnare 32.1 al gruppo Test interno e installarla su iPhone;
+  poi verifica area sicura e screenshot. Non ripetere build o caricamento.
 - Necessaria verifica reale della nuova build in alto, dopo scroll e con tastiera
   prima di screenshot definitivi. Privacy pubblicata già chiusa, nessun nuovo
   test acquisti richiesto. Gate Apple Production invariato.
