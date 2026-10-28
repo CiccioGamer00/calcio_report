@@ -30,8 +30,11 @@
   delle copie fisiche. Il vecchio log può essere nella copia del 27 ottobre:
   scadenza documentata non è prova di eliminazione già avvenuta.
   Backup mantenuto attivo, nessun upgrade/cancellazione/ripristino.
-- Prossimo passo: verificare finestra backup D1 (Time Travel) e definire
-  conservazione dump PC già noto; poi chiudere conservazione registri,
+- D1 calcio_users: screenshot del 28 ottobre conferma Time Travel di 7 giorni.
+  Nessun ripristino/bookmark richiesto o eseguito; non ripetere la verifica.
+  Bozza privacy aggiornata con evidenze D1 e OVH, limiti e cautele al ripristino.
+- Prossimo passo: accertare eventuali altre copie del dump PC del 23 ottobre
+  e definirne conservazione/smaltimento; poi chiudere conservazione registri,
   base analisi e fornitori nella privacy. Pubblicare pagine completate,
   nuova build con icona/manifest verificati, screenshot reali e consegna Apple.
 - Supporto e policy ancora non pubblicati; App Review non inviata.
