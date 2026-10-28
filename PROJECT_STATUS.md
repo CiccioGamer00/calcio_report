@@ -38,8 +38,14 @@
   dove lo ha copiato. Nessuna cancellazione eseguita; conservato per ora come
   copia precedente alla migrazione, non ripristinabile automaticamente sul live.
   Termine/procedura di smaltimento ancora da finalizzare.
-- Prossimo passo: verifica post-disattivazione Invocation logs Cloudflare
-  ancora aperta dal 27 ottobre; poi chiudere conservazione registri,
+- Controllo operativo Invocation logs CHIUSO il 28 ottobre: Observability
+  Last 1 hour senza eventi; Metrics successiva Last 1 hour mostra 93 invocazioni,
+  0 errori runtime, versione a4e384d4 al 100%. Finestre mobili sovrapposte,
+  non identiche. Coerente con disattivazione già confermata; non prova assenza
+  di ogni log dei fornitori o successo HTTP di tutte le richieste.
+  Non richiedere altre schermate per ripetere questo controllo.
+  Preservare invocation_logs=false nelle configurazioni dei futuri deploy.
+- Prossimo passo: finalizzare conservazione registri e dump manuale,
   base analisi e fornitori nella privacy. Pubblicare pagine completate,
   nuova build con icona/manifest verificati, screenshot reali e consegna Apple.
 - Supporto e policy ancora non pubblicati; App Review non inviata.
