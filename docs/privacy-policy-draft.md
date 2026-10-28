@@ -1,5 +1,5 @@
 # Informativa privacy Calcio Report — bozza di lavoro
-Data: 27 ottobre 2026. NON PUBBLICARE: i punti [DA COMPLETARE] richiedono verifica.
+Data: 28 ottobre 2026. NON PUBBLICARE: i punti [DA COMPLETARE] richiedono verifica.
 Ambito: app iOS e servizi di account condivisi. Il sito web e Stripe richiedono
 una sezione distinta se questa informativa sarà usata anche sul sito.
 
@@ -91,10 +91,22 @@ Potremo chiedere le informazioni necessarie per verificare la tua identità.
   invocation_logs=false nei futuri deploy. Nessuna copia di log personali qui.
 - Access log relay OVH: il 27 ottobre il proprietario ha autorizzato e
   confermato rimozione del relativo blocco Caddy, validazione e reload riusciti.
-  Esempio repo allineato. I vecchi file sono conservati e richiedono una
-  decisione di smaltimento; non presumere che vengano cancellati senza rotazione.
-- Rimangono da verificare log applicativi/journal e altri servizi Cloudflare/OVH.
-  Queste modifiche non dimostrano assenza di ogni altra raccolta.
+  Esempio repo allineato. Il 28 ottobre il proprietario conferma eliminazione
+  dell'unico vecchio file individuato /var/log/caddy/calcio-report-relay.log
+  (5488926 byte), con verifica di assenza; non prova assenza di copie/backup.
+- Journal VPS: il 28 ottobre applicato drop-in
+  /etc/systemd/journald.conf.d/99-calcio-retention.conf con
+  MaxRetentionSec=30day e MaxFileSec=1day. Proprietario riporta servizio active
+  e valori configurati corretti. Conservazione per file ruotati, non cancellazione
+  puntuale di ogni riga al trentesimo giorno. Si applica all'intero journal VPS.
+  Vacuum manuale riporta 0B liberati; spazio finale 261.3M (prima 453M):
+  non attribuire la differenza al vacuum manuale.
+- ForwardToSyslog=yes e rsyslog active. Configurazione logrotate osservata:
+  rotate 4, weekly, compress, delaycompress, missingok, notifempty; quattro
+  archivi oltre al corrente, non un limite esatto di 28 giorni per ogni evento.
+  Esecuzione effettiva delle rotazioni e copie/backup non ancora verificate.
+- Rimangono da caratterizzare eventuali log applicativi separati e altri servizi
+  Cloudflare/OVH. Queste modifiche non dimostrano assenza di ogni altra raccolta.
 - Dipendenze dirette iOS: Capacitor core/ios 8.5.3 e secure-storage 8.0.1;
   dipendenze transitive includono Capacitor app/keyboard. Sessione in vault nativo,
   con scadenza 6 ore e rimozione dei vecchi token plaintext dal localStorage.
@@ -103,7 +115,8 @@ Potremo chiedere le informazioni necessarie per verificare la tua identità.
 - Etichette Apple: email e ID utente per Funzionalità E Analisi (ultima
   attività legata all'email e deduplica interesse per ID); acquisti per
   Funzionalità, interazione per Analisi; tutti collegati, nessun tracking.
-  Correzione email/ID da applicare in ASC, non ancora confermata dal proprietario.
+  Correzione email/ID confermata dal proprietario il 27 ottobre, come registrato
+  nel checkpoint; etichette ancora non pubblicate e verifica complessiva incompleta.
 - URL pubblico, link nell'app, accessibilità della policy senza autenticazione.
 
 Riferimenti di lavoro:
