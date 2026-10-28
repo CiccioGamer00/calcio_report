@@ -1,5 +1,27 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
+## Ripresa verificata e candidata 31.1 — 28 ottobre 2026
+
+- Verificato stato remoto oltre il precedente messaggio interrotto: correzione
+  fixture installer già presente; signing run 40696104256 SUCCESS.
+- Delivery run 40704029949, job 122871183161 SUCCESS: IPA Production 1.0
+  (31.1), controlli risorse/privacy passati, VERIFY SUCCEEDED e UPLOAD SUCCEEDED
+  alle 14:17:57 UTC. Non ripetere compilazione o caricamento.
+- Corretto YAML del workflow metadati: condizione if in scalare multilinea;
+  il precedente testo con "release: audit" non quotato impediva il parsing.
+  Commit 8797092187a738936f115eadd5052aa85cc9c7ea.
+- Audit read-only run 40705518490, job 122876442897 SUCCESS:
+  31.1 VALID, non scaduta, usesNonExemptEncryption ancora null.
+  Versione 1.0 PREPARE_FOR_SUBMISSION, rilascio MANUAL; selezionata ancora 29.1.
+  Descrizione e parole chiave italiane presenti; screenshot assenti,
+  supportUrl e privacyPolicyUrl null. Nessuna mutazione ASC dall'audit.
+- Prossimo passo proprietario: sostituire la build selezionata 29.1 con 31.1
+  e gestire l'eventuale dichiarazione crittografia secondo quella già verificata.
+  Poi completare pubblicazione/verifica URL, screenshot reali, App Privacy
+  e prerequisiti backend/notifiche prima dell'invio. Review NON inviata.
+- Questa sezione aggiorna gli esiti pendenti sottostanti; Apple Production
+  resta disabilitato. Autorizzazione generale già acquisita, non richiederla.
+
 ## Preparazione autonoma finale — 28 ottobre 2026
 
 - Proprietario rinnova autorizzazione a completare autonomamente quanto serve
