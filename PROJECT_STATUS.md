@@ -7,8 +7,10 @@
 - CRBridgeViewController ora contiene WKWebView in una UIView separata,
   vincolata sui quattro lati alla safe area iOS; fondo scuro nelle aree sistema.
   Disabilitato l'inset automatico della scroll view per evitare doppio margine.
-- Nuova compilazione Production firmata avviata da questo commit. Esito remoto
-  pendente; uploader ancora fissato alla 31.1, da aggiornare solo dopo successo.
+- Compilazione Production 32.1 firmata SUCCESS: run 40714282107, job
+  122907590497; test e controlli IPA/manifest/icona/pagine legali passati.
+  Uploader fissato a questa origine e digest, invio Apple avviato separatamente.
+  Esito upload ancora pendente.
 - Necessaria verifica reale della nuova build in alto, dopo scroll e con tastiera
   prima di screenshot definitivi. Privacy pubblicata già chiusa, nessun nuovo
   test acquisti richiesto. Gate Apple Production invariato.
