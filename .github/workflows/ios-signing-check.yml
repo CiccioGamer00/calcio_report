@@ -6,6 +6,11 @@ on:
       - '.github/workflows/ios-signing-check.yml'
       - 'scripts/check-ios-signing.sh'
       - 'scripts/verify-ios-artifact.py'
+      - 'scripts/verify-ios-release-resources.py'
+      - 'scripts/install-privacy-manifest.mjs'
+      - 'scripts/install-app-icon.mjs'
+      - 'privacy.html'
+      - 'support.html'
       - 'tests/test_ios_artifact.py'
       - 'scripts/apple-testflight.sh'
       - 'scripts/build-mobile.mjs'
@@ -47,7 +52,9 @@ jobs:
         with:
           node-version: '24'
       - name: Verify IPA backend and artifact rejection cases
-        run: python3 -m unittest discover -s tests -p 'test_ios_artifact.py'
+        run: |
+          python3 -m unittest discover -s tests -p 'test_ios_artifact.py'
+          python3 -m unittest discover -s tests -p 'test_ios_release_resources.py'
       - run: node --test tests/*.test.mjs
       - run: npm ci
         working-directory: mobile

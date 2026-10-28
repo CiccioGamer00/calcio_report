@@ -10,7 +10,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const output = path.join(root, 'mobile/www');
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
-for (const file of ['index.html', 'style.css', 'app.js', 'js']) {
+for (const file of ['index.html', 'privacy.html', 'support.html', 'style.css', 'app.js', 'js', 'assets/branding']) {
   await cp(path.join(root, file), path.join(output, file), { recursive: true });
 }
 await writeFile(path.join(output, 'config.js'), `window.API_CONFIG = ${JSON.stringify({

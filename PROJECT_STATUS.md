@@ -1,5 +1,26 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
+## Preparazione autonoma finale — 28 ottobre 2026
+
+- Proprietario rinnova autorizzazione a completare autonomamente quanto serve
+  per lo Store mentre è assente. Non chiedere nuovamente consenso ai passaggi
+  già autorizzati; verificare comunque gli esiti e i prerequisiti tecnici.
+- Aggiunta candidata privacy.html, link prima della registrazione e nel footer,
+  assistenza collegata; entrambe incluse offline nel pacchetto iOS.
+  Decisioni e limiti documentati in docs/privacy-release-decisions.md.
+- Manifest privacy app aggiunto come risorsa Xcode, con email/ID, acquisti,
+  interazione e assistenza clienti, collegati e senza tracking. ASC richiede
+  allineamento della categoria assistenza; nessuna modifica ASC eseguita qui.
+- Nuovo controllo dell'IPA esportato: manifest app corrispondente al sorgente,
+  manifest SDK senza tracking dichiarato, risorse icona compilate e pagine
+  legali esatte. Non equivale a valutazione completa SDK né confronto pixel.
+- 4 nuovi test di rifiuto/accettazione e 9 test IPA passati localmente;
+  installer idempotente, packaging Production e sintassi shell/JS verificati.
+- Questo commit avvia build Production firmata con icona approvata. Esito
+  remoto ancora pendente; niente upload implicito e gate acquisti invariato.
+- Pubblicazione web, verifica visiva, upload candidata e metadati/screenshot
+  reali ancora da completare. Non selezionare automaticamente la vecchia 29.1.
+
 ## Ripresa e autorizzazione — 28 ottobre 2026
 
 - Proprietario autorizza le operazioni necessarie per portare l'app sullo Store,

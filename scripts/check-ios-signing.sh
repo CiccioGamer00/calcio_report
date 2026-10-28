@@ -120,6 +120,9 @@ python3 scripts/verify-ios-artifact.py \
   --export-dir "$SIGN_DIR/export" --output-dir "$RUNNER_TEMP/calcio-ipa" \
   --profile "${CR_MOBILE_PROFILE:-sandbox}" --commit "${GITHUB_SHA:?}" \
   --expected-build "${GITHUB_RUN_NUMBER:?}.${GITHUB_RUN_ATTEMPT:?}"
+python3 scripts/verify-ios-release-resources.py \
+  "$RUNNER_TEMP/calcio-ipa/CalcioReport-$CR_IOS_CANDIDATE_KIND.ipa" \
+  --report "$RUNNER_TEMP/calcio-ipa/privacy-resources.json"
 echo '### iOS signing and IPA export passed' >> "$GITHUB_STEP_SUMMARY"
 echo "Signed $CR_IOS_CANDIDATE_KIND IPA verified. No Apple upload or App Review submission performed." >> "$GITHUB_STEP_SUMMARY"
 

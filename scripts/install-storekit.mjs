@@ -30,3 +30,4 @@ await writeFile(scenePath, scene);
 console.log('StoreKit bridge installed in generated iOS project.');
 
 await import('./install-app-icon.mjs');
+await import('./install-privacy-manifest.mjs');
