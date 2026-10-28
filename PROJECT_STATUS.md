@@ -11,8 +11,15 @@
   di assenza. Evidenza riferita dal proprietario, non accesso diretto al server.
   Smaltimento di questo file CHIUSO; non ripetere cancellazione o configurazione
   access log già disattivati. Non equivale ad assenza di altri log o copie.
-- Prossimo passo: caratterizzare conservazione journal/log operativi residui
-  senza esporne il contenuto, poi chiudere conservazione registri/backup,
+- Journal VPS configurato il 28 ottobre: MaxRetentionSec=30day,
+  MaxFileSec=1day nel drop-in 99-calcio-retention.conf. Proprietario conferma
+  active e valori corretti. Vacuum: 0B liberati; spazio finale 261.3M.
+  Non ripetere applicazione/pulizia. Limite per file ruotati, intero journal VPS.
+- rsyslog active, ForwardToSyslog=yes; logrotate configurato weekly/rotate 4,
+  archivi compressi più corrente. Esecuzione rotazioni e backup ancora da verificare.
+  Bozza privacy allineata anche alla correzione ASC già confermata il 27 ottobre.
+- Prossimo passo: identificare backup/snapshot ulteriori al dump PC già noto,
+  poi chiudere conservazione registri/backup,
   base analisi e fornitori nella privacy. Pubblicare pagine completate,
   nuova build con icona/manifest verificati, screenshot reali e consegna Apple.
 - Supporto e policy ancora non pubblicati; App Review non inviata.
