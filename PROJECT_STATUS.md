@@ -18,8 +18,20 @@
 - rsyslog active, ForwardToSyslog=yes; logrotate configurato weekly/rotate 4,
   archivi compressi più corrente. Esecuzione rotazioni e backup ancora da verificare.
   Bozza privacy allineata anche alla correzione ASC già confermata il 27 ottobre.
-- Prossimo passo: identificare backup/snapshot ulteriori al dump PC già noto,
-  poi chiudere conservazione registri/backup,
+- Backup OVH verificato da schermate proprietario il 28 ottobre: Standard
+  attivo, snapshot disattivato; VPS a Gravelines (Francia). Esecuzione giornaliera
+  alle 19:04 UTC; tabella mostra una copia del 27 ottobre 2026 19:04.
+  Il testo "Non sono presenti punti di ripristino" contrasta con la riga visibile:
+  nessun ripristino effettuato o disponibilità collaudata.
+- Documentazione OVH Standard: copia giornaliera conservata 24 ore;
+  sette giorni riguardano Premium, non il piano attivo.
+  Fonte: https://www.ovhcloud.com/it/vps/vps-backup/
+  OVH dichiara replica su tre server nello stesso datacenter. Non è ispezione
+  delle copie fisiche. Il vecchio log può essere nella copia del 27 ottobre:
+  scadenza documentata non è prova di eliminazione già avvenuta.
+  Backup mantenuto attivo, nessun upgrade/cancellazione/ripristino.
+- Prossimo passo: verificare finestra backup D1 (Time Travel) e definire
+  conservazione dump PC già noto; poi chiudere conservazione registri,
   base analisi e fornitori nella privacy. Pubblicare pagine completate,
   nuova build con icona/manifest verificati, screenshot reali e consegna Apple.
 - Supporto e policy ancora non pubblicati; App Review non inviata.
