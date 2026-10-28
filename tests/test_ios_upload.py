@@ -83,7 +83,7 @@ class DeliveryTests(unittest.TestCase):
 
     def test_upload_cannot_be_requested_by_a_validation_event(self):
         event = self.folder / 'event.json'
-        event.write_text(json.dumps(dict(after='b' * 40, head_commit=dict(message='release: validate App Store candidate 29.1'))))
+        event.write_text(json.dumps(dict(after='b' * 40, head_commit=dict(message='release: validate App Store candidate ' + self.plan['build']))))
         env = {k:v for k,v in os.environ.items() if not k.startswith(('GITHUB_', 'APP_STORE_CONNECT_', 'RUNNER_'))}
         env.update(GITHUB_REPOSITORY=self.plan['repository'], GITHUB_REF='refs/heads/' + self.plan['branch'],
                    GITHUB_EVENT_NAME='push', GITHUB_EVENT_PATH=str(event), GITHUB_SHA='b' * 40, GITHUB_RUN_ATTEMPT='1')

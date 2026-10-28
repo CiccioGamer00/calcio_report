@@ -2,13 +2,13 @@
   "repository": "CiccioGamer00/calcio_report",
   "repositoryId": 1152318922,
   "branch": "release/apple-production-preparation",
-  "sourceRunId": 40372908094,
-  "sourceCommit": "047c45140d350b81c17a637dd843d02e9a3247d8",
-  "artifactId": 12672364036,
-  "artifactName": "calcio-report-production-ipa-29-1",
-  "artifactDigest": "sha256:6f2c004cb5d85f5805d565eb6c80b2d18396988b90140b63406b35199f14dd03",
+  "sourceRunId": 40696104256,
+  "sourceCommit": "1e12dac7803d9b074e5a3cbd5fb3b8d446b32152",
+  "artifactId": 12819227742,
+  "artifactName": "calcio-report-production-ipa-31-1",
+  "artifactDigest": "sha256:080373ef02311388ad92505abe14fa5d5dfdac154618d4ce854b47c54da85e44",
   "bundleId": "com.calcioreport.app",
   "version": "1.0",
-  "build": "29.1",
-  "deliveryRequest": "owner-approved-upload-2026-10-26"
+  "build": "31.1",
+  "deliveryRequest": "owner-approved-completion-2026-10-28"
 }
