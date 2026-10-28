@@ -80,8 +80,13 @@ registri Apple/PRO e dei backup: non promettere cancellazione totale immediata.]
   documentata 24 ore; 7 giorni solo Premium. Non è prova di eliminazione
   fisica già avvenuta della copia contenente il vecchio access log.
   Fonte: https://www.ovhcloud.com/it/vps/vps-backup/
-- Dump manuale del database esportato sul PC il 23 ottobre: conservazione,
-  eventuali copie/sincronizzazione e procedura di smaltimento da definire.
+- Dump manuale del database esportato sul PC il 23 ottobre: il proprietario
+  conferma il 28 ottobre di aver seguito soltanto la procedura fornita e di
+  averlo lasciato sul PC, senza effettuare altre copie. Inventario dichiarato
+  chiuso; nessun controllo autonomo dei servizi di sincronizzazione effettuato.
+  Conservato per ora come evidenza precedente alla migrazione; termine e
+  procedura di smaltimento ancora da definire prima della policy finale.
+  Non usarlo per ripristino automatico del live; nessuna eliminazione eseguita.
 - In caso di ripristino, prevedere riconciliazione delle cancellazioni account
   intervenute dopo la copia e dei diritti PRO successivi; non ripristinare
   automaticamente una copia vecchia sul live.
