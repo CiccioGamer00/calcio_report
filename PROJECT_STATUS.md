@@ -33,8 +33,13 @@
 - D1 calcio_users: screenshot del 28 ottobre conferma Time Travel di 7 giorni.
   Nessun ripristino/bookmark richiesto o eseguito; non ripetere la verifica.
   Bozza privacy aggiornata con evidenze D1 e OVH, limiti e cautele al ripristino.
-- Prossimo passo: accertare eventuali altre copie del dump PC del 23 ottobre
-  e definirne conservazione/smaltimento; poi chiudere conservazione registri,
+- Dump 23 ottobre: proprietario conferma di aver seguito soltanto le istruzioni
+  e lasciato il file sul PC, senza creare altre copie. Non richiedere di nuovo
+  dove lo ha copiato. Nessuna cancellazione eseguita; conservato per ora come
+  copia precedente alla migrazione, non ripristinabile automaticamente sul live.
+  Termine/procedura di smaltimento ancora da finalizzare.
+- Prossimo passo: verifica post-disattivazione Invocation logs Cloudflare
+  ancora aperta dal 27 ottobre; poi chiudere conservazione registri,
   base analisi e fornitori nella privacy. Pubblicare pagine completate,
   nuova build con icona/manifest verificati, screenshot reali e consegna Apple.
 - Supporto e policy ancora non pubblicati; App Review non inviata.
