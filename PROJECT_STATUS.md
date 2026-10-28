@@ -1,5 +1,22 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
+## App Privacy pubblicata — conferma proprietario 28 ottobre 2026
+
+- Proprietario conferma salvataggio URL assistenza e privacy già verificati:
+  https://app.calcioreport.com/support.html e https://app.calcioreport.com/privacy.html.
+- Aggiunta Assistenza clienti: Funzionalità app, collegata all'identità,
+  nessun monitoraggio. Email e ID utente: mantenute Analisi + Funzionalità;
+  nelle schermate di modifica erano ancora impostati non collegati, corretti a Sì.
+- Screenshot finale mostra tutte le cinque categorie soltanto nei dati collegati,
+  senza sezione dati non collegati. Supera le precedenti osservazioni discordanti.
+- Proprietario conferma «fatto» dopo Pubblica e conferma App Privacy.
+  Evidenza tramite utente, non audit API della pubblicazione.
+- Build 31.1 selezionata come già confermato. Prossimo punto: screenshot reali
+  per scheda Store; verificare prima quale build è disponibile su TestFlight.
+  Non assumere che selezione ASC implichi distribuzione ai tester.
+- App Review non inviata; rilascio manuale e gate Apple Production invariati.
+  Restano prerequisiti backend/notifiche e controllo finale scheda.
+
 ## Verifica pagine pubbliche — 28 ottobre 2026
 
 - GET HTTPS senza autenticazione: https://app.calcioreport.com/support.html
