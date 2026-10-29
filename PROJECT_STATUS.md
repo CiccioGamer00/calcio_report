@@ -1,5 +1,27 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
+## PAUSA proprietario — 29 ottobre 2026, caricamento screenshot
+
+- Proprietario deve uscire e rinvia a domani. Non avviare nuove build/deploy.
+- Conferma utente: 33.1 selezionata e salvata nella scheda iOS 1.0,
+  rilascio manuale. Screenshot 33.1 verificati: nessuna diagnostica Match visibile.
+- Scelti nell'ordine IMG_4673.PNG (Match), IMG_4675.PNG (Indicatori),
+  IMG_4672.PNG (Giornata Serie A). Copie in chat 942x2048, non originali.
+- iCloud pieno: originali trasferiti via USB da iPhone al Desktop Windows.
+  Upload iniziale fallito nel riquadro Dynamic Island display medio.
+  Proprietario poi apre Gestione risorse multimediali, Dynamic Island display
+  grande: contatore tre screenshot con elaborazione in corso.
+- Ultima schermata 180943: vista display medio con "Utilizzo di risorse
+  esistenti"; due anteprime (Indicatori/Giornata) visibili ma attenuate,
+  prima (Match) ancora icona nuvola. NON confermare tre upload completati.
+  Salvataggio finale dopo elaborazione non confermato.
+- PRIMO PASSO domani: riaprire Gestione risorse, Dynamic Island display grande,
+  verificare stato delle tre immagini e salvataggio. Non ricaricare tutto né
+  rifare screenshot senza verificare quale immagine è effettivamente pendente.
+- Indisponibili e safe area già accettati; privacy pubblicata chiusa.
+  App Review non inviata, Apple Production disabilitato; prerequisiti backend
+  e notifiche da completare secondo piano esistente.
+
 ## Verifica device Indisponibili 33.1 — 29 ottobre 2026
 
 - Proprietario invia 19719.jpg dopo installazione candidata richiesta:
