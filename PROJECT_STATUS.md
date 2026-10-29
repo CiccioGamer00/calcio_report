@@ -1,5 +1,18 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
+## PAUSA proprietario e controllo post-deploy chiuso — 29 ottobre 2026
+
+- Proprietario conferma GET pubblico /apple/token: HTTP 503,
+  {"error":"APPLE_PURCHASES_DISABLED"}. Blocco acquisti Apple verificato
+  dopo deploy a30c419c-dec0-4122-bbd2-47b3a54dbf73.
+- Non ripetere deploy, dry-run, controllo gate, HMAC o acquisti già accettati.
+- Proprietario va a dormire e rinvia a domani: nessuna ulteriore operazione
+  di rilascio durante la pausa.
+- Alla ripresa: controllo finale dei requisiti residui per App Review,
+  inclusa situazione patch audit PR16; build 33.1 selezionata, screenshot
+  completati, privacy pubblicata e URL notifiche configurati già confermati.
+- App Review non inviata. Acquisti Production disabilitati, rilascio manuale.
+
 ## Candidato attivazione distribuito — 29 ottobre 2026
 
 - Proprietario conferma deploy riuscito, Current Version ID:
