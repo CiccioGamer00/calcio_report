@@ -15,7 +15,7 @@
   locale non disponibile: conferma finale da fare su iPhone.
 - Workflow signing ora include modifiche style.css/js, asset inclusi nell'IPA.
   Production 33.1 firmata: run 40899843422, job 123538791427 SUCCESS;
-  test e controlli IPA/risorse passati. Upload dedicato avviato, esito pendente. Safe area 32.1 conservata, privacy pubblicata resta chiusa.
+  test e controlli IPA/risorse passati. Delivery 40900279493, job 123540352336\n  SUCCESS: validazione e upload Apple riusciti. Elaborazione/distribuzione\n  TestFlight ancora da verificare. Prossimo passo: assegnare 33.1 a Test interno,\n  installare e verificare Indisponibili/assenza diagnostica sul device. Safe area 32.1 conservata, privacy pubblicata resta chiusa.
 - Residui: installazione nuova candidata, screenshot definitivi, associazione
   build alla versione Store, prerequisiti backend/notifiche e controllo finale.
 
