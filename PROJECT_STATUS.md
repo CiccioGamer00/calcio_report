@@ -1,5 +1,18 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
+## Candidato attivazione distribuito — 29 ottobre 2026
+
+- Proprietario conferma deploy riuscito, Current Version ID:
+  a30c419c-dec0-4122-bbd2-47b3a54dbf73; variabili e segreti remoti preservati.
+- Comando previsto: Wrangler 4.152.0 deploy --keep-vars dalla nuova
+  wrangler.apple-activation.json, dopo controlli nome Worker, SHA256,
+  APPLE_PRODUCTION_ENABLED=0 e invocation_logs=false.
+- Nessuna migrazione o rotazione segreti. Non ripetere deploy/dry-run/HMAC.
+- Prossimo passo: singolo GET pubblico /apple/token dal PC proprietario,
+  senza credenziali, atteso HTTP 503 APPLE_PURCHASES_DISABLED.
+  Conferma HTTP post-deploy ancora pendente; non equivale a test acquisti.
+- App Review non inviata; attivazione acquisti Production non eseguita.
+
 ## Dry-run attivazione riuscito — 29 ottobre 2026
 
 - Proprietario conferma: candidato verificato, dry-run riuscito, Invocation logs
