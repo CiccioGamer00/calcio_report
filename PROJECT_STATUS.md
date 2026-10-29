@@ -1,5 +1,21 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
+## Screenshot completati e ripresa — 29 ottobre 2026, sera
+
+- Proprietario comunica "screen pronti" con schermata 213446: tutte le tre
+  anteprime Match/Indicatori/Giornata visibili, nessuna icona nuvola;
+  Salva disabilitato. Visualizzate come utilizzo di risorse esistenti nella
+  vista display medio, dopo upload originali nel display grande.
+  Blocco elaborazione immagini CHIUSO. Non richiedere nuovi screenshot.
+- 33.1 selezionata, privacy pubblicata, URL assistenza/privacy salvati come
+  confermato in precedenza. Rilascio manuale mantenuto.
+- Prossimo requisito aperto: leggere URL notifiche server App Store
+  Production e Sandbox in App Store Connect, prima di modificarli.
+  Non presumere configurazione esistente. Poi completare piano backend
+  candidato a flag 0 e controllo finale di idoneità alla review.
+- Review non inviata; acquisti Production disabilitati. Questa ripresa supera
+  la pausa sottostante; autorizzazioni generali già acquisite.
+
 ## PAUSA proprietario — 29 ottobre 2026, caricamento screenshot
 
 - Proprietario deve uscire e rinvia a domani. Non avviare nuove build/deploy.
@@ -51,7 +67,10 @@
   locale non disponibile: conferma finale da fare su iPhone.
 - Workflow signing ora include modifiche style.css/js, asset inclusi nell'IPA.
   Production 33.1 firmata: run 40899843422, job 123538791427 SUCCESS;
-  test e controlli IPA/risorse passati. Delivery 40900279493, job 123540352336\n  SUCCESS: validazione e upload Apple riusciti. Elaborazione/distribuzione\n  TestFlight ancora da verificare. Prossimo passo: assegnare 33.1 a Test interno,\n  installare e verificare Indisponibili/assenza diagnostica sul device. Safe area 32.1 conservata, privacy pubblicata resta chiusa.
+  test e controlli IPA/risorse passati. Delivery 40900279493, job 123540352336
+  SUCCESS: validazione e upload Apple riusciti. Elaborazione/distribuzione
+  TestFlight ancora da verificare. Prossimo passo: assegnare 33.1 a Test interno,
+  installare e verificare Indisponibili/assenza diagnostica sul device. Safe area 32.1 conservata, privacy pubblicata resta chiusa.
 - Residui: installazione nuova candidata, screenshot definitivi, associazione
   build alla versione Store, prerequisiti backend/notifiche e controllo finale.
 
