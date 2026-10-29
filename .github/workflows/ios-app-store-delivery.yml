@@ -29,13 +29,13 @@ jobs:
       github.ref == 'refs/heads/release/apple-production-preparation' &&
       (github.event_name == 'workflow_dispatch' ||
        (github.event_name == 'push' && github.run_attempt == 1 &&
-        (github.event.head_commit.message == 'release: validate App Store candidate 32.1' ||
-         github.event.head_commit.message == 'release: upload App Store candidate 32.1')))
+        (github.event.head_commit.message == 'release: validate App Store candidate 33.1' ||
+         github.event.head_commit.message == 'release: upload App Store candidate 33.1')))
     runs-on: macos-26
     timeout-minutes: 20
     env:
       DELIVERY_MODE: >-
-        ${{ github.event_name == 'workflow_dispatch' && inputs.delivery_mode || (github.event.head_commit.message == 'release: upload App Store candidate 32.1' && 'upload' || 'validate') }}
+        ${{ github.event_name == 'workflow_dispatch' && inputs.delivery_mode || (github.event.head_commit.message == 'release: upload App Store candidate 33.1' && 'upload' || 'validate') }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:

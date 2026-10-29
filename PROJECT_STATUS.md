@@ -14,8 +14,8 @@
   popolate/vuote e nomi lunghi senza overflow; anteprima ispezionata. WebKit
   locale non disponibile: conferma finale da fare su iPhone.
 - Workflow signing ora include modifiche style.css/js, asset inclusi nell'IPA.
-  Questo commit avvia candidata Production firmata; build/upload non ancora
-  confermati. Safe area 32.1 conservata, privacy pubblicata resta chiusa.
+  Production 33.1 firmata: run 40899843422, job 123538791427 SUCCESS;
+  test e controlli IPA/risorse passati. Upload dedicato avviato, esito pendente. Safe area 32.1 conservata, privacy pubblicata resta chiusa.
 - Residui: installazione nuova candidata, screenshot definitivi, associazione
   build alla versione Store, prerequisiti backend/notifiche e controllo finale.
 
