@@ -1,5 +1,20 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
+## URL notifiche Production configurato — 29 ottobre 2026
+
+- Schermata proprietario 214046: URL Production inizialmente vuoto;
+  Sandbox https://calcio-report-test.stemoro84.workers.dev/apple/notifications.
+- Proprietario conferma "fatto" dopo istruzione di impostare Production
+  https://api.calcioreport.com/apple/notifications, Versione 2 se richiesta,
+  e salvare senza modificare Sandbox. Evidenza riferita, non test consegna.
+- Non ripetere configurazione URL. Acquisti Apple Production ancora disabilitati;
+  non confondere salvataggio URL con verifica di consegna notifiche.
+- Prossimo passo: predisporre deploy bundle apple-activation candidato con flag 0
+  usando configurazione locale già adottata, preservando invocation_logs=false,
+  binding D1 live/review, cutover e segreti. Non ripetere migrazioni o HMAC readiness.
+  Prima verificare branch/stato checkout e presenza config sul PC del proprietario.
+- App Review non inviata. Autorizzazioni di completamento già acquisite.
+
 ## Screenshot completati e ripresa — 29 ottobre 2026, sera
 
 - Proprietario comunica "screen pronti" con schermata 213446: tutte le tre
