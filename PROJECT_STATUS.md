@@ -1,5 +1,24 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
+## Ripresa UI e candidata finale — 29 ottobre 2026
+
+- Proprietario chiede di proseguire: pausa del 28 ottobre conclusa.
+- Indisponibili: la kv-row con etichetta fissa 170px comprimeva tutta la lista.
+  Scheda specifica a larghezza piena, metadati sotto il giocatore su mobile,
+  nomi lunghi a capo e foto non comprimibili. Desktop mantiene due colonne
+  giocatore/dettaglio; nessuna modifica alle altre schede o alle API.
+- Diagnostica Match: isLocalDebug accettava localhost anche con capacitor:.
+  Ora richiede http/https oltre all'host locale, escludendo l'app installata.
+- Controlli sintassi JS e diagnostica (capacitor/pubblico spenti, server locale
+  attivo) passati. Layout Chromium verificato a 320/430/768/1280px, liste
+  popolate/vuote e nomi lunghi senza overflow; anteprima ispezionata. WebKit
+  locale non disponibile: conferma finale da fare su iPhone.
+- Workflow signing ora include modifiche style.css/js, asset inclusi nell'IPA.
+  Questo commit avvia candidata Production firmata; build/upload non ancora
+  confermati. Safe area 32.1 conservata, privacy pubblicata resta chiusa.
+- Residui: installazione nuova candidata, screenshot definitivi, associazione
+  build alla versione Store, prerequisiti backend/notifiche e controllo finale.
+
 ## PAUSA richiesta dal proprietario — 28 ottobre 2026, dopo test 32.1
 
 - Proprietario sospende per crediti esauriti; non avviare modifiche/build/deploy.

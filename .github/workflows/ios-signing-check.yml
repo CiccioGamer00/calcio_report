@@ -18,6 +18,8 @@ on:
       - 'scripts/build-mobile.mjs'
       - 'scripts/install-storekit.mjs'
       - 'mobile/**'
+      - 'style.css'
+      - 'js/**'
   workflow_dispatch:
     inputs:
       mobile_profile:

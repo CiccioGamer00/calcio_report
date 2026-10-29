@@ -1987,6 +1987,24 @@ body[data-view-mode="single"] .card.is-focus {
 /* =========================
    FIX LISTA INDISPONIBILI
    ========================= */
+/* Injury lists need the full card width, including on narrow iPhones. */
+#injuriesPanel .injTeamCard {
+  grid-template-columns: minmax(0, 1fr);
+}
+#injuriesPanel .injTeamCard > * { min-width: 0; }
+#injuriesPanel ul { list-style: none; margin: 12px 0 0; padding: 0; }
+#injuriesPanel .injRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+#injuriesPanel .pchip { min-width: 0; max-width: 100%; text-align: left; }
+#injuriesPanel .pimg { flex-shrink: 0; }
+#injuriesPanel .pname, #injuriesPanel .injMeta { overflow-wrap: anywhere; min-width: 0; }
+@media (max-width: 560px) {
+  #injuriesPanel .injRow { grid-template-columns: minmax(0, 1fr); gap: 4px; margin-bottom: 14px; }
+  #injuriesPanel .pchip { justify-self: start; }
+}
+
 .injRow {
   display: flex;
   align-items: center;
