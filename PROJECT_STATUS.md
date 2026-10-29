@@ -1,5 +1,23 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
+## Dry-run attivazione riuscito — 29 ottobre 2026
+
+- Proprietario conferma: candidato verificato, dry-run riuscito, Invocation logs
+  disattivati nella nuova copia, Apple Production=0; nessun deploy eseguito.
+- Config sorgente verificata sul PC:
+  C:\Users\stefa\calcio-report-maintenance-candidate-20261024-103247\wrangler.apple-readiness.json.
+  Worker calcio-report-proxy, DB live 45681187-3565-4d36-8627-131c18ff1885,
+  review 5b5458eb-4a69-454d-a5ac-76ffc93b8af7. Apple=0, review=1, ledger=1,
+  pausa=0, cutover=1792845158779. Invocation logs sorgente True, corretti SOLO
+  nella nuova wrangler.apple-activation.json a false.
+- Bundle apple-activation-worker-candidate.mjs scaricato dal commit bf1435a,
+  SHA256 9bcbc82eb0e1794432eba130116162f31269a0a605b70b82d141e1e42777a599.
+  Wrangler 4.152.0. Log dry-run locale apple-activation-dry-run.log.
+- Prossimo passo autorizzato: deploy con --keep-vars della sola nuova config
+  dopo controllo hash/logs/flag, senza migrazioni o reinstallazione segreti.
+  Esito remoto e nuova versione ancora da ricevere. Non ripetere HMAC readiness.
+- App Review non inviata, acquisti Production disabilitati.
+
 ## URL notifiche Production configurato — 29 ottobre 2026
 
 - Schermata proprietario 214046: URL Production inizialmente vuoto;
