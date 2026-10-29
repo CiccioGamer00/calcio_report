@@ -1,5 +1,19 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
+## Verifica device Indisponibili 33.1 — 29 ottobre 2026
+
+- Proprietario invia 19719.jpg dopo installazione candidata richiesta:
+  Fiorentina, cinque indisponibili. Giocatori allineati a sinistra, metadati
+  sotto ogni chip, nessun taglio laterale visibile; safe area mantenuta.
+  Difetto layout Indisponibili CHIUSO per evidenza reale ricevuta.
+- Alcuni ruoli mostrano trattino (dato assente), motivi injury in inglese:
+  non confondere con regressione layout. Nessuna nuova modifica eseguita.
+- Assenza diagnostica Match non verificabile dalla sola schermata Indisponibili.
+- Prossimo passo: sostituire la candidata selezionata nella scheda iOS 1.0 con
+  33.1, mantenendo rilascio manuale; selezione non ancora confermata.
+  Restano screenshot Store originali della candidata finale, verifica diagnostica
+  Match e prerequisiti backend/notifiche già documentati. Review non inviata.
+
 ## Ripresa UI e candidata finale — 29 ottobre 2026
 
 - Proprietario chiede di proseguire: pausa del 28 ottobre conclusa.
