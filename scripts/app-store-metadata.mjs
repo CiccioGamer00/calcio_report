@@ -7,8 +7,8 @@ const plan = JSON.parse(await readFile('deploy/app-store-candidate.json', 'utf8'
 if (process.env.GITHUB_REPOSITORY !== 'CiccioGamer00/calcio_report' ||
     process.env.GITHUB_REF !== 'refs/heads/release/apple-production-preparation') throw Error('Wrong execution target');
 const event = JSON.parse(await readFile(process.env.GITHUB_EVENT_PATH, 'utf8'));
-if (process.env.GITHUB_EVENT_NAME !== 'push' || event.head_commit?.message !== 'release: audit App Store metadata 31.1' ||
-    event.after !== process.env.GITHUB_SHA || process.env.GITHUB_RUN_ATTEMPT !== '1' || plan.build !== '31.1') throw Error('Explicit metadata audit required');
+if (process.env.GITHUB_EVENT_NAME !== 'push' || event.head_commit?.message !== 'release: audit App Store metadata 33.1' ||
+    event.after !== process.env.GITHUB_SHA || process.env.GITHUB_RUN_ATTEMPT !== '1' || plan.build !== '33.1') throw Error('Explicit metadata audit required');
 const now = Math.floor(Date.now() / 1000);
 const b64 = value => Buffer.from(JSON.stringify(value)).toString('base64url');
 const input = b64({alg:'ES256',kid:process.env.APP_STORE_CONNECT_KEY_ID,typ:'JWT'}) + '.' +
@@ -37,7 +37,8 @@ try {
     const sets = await get('/v1/appStoreVersionLocalizations/'+loc.id+'/appScreenshotSets?include=appScreenshots');
     report.localizations.push({id:loc.id,locale:loc.attributes.locale,supportUrl:loc.attributes.supportUrl,
       hasDescription:Boolean(loc.attributes.description),hasKeywords:Boolean(loc.attributes.keywords),
-      screenshots:sets.data.map(s=>({display:s.attributes.screenshotDisplayType,count:s.relationships?.appScreenshots?.data?.length ?? 0}))});
+      screenshots:sets.data.map(s=>({display:s.attributes.screenshotDisplayType,count:s.relationships?.appScreenshots?.data?.length ?? 0,
+        assets:(sets.included || []).filter(a=>a.type==='appScreenshots' && (s.relationships?.appScreenshots?.data || []).some(link=>link.id===a.id)).map(a=>({state:a.attributes.assetDeliveryState?.state ?? null}))}))});
   }
   for (const info of (await get('/v1/apps/'+app+'/appInfos')).data) {
     const localizations = (await get('/v1/appInfos/'+info.id+'/appInfoLocalizations')).data;

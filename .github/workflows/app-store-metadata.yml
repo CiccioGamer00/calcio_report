@@ -11,7 +11,7 @@ concurrency:
 jobs:
   audit:
     if: >-
-      github.repository == 'CiccioGamer00/calcio_report' && github.event.head_commit.message == 'release: audit App Store metadata 31.1' && github.run_attempt == 1
+      github.repository == 'CiccioGamer00/calcio_report' && github.event.head_commit.message == 'release: audit App Store metadata 33.1' && github.run_attempt == 1
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
