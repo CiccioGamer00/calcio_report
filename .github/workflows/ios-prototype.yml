@@ -21,7 +21,8 @@ concurrency:
   cancel-in-progress: true
 jobs:
   simulator:
-    if: github.event_name != 'push' || github.event.head_commit.message == 'release: capture iPad screenshots 34.1'
+    if: >-
+      github.event_name != 'push' || github.event.head_commit.message == 'release: capture iPad screenshots 34.1'
     env:
       CR_MOBILE_PROFILE: production
     runs-on: macos-26
