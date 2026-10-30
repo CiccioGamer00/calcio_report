@@ -1,5 +1,24 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
+## Device 34.1 e schermate acquisto — 30 ottobre 2026
+
+- Delivery run 41087773153, job 124173352720 SUCCESS: validazione e upload
+  della stessa 34.1 completati. Proprietario conferma aggiornamento installato.
+- IMG_4681.png 1320x2868: Mostra e pulsanti Login/Registrati più grandi/distanti.
+  IMG_4678: account PRO 21g e Estendi PRO · 30 giorni visibile.
+  IMG_4679: conferma offerta 30 giorni, senza rinnovo automatico.
+  IMG_4680: foglio Apple 9,99 EUR, unico addebito, solo test senza addebito.
+- Proprietario riferisce nuovo acquisto riuscito. Immagini provano apertura
+  checkout Sandbox; non mostrano da sole accredito finale o nuova scadenza.
+  Non richiedere altro acquisto. Non interpretare come acquisto Production.
+- Screenshot IAP scelto: originale di IMG_4679, mostra offerta senza account Apple.
+  Copia allegata JPEG 707x1536, ridotta: recuperare originale iPhone sul Desktop,
+  non ridimensionare artificialmente e non usare screenshot login IMG_4681.
+- Prossimo passo: originale offerta poi caricamento nella sezione revisione
+  del prodotto PRO30. Screenshot Store già completi non da rifare.
+- Selezione 34.1 nella scheda Store non ancora confermata; review non inviata.
+  Gate acquisti Production resta 0.
+
 ## Candidata 34.1 firmata e avvio consegna — 30 ottobre 2026
 
 - Signing run 41086301264, job 124168239719 SUCCESS; build Production 34.1.
