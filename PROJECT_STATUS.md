@@ -1,5 +1,19 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
+## Screenshot PRO salvato e build 34.1 selezionata — 30 ottobre 2026
+
+- Screenshot proprietario 174809: prodotto PRO30, sezione Informazioni per
+  la verifica, miniatura offerta reale presente, Salva disabilitato;
+  pulsante Aggiungi alla verifica disponibile. Note IAP ancora vuote.
+  Stato esatto prodotto non visibile nella schermata, non assumere approvato.
+- Proprietario conferma fatto dopo sostituzione 33.1 con 34.1 nella
+  scheda iOS 1.0 e salvataggio. Evidenza riferita, non nuovo audit API.
+- Prossimo passo: Aggiungi alla verifica dalla versione iOS per creare/
+  completare bozza submission, poi aggiungere PRO30 alla stessa richiesta.
+  Verificare eventuali errori/campi mancanti e riepilogo prima invio.
+- Nessun invio review ancora confermato; rilascio manuale mantenuto,
+  acquisti Production disabilitati. Non rifare screenshot/build/acquisti.
+
 ## Device 34.1 e schermate acquisto — 30 ottobre 2026
 
 - Delivery run 41087773153, job 124173352720 SUCCESS: validazione e upload
