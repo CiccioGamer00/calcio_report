@@ -2642,3 +2642,19 @@ body {
 }
 #deleteAccountForm .auth-buttons { flex-wrap: wrap; }
 #btnConfirmDeleteAccount { border: 1px solid #d87979; }
+
+/* Comfortable touch targets in the sign-in dialog. */
+#authStandardBox .auth-buttons {
+  gap: 16px;
+}
+#authStandardBox .auth-buttons button {
+  min-height: 52px;
+  min-width: 0;
+  padding: 12px 16px;
+  flex: 1 1 0;
+  font-size: 16px;
+  line-height: 1.25;
+}
+#authStandardBox .auth-buttons + .auth-buttons {
+  margin-top: 16px !important;
+}
