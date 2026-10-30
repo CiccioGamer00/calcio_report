@@ -1,5 +1,22 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
+## Preparazione PRO30 senza proprietario — 30 ottobre 2026
+
+- Proprietario chiede di preparare le fondamenta; screenshot reali rinviati
+  alla sera. Nessuna azione richiesta durante il lavoro.
+- Preparato docs/pro30-review-preparation.md: note inglesi prodotto,
+  percorso reale della 33.1, piano cattura/caricamento e limiti dell'audit.
+- Lettura sorgenti: manager.product interroga /apple/token prima dell'offerta.
+  Account live con flag 0 non può aprirla; percorso review Sandbox isolato
+  già predisposto. Non attivare Production per la foto, non rifare acquisti.
+- Tenere conto di pulsante upgrade nascosto per account PRO; verificare UI
+  reale senza modificare diritti/scadenze o creare nuovi account.
+- Prezzo/territori solo evidenza storica, non riverificati. Nessuna nuova
+  configurazione inventata. Note pronte ma non caricate in ASC.
+- Prossimo passo serale: cattura reale offerta PRO nella 33.1 e caricamento
+  nella scheda IAP; poi verificare MISSING_METADATA e associazione submission.
+- Solo documentazione aggiunta; nessun deploy/build/test acquisti/review.
+
 ## Verifica autonoma finale — 30 ottobre 2026
 
 - Proprietario autorizza avanzamento mentre è al lavoro; pausa conclusa.
