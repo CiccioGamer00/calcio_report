@@ -1,22 +1,25 @@
-// Isolated prototype: allowlisted assets, test backend, no production payments.
+// Allowlisted packaged assets; Sandbox remains the default delivery profile.
 import { cp, mkdir, rm, writeFile, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { build } from '../mobile/node_modules/esbuild/lib/main.js';
+import { resolveBuildProfile } from '../mobile/src/build-profile.mjs';
 import { patchApp } from '../mobile/src/patch-frontend.mjs';
+const profile = resolveBuildProfile(process.env.CR_MOBILE_PROFILE);
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = path.join(root, 'mobile/www');
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
-for (const file of ['index.html', 'style.css', 'app.js', 'js']) {
+for (const file of ['index.html', 'privacy.html', 'support.html', 'style.css', 'app.js', 'js', 'assets/branding']) {
   await cp(path.join(root, file), path.join(output, file), { recursive: true });
 }
 await writeFile(path.join(output, 'config.js'), `window.API_CONFIG = ${JSON.stringify({
-  baseUrl: 'https://calcio-report-test.stemoro84.workers.dev',
-  headers: {}, telegramUrl: '', supportEmail: '', paymentUrl: '', paypalUrl: ''
+  baseUrl: profile.baseUrl,
+  headers: {}, telegramUrl: '', supportEmail: 'support@calcioreport.com', paymentUrl: '', paypalUrl: ''
 }, null, 2)};\n`);
 await cp(path.join(root, 'mobile/assets'), path.join(output, 'native'), { recursive: true });
 await build({ entryPoints: [path.join(root, 'mobile/src/bootstrap.js')], bundle: true,
+  define: { __CR_MOBILE_PROFILE__: JSON.stringify(profile.name) },
   format: 'iife', platform: 'browser', target: 'safari15',
   outfile: path.join(output, 'native/bootstrap.js') });
 await writeFile(path.join(output, 'app.js'), patchApp(await readFile(path.join(root, 'app.js'), 'utf8')));
@@ -35,4 +38,4 @@ for (const match of html.matchAll(/(?:src|href)="([^"#]+)"/g)) {
   if (/^(?:[a-z]+:|\/\/)/i.test(asset)) continue;
   await readFile(path.join(output, asset));
 }
-console.log('Mobile prototype packaged: isolated API, payment links disabled.');
+console.log(`Mobile ${profile.name} assets packaged; external payment links disabled. Not a release approval.`);

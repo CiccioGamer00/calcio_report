@@ -1,0 +1,9 @@
+# Candidate only: do not install/reload before owner deployment authorization.
+# Proposed hostname; DNS ownership/target and TLS are not yet verified.
+# Integrate with the existing Caddy configuration; do not replace /etc/caddy/Caddyfile.
+# Sandbox remains apple-test.calcioreport.com -> 127.0.0.1:8790.
+# Prerequisites: dedicated Production verifier provisioned on loopback 8791,
+# configuration validation, DNS verification and approved activation plan.
+apple.calcioreport.com {
+    reverse_proxy 127.0.0.1:8791
+}

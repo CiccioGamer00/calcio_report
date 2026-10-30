@@ -1,1441 +1,1524 @@
-# Calcio Report — Project Status
-
-_Last updated: 2026-10-19_
-
-This file is the operational source of truth for Calcio Report. Keep it updated when architecture, infrastructure, release state or implementation status changes.
-
-## Fresh purchase immediate unlock accepted — 2026-10-19 13:31 Europe/Rome
-
-Owner confirms a new purchase from the second TRIAL Calcio Report account using
-the same Apple account on build 21.1. Apple offered to extend the purchase; after
-confirmation the current account became PRO and both Indicators and Prediction
-were immediately accessible without logout/login. Fresh-purchase panel unlock
-acceptance PASSES. This is distinct from the previously rejected cross-account
-restore: do not mark restore ownership protection as failing or repeat this test.
-No transaction IDs or backend ledger inspection were supplied in this report.
-
-Next release work: prepare the production purchase integration. Current
-worker/apple-entry.mjs is explicitly test/Sandbox-only, mobile/src/purchase-ui.mjs
-targets the test Worker, and mobile/src/purchases.mjs accepts only Sandbox.
-Production payment writers still require source-aware ledger integration.
-The current 21.1 is therefore a validated Sandbox purchase baseline, not a
-production-ready App Store build. No production deployment or submission today.
-Advanced real-device refund/interruption/deletion checks remain unverified;
-do not describe them as passed or reopen the now-completed unlock test.
-
-## Autonomous verification and support handoff — 2026-10-19
-
-Owner has not run further device tests and requested autonomous continuation.
-Latest installed/accepted baseline remains 1.0 (21.1); no new TestFlight upload,
-production deployment, main merge or device acceptance is claimed today.
-
-- Re-ran the 80 existing root tests successfully, then added two focused recovery
-  regressions: lost backend response and interrupted native finish. Both recover
-  via resume without a second checkout. The full suite now passes 82/82 locally.
-  These mocked coordination tests do not replace real StoreKit/device testing;
-  durable grant idempotency remains covered by the separate ledger tests.
-- Updated mobile/SANDBOX_CHECKLIST.md to preserve the completed purchase, restore,
-  persistence and cross-account acceptance and isolate remaining checks.
-- Added docs/apple-support.md with read-only account/transaction/event queries.
-  All three queries were executed successfully against an empty SQLite database
-  built from the repository schemas. No real customer data or remote DB queried.
-  Lookup follows Calcio Report account → token → Apple transaction, not Apple
-  email. No support dashboard, ownership transfer or entitlement write added.
-- Application, Worker, verifier and native runtime code are unchanged.
-
-Next owner step when available: on a disposable test account, one fresh Sandbox
-purchase in 21.1, then open Indicators immediately without logout or restart.
-If Apple returns another account's purchase, record and stop rather than forcing
-ownership or repeating checkout. Refund, interrupted-delivery and deletion device
-scenarios remain pending. Existing account must not be deleted for testing.
-
-## Cross-account restore accepted on 21.1 — 2026-10-17
-
-Owner explicitly used Restore purchases with a separate Calcio Report account
-and the same Apple account. Screenshots IMG_4555.PNG and IMG_4556.PNG show
-Apple password authentication followed by the application message:
-"Gli acquisti trovati appartengono a un altro account Calcio Report."
-The current account remains TRIAL (7 days). Cross-account restore ownership
-protection passes: the existing purchase did not grant PRO to this other account.
-This was a restore flow, not an accidental purchase tap.
-No new build or production change. Fresh-purchase immediate panel unlock without
-logout remains a separate pending device acceptance check.
-
-## Build 21.1 device checkpoint — 2026-10-17 18:19 Europe/Rome
-
-Owner updated to 21.1, logged out and back in: PRO persisted and Indicators are accessible.
-This confirms update/login persistence and panel access, but does not yet demonstrate
-immediate overlay removal after a fresh purchase without logout. Previous purchase
-and restore-without-extra-duration acceptance on 18.1 remain valid. Next device check:
-use a separate Calcio Report test account with the same Apple account and restore;
-original purchase must not grant PRO to the other account. Do not delete or alter
-the owner's existing account. No new build or production change needed for this check.
-
-## Post-purchase UI build 1.0 (21.1) uploaded — 2026-10-17
-
-Release 616daebba49727c5ac5d8705e87a0a7059f3834b, signing run 39045013906,
-job 117432444269: all checks completed successfully; job logs confirm explicit
-UPLOAD_TESTFLIGHT=true, VERIFY SUCCEEDED and UPLOAD SUCCEEDED with no errors.
-Simulator compilation also passed (39045015930). 80 root tests pass.
-Includes automatic PRO overlay refresh, price shown only in Apple confirmation
-sheet, and explicit cancelled-purchase notice. Apple processing and installation
-of 21.1 not yet confirmed. Next owner step: make available internally if needed,
-update iPhone, confirm existing PRO persists and panels open. No new purchase
-needed for this first update check; fresh-purchase unlock acceptance still pending.
-Main and production remain unchanged.
-
-## Post-purchase UI candidate — 2026-10-17
-
-Preparing internal delivery with automatic PRO overlay refresh, a preliminary dialog
-that delegates price display to Apple's final confirmation sheet, and explicit
-cancelled-purchase feedback. No currency conversion or fixed price introduced.
-80 root tests pass locally; native packaging passes; focused tests cover cancelled,
-pending, interrupted, duplicate and other-account delivery plus panel unlock.
-Installed 18.1 remains the last device-accepted purchase/restore baseline until the
-new delivery is confirmed. Next checks: existing PRO persists, panels open and restore
-does not extend duration. New-account purchase unlock and advanced device scenarios
-remain pending. No main/production changes.
-
-## Sandbox restore accepted — 2026-10-17 17:21 Europe/Rome
-
-Owner confirms restore verified the successful purchase and did not add another 30 days. Device purchase, persistence after login and restore without duplicate visible duration now pass on 18.1. Native overlay fix remains committed but not uploaded. Support linkage exists in apple_account_tokens and apple_purchase_ledger (account_id, app_account_token, transaction_id, original_transaction_id); no dedicated support dashboard has been implemented.
-
-## First Sandbox purchase accepted on device — 2026-10-17 17:05 Europe/Rome
-
-Owner screenshots IMG_4548(1), IMG_4549(2), IMG_4550(1), IMG_4551, IMG_4552 confirm Apple test purchase completion, backend verified purchase notice and PRO 30 days on build 18.1. Previous attempts returned to app without success; restore before successful purchase reported no purchases. Cancellation via X confirmed by owner. Successful purchase persisted across logout/login.
-
-Device bug: badge changed to PRO but existing panels retained pro-locked overlay until logout/login. Fixed in packaged-only patch-frontend.mjs: refreshTopAuthUI now applies locks from the same fetchMe response used by badge. Regression test verifies unlocking without login and relocking for trial/unauthenticated state; local packaging passes. Fix committed but NOT yet uploaded to TestFlight. Next manual test: restore the successful purchase once; verify PRO stays 30 days rather than adding another 30. Price mismatch ($8.99 preflight vs 9.99 EUR Apple sheet) remains open; do not hardcode a currency. Production/main unchanged.
-
-## StoreKit fix 1.0 (18.1) uploaded — 2026-10-17 16:02 Europe/Rome
-
-Release commit 973325a0d36b8a7368e84f92aeacb8f55df2ae6b, signing run 39038673942 (18.1), job 117413581788. All 79 root tests, verifier checks, simulator compilation, signed archive/export and Apple delivery passed. Logs confirm UPLOAD_TESTFLIGHT=true, VERIFY SUCCEEDED at 14:01:10 UTC, UPLOAD SUCCEEDED at 14:02:29 UTC. Includes SceneDelegate StoreKit startup correction and dark native action buttons.
-
-Latest uploaded build: 1.0 (18.1). Apple processing/tester availability and device acceptance remain unconfirmed. Owner next step: make 18.1 available to internal testers in App Store Connect if needed, update iPhone, tap Passa a PRO and inspect localized price before purchasing. Build 16.1 was installed successfully but blocked on missing native plugin, as documented below. Production and main untouched.
-
-## StoreKit device blocker — 2026-10-17
-
-Owner confirmed 16.1 installed and signed in; screenshot 1410.jpg reports native StoreKit unavailable. Root cause: pinned Capacitor 8.5.3 SceneDelegate creates CAPBridgeViewController directly, bypassing patched storyboard. Installer correction connects CRBridgeViewController at actual scene startup. Verified against actual SPM template twice; 79 root tests pass including scene wiring, idempotence and unknown-root rejection. Native account/restore buttons now follow dark theme with 44px targets. New internal build is being prepared; device acceptance remains pending. Backend, secrets, main and production unchanged.
-
-## StoreKit 1.0 (16.1) uploaded — 2026-10-17 10:37 Europe/Rome
-
-Authorized internal TestFlight delivery completed from release commit
-b2d74a59bb22bf87a2c862104579dff21f13463a, Actions 39017629802 (run 16, attempt 1).
-All 78 root tests, archive/sign/export and the Apple step passed.
-Job 117353458204 logs confirm UPLOAD_TESTFLIGHT=true,
-VERIFY SUCCEEDED with no errors at 08:36:44 UTC and
-UPLOAD SUCCEEDED with no errors at 08:37:50 UTC.
-Build number derives from run number/attempt: 16.1; marketing version 1.0.
-
-Latest uploaded build is now 1.0 (16.1), replacing 12.1 as the uploaded baseline.
-Apple processing, internal tester availability, installation and real StoreKit
-device acceptance have NOT yet been confirmed. Next owner step: open TestFlight,
-check whether Calcio Report 1.0 (16.1) is available and install it. Then sign in
-and inspect the localized PRO product price before the first Sandbox purchase.
-Follow mobile/SANDBOX_CHECKLIST.md one step at a time. No need to repeat OVH,
-database, secrets or the now-passing Apple TEST notification setup.
-
-Main and production unchanged. No App Review submission or new tester invitation.
-
-## StoreKit TestFlight upload authorized — 2026-10-17 10:19 Europe/Rome
-
-Owner explicitly approved internal TestFlight delivery and autonomous continuation.
-The existing release gate now names the October 17 StoreKit Sandbox delivery;
-branch/repository/SHA and first-attempt protections are preserved. Six focused
-gate checks passed (authorized request, ordinary commit, old release, wrong SHA,
-rerun and main branch). No app runtime code changed since validated candidate.
-
-Release commit b2d74a59bb22bf87a2c862104579dff21f13463a starts signing workflow
-39017629802 (run number 16), including validation then authorized Apple upload.
-It is queued behind validation-only run 39017627924. Upload is not yet confirmed.
-No production/main change or App Review submission. Await upload outcome before
-asking the owner to install the new build.
-
-## StoreKit candidate validated — 2026-10-17 10:16 Europe/Rome
-
-Owner requested proceeding with preparation after notification acceptance.
-Candidate source faf0aeb683500ec1f0d8fcb9a7b92195dfa42ca2:
-- 78 root tests passed locally and in signing CI.
-- Signing/archive/export succeeded in Actions 39016578833 (run number 14).
-- Apple validation log: VERIFY SUCCEEDED with no errors at 08:16:49 UTC.
-- Simulator compilation succeeded in 39016583107.
-- Apple verifier checks succeeded in 39016583105.
-- Device acceptance checklist: mobile/SANDBOX_CHECKLIST.md.
-
-The ordinary preparation commit did not request upload. Candidate has NOT been
-uploaded to TestFlight; installed baseline remains 1.0 (12.1). The owner's next
-decision is delivery to internal TestFlight for Sandbox device testing. Existing
-workflow/script require explicit upload dispatch or matching release request.
-Do not reuse the old keyboard-fix release message. No production/main change.
-
-## Apple TEST notification delivery PASS — 2026-10-17
-
-Supersedes the pending activation items in the October 16 infrastructure handoff.
-Owner confirmed APPLE_DEPLOYMENT=test, APPLE_ENVIRONMENT=Sandbox and
-APPLE_SANDBOX_ENABLED=1; dedicated verifier secret and URL were already checked.
-Do not repeat secret copying or server/database setup without new evidence.
-
-Cloudflare dashboard screenshots identify test Worker calcio-report-test active
-version b338f284. The owner-exported bundle contains a single redirect option,
-manual, in fetchReconciledAppleTransaction, followed by the response.ok guard.
-The earlier HTTP 503 diagnostic identified unsupported redirect:error in the
-Cloudflare runtime. Repository client now uses manual; 3xx responses remain rejected.
-The separate Node verifier redirect:error is unchanged.
-
-On October 16 the owner replayed Apple's signed TEST payload to
-https://calcio-report-test.stemoro84.workers.dev/apple/notifications and supplied
-a screenshot showing HTTP 200 with {"ok":true,"ignored":true}.
-A fresh TEST was then requested via Apple's Sandbox API. On October 17 the owner
-reported SUCCESS from getTestNotificationStatus sendAttempts. This confirms the
-reported direct Apple delivery test, not a purchase or entitlement grant.
-
-Validation: focused server/client suite passes 3/3 locally, including signed body,
-manual redirect mode, rejection of 301/302/307/308/503 and ignored TEST response.
-These mocked transport checks are separate from the owner-run remote checks.
-
-Cleanup completed by owner on October 17: removed temporary diagnostic object
-(type/message/code/secretFormatOk/urlMatches) from the deployed test bundle's final
-catch and deployed the generic json2 APPLE_DELIVERY_UNAVAILABLE response.
-At 10:08 Europe/Rome the owner replayed the signed TEST payload after deployment
-and reported HTTP 200 with {"ok":true,"ignored":true}. The notification incident
-and diagnostic cleanup are closed. The cleanup version ID was not captured.
-
-NEXT: prepare/validate the StoreKit-capable candidate for separately authorized
-TestFlight delivery, then perform Sandbox purchase/restore/refund device tests.
-The TEST notification alone does not validate authenticated /apple/token, purchase
-reconciliation or entitlement persistence.
-No production change, main merge or new TestFlight upload; baseline remains 1.0 (12.1).
-
-## Sandbox infrastructure handoff — 2026-10-16
-
-This section supersedes the infrastructure prerequisites in the older entries below.
-The owner completed the following remote setup on October 15; the assistant has
-not independently accessed the server or Cloudflare account:
-
-- Isolated Node 24 runtime and calcio-report-apple systemd service installed.
-  Dedicated Apple In-App Purchase key and verifier secret are protected on the
-  server. Existing football relay runtime/configuration was left unchanged.
-- HTTPS verifier at https://apple-test.calcioreport.com/health returned ok:true.
-  This proves liveness only, not Apple API authentication or real JWS verification.
-- Both staged schemas applied to calcio_users_test. Screenshot confirmed four
-  tables, five triggers and one index. Existing accounts remain in place.
-- On October 16 the owner reported entering the four requested Worker text
-  variables: APPLE_DEPLOYMENT=test, APPLE_ENVIRONMENT=Sandbox,
-  APPLE_VERIFIER_URL=https://apple-test.calcioreport.com,
-  APPLE_SANDBOX_ENABLED=0. Their saved values still need a dashboard check.
-
-Still pending: copy the existing dedicated verifier secret into the test Worker,
-deploy the generated Worker bundle preserving all bindings, configure edge limits
-and Sandbox notifications, then enable and test. Do not regenerate the server
-secret or repeat the server/database installation. No new TestFlight upload;
-latest confirmed uploaded baseline remains 1.0 (12.1).
-
-Local October 16 checks: 78 repository tests and 9 verifier tests passed. Worker
-bundle generation/syntax passed; bundle smoke checks confirmed disabled mode,
-production configuration rejection and OPTIONS handling. Mobile web packaging and
-StoreKit installation passed. These are not remote deployment or device tests.
-See docs/apple-sandbox-setup.md for the remaining evening sequence.
-
-## Native StoreKit candidate — 2026-10-15 morning
-
-Added the local StoreKit 2 Capacitor bridge (mobile/native/CRStoreKit.swift),
-registered in the generated Xcode project by scripts/install-storekit.mjs.
-CI installs the bridge after cap add ios for simulator and signed archive checks.
-No automatic TestFlight upload is enabled by this change.
-
-The native flow loads Apple's localized price, purchases the fixed non-renewing
-product with the server-issued appAccountToken, handles pending/cancelled states,
-listens for transaction updates and retries unfinished purchases on login/resume.
-Explicit restore calls AppStore.sync and inspects transaction history. Foreign
-account transactions are never finished by the current account. JS acknowledges
-StoreKit only after backend state=applied for the exact transaction; session
-changes and interrupted delivery preserve retryability. Backend /apple/token must
-be enabled on the isolated test Worker before checkout can open.
-
-Added seven JS coordination tests. All 78 root tests pass locally; verifier suite
-previously 9/9. Mobile web packaging and repeatable native installation pass.
-Swift simulator compilation passed on GitHub at bb378855 (run 38688777452).
-Signed archive/export and Apple validation also passed (run 38688772231).
-No TestFlight upload was requested. No real StoreKit device or Apple Sandbox test
-has happened. Latest uploaded build remains 1.0 (12.1).
-The test-only Worker bundler also passed locally; setup steps are recorded in
-docs/apple-sandbox-setup.md. Server access/configuration is required for deployment.
-
-Evening prerequisites: deploy the isolated verifier with an authorized server API
-key and dedicated secret/HTTPS hostname, apply staged test DB schemas, bundle and
-deploy apple-entry.mjs, configure Sandbox notifications/rate limits, then validate
-authorized TestFlight delivery. Existing production relay and payments unchanged.
-
-## Sandbox purchase delivery candidate — 2026-10-15
-
-The source-aware entitlement ledger, fresh Apple transaction reconciliation,
-authenticated verification transport and test-only Worker routes are implemented.
-No new deployment or TestFlight upload has been performed; 12.1 remains latest.
-
-- pro-entitlements.mjs captures the existing non-Apple expiry once, records immutable
-  grant/status events and atomically updates paid_until using D1 batch + revision CAS.
-  Duplicate/reordered deliveries do not add time. Refunds remove the Apple grant
-  from chronological replay, preserving other sources' durations. A newer verified
-  active status can reverse a refund; a tied status favors revocation.
-- apple-pro-delivery.mjs first records immutable purchase ownership, then atomically
-  applies the grant and current status. Interrupted delivery can safely retry.
-- Node verifier reconciles each device/notification transaction with Apple's
-  getTransactionInfo and verifies the returned JWS. Dedicated HMAC authenticates
-  timestamp, method, path and body hash; no football-relay key reuse.
-- Separate worker/apple-entry.mjs adds authenticated GET /apple/token and POST
-  /apple/transaction, plus verified POST /apple/notifications. Expired trials may
-  buy. Deleted owners' notifications are acknowledged without granting a new account.
-- The entry is test/Sandbox-only and disabled by default. When enabled it blocks
-  legacy Stripe/redeem/admin expiry writes in this isolated deployment. Those
-  production writers still need migration (including admin negative adjustments).
-  An unexpected direct expiry write is detected and never silently overwritten.
-
-Validation: 71 repository tests + 9 verifier tests pass locally. Tests use actual
-SQLite transactions and real Apple-library rejection checks, with mocked Apple API
-responses for successful flows. Genuine Sandbox signatures, OCSP connectivity,
-remote D1 contention and device StoreKit behavior remain untested.
-
-Remaining: native StoreKit bridge/UI; service hosting + dedicated server API key,
-HTTPS hostname and secret; staged test DB schema application and test Worker bundle;
-notification URL/rate limiting and missed-notification reconciliation; retention
-policy and production payment-writer migration. These are not a ready-to-upload app.
-See services/apple-verifier/README.md for the prepared service interface.
-
-## Apple verifier and administrative checkpoint — 2026-10-14 evening
-
-Screenshot confirms Paid Apps and Free Apps agreements ACTIVE, bank account ACTIVE,
-and a green DSA requirements-satisfied banner. Owner reports selecting non-trader;
-this records the UI state, not a legal/tax determination. No further bank-processing
-wait is needed. Tax-form rows were below the screenshot and are not individually verified.
-
-Added isolated services/apple-verifier Node module using the official Apple library
-3.1.0, pinned dependencies and Apple Root CA G3. Online certificate checks are
-mandatory; deployment/environment mismatches fail closed. Transactions and nested
-notification transactions are signature-verified. No HTTP route or deployment yet.
-Four real-library rejection tests pass; existing repository suite remains 60/60.
-Valid Apple Sandbox delivery and online OCSP acceptance remain untested.
-
-Next: authenticated verification transport, current refund reconciliation and atomic
-source-aware PRO grants, then StoreKit bridge/device tests. No new TestFlight build;
-latest owner-accepted build is still 1.0 (12.1). Native purchases remain disabled.
-No main merge, production change or App Store submission.
-
-## Apple purchase persistence foundation — 2026-10-14
-
-Added `worker/apple-purchase-ledger.mjs` and staged schema
-`worker/schema/apple-purchase-ledger.sql`. Neither is wired to the Worker or
-applied to any remote database. Account tokens are server-generated random UUIDs,
-unique per account/environment. Expired trials are eligible; missing, disabled
-or deleted accounts are not. Deletion retires tokens while retaining opaque
-ownership records, so re-registration with the same email cannot reclaim them.
-
-The internal record function consumes only trusted verifier output, runs the
-existing policy and rechecks account identity/status inside a D1 batch. The
-(environment, transactionId) key makes repeated delivery insert once; conflicting
-ownership or purchase facts fail closed. Separate purchases may share an original
-transaction ID. No email, bank details, tax identifiers or raw JWS are stored.
-
-`state: recorded` is NOT a grant or permission to finish a StoreKit transaction.
-No paid_until update, refund resolution, HTTP endpoint, Apple signature verifier
-or native payment flow is implemented here. Source-aware grants and refund events
-must be added before delivery can be acknowledged. Retention duration and deletion
-policy for the opaque ownership records must be finalized before deployment.
-
-Eight new tests use real in-memory SQLite with a transactional D1 API adapter:
-duplicates/interleaved requests, ownership conflicts, account deletion/recreation,
-account-change races, rollback/retry, payload rejection and environment separation.
-All 60 repository tests pass locally on Node 24.19.0. These tests do not
-substitute for remote D1 concurrency or Apple Sandbox testing.
-
-Owner reported completion of tax forms on 2026-10-13 ("only bank account missing"); final Apple acceptance and Paid Apps Agreement activation are not yet verified.
-Bank entry postponed until the evening of 2026-10-14. Owner plans to use their
-usual personal bank account rather than personal Revolut; account suitability
-and bank details are not verified. DSA completion is also not independently
-confirmed. Do not store any banking/tax identifiers in the repository.
-
-No new TestFlight build, remote schema change, main merge, production deploy or
-App Store submission. Native payment UI remains disabled.
-
-## App Store product configured — 2026-10-13 19:05 Europe/Rome
-
-Owner screenshots confirm creation of non-renewing PRO 30 giorni,
-product ID com.calcioreport.app.pro30, Apple product ID 6822393280.
-Italy EUR 9.99 was shown in the pricing wizard and the resulting price schedule
-appears on the product page. Owner confirmed saving the Italian localization:
-PRO 30 giorni / PRO per 30 giorni, senza rinnovo automatico.
-The earlier suggested description exceeded Apple's displayed character limit;
-use this shorter version. Owner also confirmed saving Italy-only availability
-and disabling automatic availability in future territories. Availability scope
-is owner-reported, not independently queried through Apple APIs.
-
-Paid Apps Agreement/banking/tax status remains unverified; next owner step is
-to inspect Business > Agreements. Review screenshot and submission are pending.
-The product is not evidence of working purchases: signature verification, ledger,
-StoreKit bridge and sandbox device tests remain outstanding. No app review
-submission, production change or new TestFlight upload in this checkpoint.
-
-## Apple launch price approved — 2026-10-13 18:53 Europe/Rome
-
-Owner accepted EUR 9.99 for 30 days of iPhone PRO, without automatic renewal,
-keeping the existing seven-day trial. Selected product ID:
-com.calcioreport.app.pro30, Non-Renewing Subscription. Product entry values and
-Italian localization are prepared in docs/apple-purchases.md. App Store Connect
-product creation/pricing are not yet verified; no store change, purchase activation
-or release has been performed. Next owner step: create the non-renewing product
-in App Store Connect. Server verification, atomic ledger and StoreKit integration
-remain outstanding as documented in the preceding implementation checkpoint.
-
-## Apple purchase policy foundation — 2026-10-13
-
-Owner authorized proceeding with Apple purchases after successful iPhone 12.1
-acceptance. Added an isolated server-side post-verification policy module and
-seven boundary tests; all 52 repository tests pass locally. Checks include
-Sandbox/Production separation, product and account identity, immutable string
-transaction IDs, timestamps and revoked-purchase rejection. No runtime integration,
-Apple signature verifier, D1 ledger or StoreKit bridge has been enabled yet.
-Duplicate prevention and refunds still require the atomic, source-aware ledger.
-See docs/apple-purchases.md for the concrete implementation sequence and gaps.
-
-Proposed product ID: com.calcioreport.app.pro30, Non-Renewing Subscription,
-30 days, no automatic renewal. Price approved later at 18:53 (see above);
-product creation remains unverified.
-Native payment button remains disabled. No new TestFlight build, database change,
-main merge or production deployment performed for this checkpoint.
-
-## Native modal acceptance CLOSED — 2026-10-13 17:34 Europe/Rome
-
-Owner installed the replacement TestFlight build 1.0 (12.1) and reported the
-requested deletion-modal keyboard/scroll test successful on iPhone 16 Pro Max.
-Login spacing and recovery-button reachability were already confirmed on 10.1.
-The reported login overlap and deletion-modal scrolling/button visibility bugs
-are now closed by owner device acceptance. This does not imply unreported
-negative auth cases, purchase testing or App Store readiness.
-
-Build source 3cb9dbc, Actions 38417873754: tests, signed archive/export and Apple
-validation/upload step all succeeded. Main and production unchanged; PR #14
-remains draft. Next product work: Apple purchases with server verification,
-store icon/support/privacy materials, and remaining release checklist items.
-
-## iPhone 10.1 acceptance and deletion follow-up — 2026-10-13
-
-Owner installed 10.1 after completing Apple encryption declaration and group
-assignment. Login spacing and scrolling to the recovery button with keyboard
-open are confirmed PASS. Deletion layout FAILED: background page scrolls while
-the form stays oversized and its action buttons are obscured by the keyboard.
-Photo shows title also entering the status-bar area.
-
-Root cause: #deleteAccountForm max-height: calc(100dvh - 24px) overrides the
-lower-specificity native .modal-content constraint. Native CSS now explicitly
-includes #deleteAccountForm with max-height: 100% inside the visual-viewport
-modal. Native JS fixes the background body while any modal is open and restores
-its saved scroll position once all modals close. Web and API behavior unchanged.
-45 tests, mobile packaging and focused scroll-lock lifecycle mock passed.
-Replacement build 12.1 delivered and deletion keyboard/scroll retest confirmed
-successful by the owner at 17:34 Europe/Rome; see the current checkpoint above.
-
-## Keyboard fix delivered to TestFlight — 2026-10-13
-
-Owner authorized autonomous continuation and evening iPhone tests. Build 1.0
-(10.1), source 88b44ea, Actions 38351540078: 45 tests, signed archive/export,
-Apple VERIFY SUCCEEDED (07:31 Europe/Rome) and UPLOAD SUCCEEDED with no errors
-(07:32 Europe/Rome). Simulator compile also passed (38351541394).
-The explicit release gate was updated only for this requested delivery; ordinary
-push, wrong SHA/branch and rerun rejection checks passed. Test backend and disabled
-payments preserved. No main merge or production deploy. Apple processing/group
-availability and real-device keyboard acceptance remain unverified.
-Evening checklist: docs/iphone-testflight-checklist.md. Confirm build 10.1 before
-checking keyboard-open login/reset/delete modals and scroll reachability.
-
-## iPhone acceptance and keyboard layout fix — 2026-10-13
-
-Owner confirmed on iPhone 16 Pro Max / TestFlight 1.0 (6.1): installation,
-login, Milan fixture loading, session retained after closing/reopening, password
-recovery via pasted email link followed by login with the new password, and
-account deletion. These are owner-reported passes, not automated device tests;
-individual negative cases from the checklist are not separately confirmed.
-
-Screenshots reproduced the visible defect: with the keyboard open, the auth
-message overlaps Email and the bottom recovery button is clipped. The native-only
-CSS constrained the flex container height but allowed children to shrink.
-The fix prevents direct modal children shrinking, spaces the login/reset/recovery
-fields, wraps action buttons and includes safe-area padding in the viewport-bound
-scrollable modal. native.js gives the recovery block an explicit CSS class.
-Only packaged assets change; web production, Worker and API request count are
-unchanged. 45 existing tests and mobile web packaging pass. Native keyboard and
-safe-area acceptance on the corrected TestFlight build remains pending.
-
-## Evening test environment verified — 2026-10-12
-
-Owner recovered the existing relay secret over SSH and added it only to the test
-Worker. Screenshot confirms CR_RELAY_URL, CR_RELAY_SECRET, AUTH_PASSWORD_V2=1,
-RESEND_API_KEY and independent LICENSE_SECRET. Live bounded smoke succeeded:
-disposable account registration, authenticated /teams?id=489 -> HTTP 200, one
-AC Milan result, no provider errors; account deletion -> HTTP 200 / ok true.
-No secret value was provided in chat or committed. Windows checkout was confirmed
-clean and aligned with mobile/ios-preparation at the morning checkpoint.
-
-Internal TestFlight delivery now uses an explicit release-commit trigger on the
-trusted branch, avoiding a main merge merely to expose workflow_dispatch. Only the
-exact release message on the first run attempt enables upload; the script also
-checks event SHA/repository/branch. Normal pushes validate only. Mock gate checks
-passed. An initial workflow YAML syntax failure prevented execution and was fixed
-before upload. Build 1.0 (6.1) UPLOADED successfully at b152696, Actions 38268628004,
-2026-10-12 17:17 Europe/Rome. Apple reported VERIFY SUCCEEDED and UPLOAD SUCCEEDED
-with no errors. 45 tests passed; processing/internal tester assignment and iPhone
-runtime are still unverified. No main merge, production deploy or App Store review
-submission was performed.
-
-## TestFlight preparation — 2026-10-12
-
-Owner requested autonomous preparation while at work; evening PC/iPhone checks.
-On 2026-10-11 owner added a dedicated RESEND_API_KEY to the test Worker and
-confirmed password-recovery email delivery at 21:44 Europe/Rome (landed in spam).
-Delivery is verified; native password-reset completion is not yet tested.
-Screenshots show missing CR_RELAY_URL/CR_RELAY_SECRET and AUTH_PASSWORD_V2 in test.
-The current Worker requires both relay variables for football requests; do not
-copy the production LICENSE_SECRET. Test DB remains calcio_users_test.
-
-Commit b14af28 adds Apple IPA validation with existing GitHub API-key secrets,
-artifact provenance/hash checks, ephemeral P8 cleanup, and an opt-in manual upload
-path. Push events perform validation only. Local mock smoke passed for validation
-routing, artifact tamper rejection and key-file cleanup. Simulator compile passed
-(Actions 38209415495); 45 tests and signed IPA export passed in 38209412616.
-Apple validation PASSED in Actions 38209412616: API credentials and IPA accepted.
-No TestFlight upload, main merge or production deploy.
-Evening handoff: docs/iphone-testflight-checklist.md.
-
-## iOS IPA export checkpoint — 2026-10-11 evening
-
-PR #14 remains draft; main/production unchanged. Commit `fcf2006` passed 45 tests,
-signed device archive and IPA export (Actions `38164705461`). Export uses manual
-signing, internal-TestFlight-only option and a unique run/attempt build number.
-IPA checks verify the bundle ID, test API and empty payment URLs. GitHub artifact
-retention is one day; no Apple upload/distribution has been performed.
-Native-origin preflight against the test Worker returned 204 with compatible CORS
-using a browser user agent; Python's default agent was rejected by Cloudflare 1010.
-This is not a real-device runtime test. Next: verify test email configuration,
-prepare TestFlight upload and collaudate on iPhone. Store assets, purchase support
-and production release remain separate gates.
-
-## Native session candidate — 2026-10-11
-
-PR #14 adds packaged-only iOS Keychain session storage and pasted-email-link
-password recovery. Production web/Worker unchanged. 45 local tests passed;
-new plugin simulator/device signing CI PASSED at 18a01d2 (runs 38145418576 / 38145414073). Real iPhone checks and test
-email configuration remain outstanding. No TestFlight upload.
-
-## iOS signing setup — 2026-10-11
-
-PR #14 remains draft on `mobile/ios-preparation`. Latest unsigned iOS compile
-passed at e7ef13e. Owner completed Apple API key, Windows certificate/P12 and
-App Store profile setup in GitHub secrets. Branch-only signed archive check
-PASSED at 945a1da (Actions 38144848197): profile/identity validation, device
-archive and codesign verification all succeeded. No TestFlight upload or production change.
-See `docs/ios-preparation.md` for validation and remaining runtime gates.
-
-## Current release — 2026-10-11
-
-PR #13 released with explicit owner approval (2026-10-10, resumed 2026-10-11).
-Merge: `6b6953c0a21e6fe15798719de2883fbe67fe806c`. Production Worker updated by owner;
-GitHub Pages deployment succeeded and public assets `20261010r3` were verified.
-`ACCOUNT_DELETION_ENABLED=1` is active. Unsigned deletion is rejected with 401;
-direct production workers.dev remains 404. Owner confirmed production registration,
-opening deletion, password + ELIMINA, successful deletion/logout and rejected login
-at 09:31 Europe/Rome. Release complete; 38 automated tests previously passed.
-Real Stripe payment/PRO activation is not newly tested. Email verification remains
-proposal only. Older NOT RELEASED notes below are historical and superseded here.
-
-Next branch: `mobile/ios-preparation`. See `docs/ios-preparation.md` for proposed
-Apple payments, retained UI and implementation sequence. No iOS build or store
-submission yet; new production releases still require approval.
-
-## Account deletion candidate — 2026-10-10 (NOT RELEASED)
-
-- Branch `auth/account-deletion` from stable `main` `c05438a`; PR #12 remains the production baseline.
-- Implemented password-confirmed self-service deletion with explicit `ELIMINA`, atomic deletion across `users`, `trial_usage` and `trial_search_log`, account-ID-bound sessions/reset links, footer modal and error handling. New feature disabled unless `ACCOUNT_DELETION_ENABLED=1`.
-- Stripe candidate no longer creates users from payment events and rejects checkout sessions predating the current account. Registration-before-payment was explicitly accepted by the owner on 2026-10-10; the owner confirmed on 2026-10-10 that PRO payments are one-time, with no subscriptions or automatic renewal.
-- Email verification evaluated, not enabled/implemented: recommend new registrations verify before the seven-day trial begins, while preserving existing TRIAL/PRO access.
-- Full local suite: **31 passed / 0 failed** on Node 24, including Worker routes against SQLite and frontend behavior tests. No external football/email/payment calls were made by tests.
-- Repeat-trial policy agreed on 2026-10-10: deletion followed by re-registration may receive a fresh seven-day TRIAL, including with the same email. PRO-only prediction remains the paid differentiator; do not add retained email identifiers solely to prevent repeat trials. Revisit only if observed abuse/API costs justify it.
-- D1 table schema confirmed from the owner screenshot on 2026-10-10: three application tables (`users`, `trial_usage`, `trial_search_log`) plus Cloudflare `_cf_KV`, which is never modified. The initial users-only candidate was corrected before deployment. A guarded D1 batch removes all three user records atomically; rollback, cross-account isolation, concurrent reset/re-registration and fresh-trial cleanup are tested. Empty test database schema: `tests/fixtures/account-schema.sql`.
-- Isolated environment created by the owner on 2026-10-10: `calcio-report-test.stemoro84.workers.dev` → `DB` binding → `calcio_users_test`; separate `LICENSE_SECRET`, deletion enabled. The owner deployed the candidate Worker; production is unchanged.
-- Live isolated backend smoke: **15 checks passed** using disposable `example.invalid` accounts, all cleaned up. Verified register/me, deletion availability, wrong-password/missing-confirmation rejection, successful D1 batch deletion, revoked access/login, same-email/password re-registration, fresh seven-day trial and protection against old tokens deleting the replacement account. No email/payment/football-provider calls made. Local rollback/child-row tests remain distinct from this live smoke (which had no seeded child records).
-- Browser handoff: `py scripts/serve-account-test.py` serves the actual frontend at `http://127.0.0.1:5501`, overriding configuration in the HTTP response only to target the test Worker and disable payment URLs. No production config file changes; independent browser origin. Local serving/config check passed.
-- Owner browser confirmation (2026-10-10): all six requested steps passed: registration, cancel, wrong-password rejection, deletion/logout, old-login rejection and same-email registration with a fresh seven-day TRIAL. Narrow desktop-window layout subsequently passed; native mobile browser not separately tested.
-- Earlier credit pause ended; do not repeat completed tests without a relevant code change. Next: review external data/backup inventory, confirmed registration-before-payment flow and rate-limit coverage, then request explicit merge/deploy approval. Email verification remains a separate proposal.
-- Resumed 2026-10-10: prepared authenticated purchase flow across all in-app payment CTAs and corrected subscription wording to one-time 30-day PRO. Owner explicitly accepted registration/login before payment on 2026-10-10: grant 30-day PRO to the same registered user. Current webhook matching requires the same payment email; no claim of error-proof checkout identity binding. Frontend assets `20261010r2`; Worker unchanged from the tested isolated deployment.
-- Latest suite: **38 passed / 0 failed**, including six payment-flow tests and PBKDF2 deletion coverage with the production hash flag. Existing manual deletion/backend smoke evidence is preserved; the changed purchase flow has now also passed owner manual confirmation.
-- Repository data inventory and exact activation/rollback sequence are recorded in the design document. Cloudflare coverage on the configured API hostname is now verified (see below). Backup/log settings remain unverified; production application deployment still requires approval.
-- Purchase UI manual smoke PASSED (owner confirmation 2026-10-10): logged-out upgrade requests login; logged-in upgrade shows one-time 30-day PRO; confirmation opens the local mock payment page. No real payment or PRO activation tested. Cloudflare path/hostname rate-limit coverage is now verified below. Narrow/keyboard modal checks subsequently passed; external retention settings remain unverified.
-- Cloudflare auth rule updated by owner on 2026-10-10 to include `/auth/delete`, retaining login/register/forgot/reset, IP grouping, 5 requests per 10 seconds and a 10-second block. Live bounded check against `https://api.calcioreport.com/auth/delete`: five unauthenticated empty POSTs returned 401, then three returned 429. This confirms rate-limit coverage on the configured API hostname; no credentials, user records or entitlement changes involved. Alternate Worker entry points were subsequently disabled and checked; see the checkpoint below.
-- Owner manual confirmation 2026-10-10: fresh dummy account registration/logout/login works; narrow deletion modal remains readable, Tab moves focus/scroll appropriately, Escape closes. These UI checks are complete. Owner noticed login did not close with Escape; added a scoped handler preserving X, backdrop/autofill behavior, and already-handled/composition keyboard events. Regression test extended; assets 20261010r3.
-- Release checkpoint 2026-10-10 17:52 Europe/Rome: owner confirmed login Escape works; narrow-window login Tab auto-scroll remains a minor issue explicitly accepted as nonblocking. Do not spend more release time on that polish. Next product goal: Apple App Store preparation after this release.
-- Owner edited the existing active Stripe destination to `https://api.calcioreport.com/stripe/webhook` (same two selected events), then disabled production and preview `workers.dev` URLs on `calcio-report-proxy`, keeping custom domain `api.calcioreport.com`. Screenshot confirms both toggles off. Unsigned empty POST to custom-domain webhook returned HTTP 400 `Invalid signature`; this verifies reachability/signature rejection, not a signed Stripe payment or PRO activation.
-- Post-change checks: public frontend HTTP 200; custom-domain `/auth/me` HTTP 200; direct production `workers.dev/auth/me` HTTP 404. Preview disabling is evidenced by the dashboard screenshot, not by probing an actual version URL. Preserve these disabled alternate endpoints on future deployments.
-- Detailed design, limitations and test/release checklist: `docs/account-deletion-email-verification.md`.
-- `main` and production application code are unchanged. The owner has updated the production Cloudflare auth rule, Stripe destination URL and alternate Worker routing; account deletion is not released.
-
-## Current operating state — 2026-10-09
-
-- Core V2 is released on `main` and is the current public frontend at `https://app.calcioreport.com/`.
-- `main` is the stable production branch. New work must start from current `main` on a small feature/fix branch and return through a tested pull request.
-- `core-v2` is now historical; do not use it as the base for new work.
-- The production request path Browser → Cloudflare Worker → OVH relay → API-Football is verified and remains the required architecture.
-- **Password recovery RELEASED to `main` on 2026-10-09** via PR #12, merge commit `a4bf6c1447fff876dd05a4cadce5bc8446000596`. GitHub Pages deployment for the merge commit completed successfully. The Worker recovery endpoints were manually deployed and exercised before the merge. Manual E2E on the updated local frontend passed: new password accepted, old password rejected, reused reset link rejected, login with new password successful. Local automated suite: **15 pass / 0 fail**, clean branch. Public browser smoke check on `https://app.calcioreport.com/` was reported successful by the user on 2026-10-09 (site access, login modal/email autofill, recovery UI and ordinary app operation). The complete reset flow was independently exercised on the local updated frontend, not repeated after publication.
-- Resend: `mail.calcioreport.com` verified, DKIM and SPF provider-verified. Two test recovery emails arrived in **Libero spam**, not Gmail. Frontend now instructs users to check spam. Inbox placement remains a non-blocking follow-up; do not change DNS/sender speculatively.
-- Existing Cloudflare check `Workers Builds: calcioreport` failed on both the pre-merge stable `main` and the PR head. It refers to `calcioreport`, not the production Worker `calcio-report-proxy`; GitHub Pages deployment succeeded separately. Review obsolete Cloudflare build integration later.
-- Workflow: when the user runs local steps, provide **all related terminal commands in one coherent batch**, not one per conversational turn. Request a single combined report.
-- Matchday / Giornata is released and verified in production.
-- Shared fixture-statistics caching plus the official-match sample rule are released and verified in production.
-- No currently visible panel has a known blocking regression. Do not change an audited panel unless a new reproducible bug, duplicated request or measurable efficiency issue is found.
-- Infrastructure still has one explicit non-blocking follow-up: security update policy / logging review on the OVH VPS.
-- Historical release-candidate and pre-merge sections below are retained as project history; when they conflict with this section, this current operating state takes precedence.
-
-## Product direction
-
-Calcio Report is a football analysis web app. The current visual identity should be preserved unless a change is explicitly agreed. The goal is to rebuild the core so search, fixture loading, caching, auth and monetization behave deterministically and scale to real users.
-
-### Functional parity contract
-
-- `main` is the working functional/product reference for Core V2.
-- Core V2 is an internal orchestration and efficiency refactor, not a product rewrite.
-- Existing useful data, panels, calculations, layout and user flows must remain functionally equivalent unless a visible change is explicitly agreed.
-- Change structure only when it reduces/controls API calls, removes race conditions, improves cache/error handling or is required by the relay architecture.
-- Do not rewrite an unchanged working panel merely to call it "V2"; audit and reuse it.
-- A Core V2 regression or missing datum must be restored before merge even if the equivalent feature still exists in legacy code.
-- The agreed lineup optimization preserves the feature while changing cost: lightweight official check on main load; expensive estimate only on explicit user request when official lineups are absent.
-
-## Non-negotiable architecture
-
-- Frontend: static `index.html` + `style.css` + JavaScript.
-- Frontend hosting: GitHub Pages.
-- Public backend entry point: Cloudflare Worker only.
-- Football data source: API-Football only.
-- Cloudflare Worker responsibilities:
-  - hide API keys/secrets;
-  - CORS;
-  - auth;
-  - TRIAL / PRO gate;
-  - payment-related backend routes;
-  - edge cache with TTL;
-  - expose `x-cr-cache` and `x-cr-relay` diagnostics;
-  - never cache upstream errors.
-- Frontend responsibilities:
-  - async/await;
-  - separate cards/panels;
-  - on-demand loading for expensive sections;
-  - stale-request protection through `searchId`;
-  - no generic `error -> [] -> zero data` conversions.
-
-## Target request path
-
-```text
-Browser / future mobile app
-        ↓
-Cloudflare Worker
-(auth / TRIAL-PRO / CORS / edge cache)
-        ↓ on cache MISS
-Private relay on OVH VPS
-(stable outbound IPv4 / HMAC auth / request shaping)
-        ↓
-API-Football
-```
-
-The browser must never call API-Football or the VPS relay directly.
-
-## Why the VPS relay was introduced
-
-API-Football PRO is active, but real tests through Cloudflare Worker returned semantic rate-limit errors such as:
-
-```text
-Too many requests. You have exceeded the limit of requests per minute of your subscription.
-```
-
-Important observations from tests:
-
-- the API-Football response can be HTTP 200 while containing a rate-limit error in `errors`;
-- failures occurred both during team lookup and during fixture lookup;
-- diagnostics showed `x-cr-cache: MISS`, therefore the failing request actually reached upstream;
-- team resolution itself was correct in later tests (example: AC Milan resolved to the expected club), while the following fixture call hit rate-limit;
-- Cloudflare Worker shared egress is therefore the main infrastructure suspect.
-
-The relay is intended to provide a stable outbound IP while preserving Cloudflare as the public gateway and cache layer.
-
-## Repository / branch policy
-
-Repository: `CiccioGamer00/calcio_report`
-
-- `main` = stable public/production branch and current source for new work.
-- `core-v2` = historical development branch; do not branch new work from it.
-- New work: branch from current `main`, use small coherent commits, run focused/full tests as appropriate, then merge through a pull request after verification.
-- Historical Core V2 base commit `a595ad710c1dba96e151cf2acab66b8b4514d28f` and historical commit `6553c287148271bddb62f50a85f0fadd10e1463b` are reference only.
-- Do not delete important working code until replacement behavior is verified.
-
-## Local development
-
-Typical local folder:
-
-```text
-C:\Users\stefa\Desktop\progetti\calcio_report_v2
-```
-
-Normal stable branch:
-
-```text
-main
-```
-
-Update stable local checkout:
-
-```bash
-git fetch origin
-git switch main
-git pull --ff-only origin main
-```
-
-Feature/fix work uses a dedicated branch created from current `main`.
-
-Local static server:
-
-```bash
-py -m http.server 5500
-```
-
-Browser:
-
-```text
-http://localhost:5500
-```
-
-## Core V2 implemented so far
-
-### `js/state.js`
-
-Introduced central V2 state with:
-
-- incremental active `searchId`;
-- atomic team + fixture commit;
-- panel lifecycle state;
-- temporary compatibility with legacy `selectedTeam` / `selectedFixture` globals.
-
-### `js/api.js`
-
-Introduced typed API outcomes:
-
-- `success`
-- `empty`
-- `api_error`
-- `auth`
-- `paywall`
-- `forbidden`
-- `rate_limit`
-- `server_error`
-- `http_error`
-- `network_error`
-- `aborted`
-- `parse_error`
-
-Also:
-
-- recognizes API-Football HTTP 200 + semantic rate-limit;
-- no immediate retry for semantic rate-limit;
-- only real semantic success is stored in frontend cache;
-- carries request/search diagnostics;
-- reads `x-cr-cache`.
-
-### `js/features/searchController.js`
-
-Current responsibilities:
-
-- single search entry point for suggestion click, Enter and Search button;
-- debounce;
-- stale suggestion protection;
-- AbortController;
-- active `searchId` validation;
-- new search invalidates older responses;
-- selected team and fixture are published only after a valid fixture exists;
-- no standings / lineup / secondary panels in the critical path;
-- case-insensitive search;
-- local ranking for major clubs;
-- local reuse of prefix suggestion results;
-- reuse of identical in-flight suggestion requests;
-- localhost-only diagnostics showing phase, searchId, result kind, HTTP status, cache, team ID and API errors.
-
-Known tested behavior:
-
-- suggestion click for AC Milan successfully loaded the expected main fixture;
-- lowercase/uppercase input is intentionally equivalent;
-- Milan ambiguity was fixed so the intended AC Milan is preferred;
-- Juventus and Milan failures observed after this point were explicit API-Football rate-limit errors, not hidden `empty` states.
-
-## Cloudflare Worker status
-
-A real deployed Worker copy is versioned in:
-
-```text
-worker/worker.js
-```
-
-Current versioned Worker state on `core-v2` includes:
-
-- semantic API-Football errors are not edge-cached;
-- dedicated relay cache namespace/keying;
-- canonical query parameter ordering;
-- upstream error responses use `no-store`;
-- `Access-Control-Expose-Headers: x-cr-cache, x-cr-relay`;
-- root direct access without auth correctly returns `AUTH_REQUIRED`.
-
-Relay transport implementation is complete in the versioned Worker:
-
-- both the default proxy and the internal `/predict` data helper use one shared cache/relay transport;
-- cache HIT returns without contacting the relay;
-- cache MISS is signed with HMAC SHA-256 and sent to `CR_RELAY_URL`;
-- there is no direct Worker fallback to API-Football;
-- API-Football HTTP 200 responses containing semantic `errors` are never cached;
-- `x-cr-relay` is propagated for diagnostics;
-- the API-Football key is no longer referenced by the Worker.
-
-The canonical relay-enabled Worker was deployed manually to the live Cloudflare Worker `calcio-report-proxy` on 2026-09-12.
-
-Live end-to-end validation completed:
-
-- the online app loaded AC Milan's real next fixture through the deployed Worker;
-- the sequence Milan → Juventus → Inter → Milan completed successfully when teams were selected from suggestions;
-- no abnormal API-Football rate-limit error reappeared during the sequence;
-- because the deployed Worker has no direct API-Football fallback and uses a fresh relay cache namespace, the successful live data confirms the Worker → OVH relay → API-Football path;
-- automated transport tests separately confirmed canonical cache keys, MISS → HIT reuse, correct HMAC signatures, and that HTTP 200 responses containing semantic `errors` are not cached.
-- local Core V2 test with raw `milan` + Enter resolved AC Milan (`team.id = 489`) and loaded the correct fixture;
-- first local fixture request showed `cacheWorker=MISS`, `cacheBrowser=MISS`, `relay=1`;
-- after a hard refresh, the same request showed `cacheWorker=HIT`, `cacheBrowser=MISS`, `relay=1`;
-- opponent-next data was restored as a non-blocking background request; Lazio's next fixture against Venezia rendered correctly after the main Lazio–Milan card.
-
-Observed frontend behavior on the currently published legacy UI: pressing Enter on raw `milan` produced a false empty result, while selecting `AC Milan` from suggestions loaded the fixture correctly. Treat this as a frontend flow bug; do not infer an upstream/relay failure from it. Core V2 must keep Enter, Cerca and suggestion click on one shared deterministic path.
-
-## Relay status
-
-Files prepared and installed from `core-v2`:
-
-```text
-relay/package.json
-relay/server.js
-relay/README.md
-relay/deploy/calcio-report-relay.service
-relay/deploy/relay.env.example
-relay/deploy/Caddyfile.example
-```
-
-Design / implemented protections:
-
-- API-Football key stored only in VPS environment file;
-- shared Worker/VPS secret stored only in environment secret;
-- HMAC SHA-256 request authentication;
-- timestamp validation;
-- GET only;
-- API-Football endpoint allowlist;
-- relay listens only on `127.0.0.1:8788`;
-- outbound pacing below API-Football per-second limit;
-- deduplicate identical concurrent requests;
-- main data cache remains Cloudflare edge cache;
-- service runs under dedicated unprivileged user `calcioreport` with systemd hardening.
-
-Deployment layout on VPS:
-
-```text
-/opt/calcio-report/relay/
-/etc/calcio-report/relay.env
-/etc/systemd/system/calcio-report-relay.service
-/etc/caddy/Caddyfile
-/etc/caddy/sites/*.caddy
-```
-
-Current relay validation completed:
-
-- `server.js` syntax checked successfully with Node.js 22;
-- systemd unit installed and validated;
-- VPS-only environment file created with permissions `600 root:root`;
-- `APISPORTS_KEY`, `CR_RELAY_SECRET`, `HOST` and `PORT` verified set without exposing values;
-- relay service started successfully and reported `active`;
-- local `/health` returned HTTP 200 with `x-cr-relay: 1`;
-- HMAC rejection path confirmed during testing;
-- signed local request `/teams?search=Milan` successfully reached API-Football through the relay;
-- API-Football returned HTTP 200, `errors: []`, and AC Milan (`team.id = 489`) in the response;
-- relay forwarded API rate-limit headers and `x-cr-relay: 1`;
-- relay systemd service enabled at boot and verified `enabled` + `active`;
-- `relay.calcioreport.com` DNS A record points directly to the VPS during relay validation;
-- Caddy HTTPS endpoint is active for `relay.calcioreport.com`;
-- external `https://relay.calcioreport.com/health` returned HTTP/2 200 with `x-cr-relay: 1` and `{"ok":true,"service":"calcio-report-relay"}`.
-- a signed request to `/teams?search=Milan` through the public HTTPS relay endpoint succeeded;
-- the public signed response contained `errors: []` and AC Milan (`team.id = 489`).
-
-Test note: an initial manual test used a shell timestamp format incompatible with the relay's millisecond timestamp requirement and was correctly rejected as `expired_signature`. Retesting with Node `Date.now()` succeeded. No relay code change is required for this.
-
-The internal relay port `8788` remains private on loopback and closed in UFW. Public relay traffic terminates on Caddy over ports 80/443 and is forwarded internally to `127.0.0.1:8788`.
-
-The public HTTPS/HMAC prerequisite for switching the Worker to the relay is complete.
-
-## OVH VPS
-
-Purpose: shared infrastructure for Calcio Report and potentially other future low-risk projects, while keeping services isolated.
-
-Current server profile:
-
-- OVHcloud VPS-1
-- Gravelines, France
-- Ubuntu 26.04 LTS
-- 2 vCore
-- 4 GB RAM
-- 40 GB NVMe
-- automatic backup included
-- stable public IPv4 assigned
-
-Do not store the public IP or any login credentials/secrets in this public repository unless operationally necessary.
-
-Completed:
-
-- VPS provisioned;
-- initial SSH login completed;
-- temporary password changed;
-- SSH login with new password confirmed;
-- `sudo apt update && sudo apt upgrade -y` completed;
-- UFW firewall enabled and verified active;
-- default incoming policy is `deny`;
-- OpenSSH/22 explicitly allowed for IPv4 and IPv6;
-- UFW enabled on system startup;
-- dedicated Ed25519 SSH key created on Windows and public key installed on the VPS;
-- key-based SSH login tested successfully;
-- SSH hardening applied through `/etc/ssh/sshd_config.d/00-calcio-hardening.conf`;
-- `PubkeyAuthentication yes`;
-- `PasswordAuthentication no`;
-- `KbdInteractiveAuthentication no`;
-- `PermitRootLogin no`;
-- SSH configuration validated with `sshd -t`;
-- SSH service reloaded successfully;
-- second independent key-based login tested successfully after reload;
-- password-only SSH login explicitly tested and correctly denied;
-- controlled reboot completed after package updates;
-- fresh SSH key login tested successfully after reboot;
-- Node.js 22.22.1 installed from the official Ubuntu repository;
-- Node.js executable verified at `/usr/bin/node`;
-- Caddy 2.6.2 installed from the official Ubuntu repository;
-- Caddy systemd service verified active;
-- dedicated system user/group `calcioreport` created with `/usr/sbin/nologin`;
-- `/opt/calcio-report/relay` created with dedicated ownership and restricted access;
-- relay runtime files installed as `calcioreport`;
-- `/etc/calcio-report` created as root-only;
-- relay environment file created root-only;
-- relay systemd unit installed and validated;
-- relay started successfully and tested locally through a real API-Football request;
-- relay enabled at boot and verified `enabled` + `active`;
-- original Caddyfile backed up as `/etc/caddy/Caddyfile.original`;
-- multi-project Caddy layout created with `/etc/caddy/Caddyfile` importing `/etc/caddy/sites/*.caddy`;
-- original default `:80` site moved to a separate file and later disabled after the real relay site was added;
-- dedicated Calcio Report Caddy site installed from the versioned `relay/deploy/Caddyfile.example`;
-- Caddy configuration validated successfully and reloaded;
-- DNS resolution for `relay.calcioreport.com` verified from the VPS;
-- UFW opened only TCP 80 and 443 in addition to SSH; internal relay port `8788` was not opened;
-- automatic HTTPS for `relay.calcioreport.com` is working;
-- external HTTPS `/health` test succeeded with HTTP/2 200.
-
-Security / infrastructure still pending:
-
-- security update policy/logging review.
-
-## Completed infrastructure milestone
-
-The required live path is now working:
-
-```text
-localhost frontend
-    ↓
-Cloudflare Worker
-    ↓
-OVH relay with stable egress IP
-    ↓
-API-Football
-```
-
-Relay code integration, deployment, local transport tests and the live team sequence are complete. Automatic direct API-Football fallback remains disabled.
-
-## Immediate next objective
-
-Work only on the verified frontend bug list below, one item at a time. Do not reopen the completed relay/infrastructure design unless a new reproducible regression points there.
-
-### Current verified functional checkpoint — 2026-09-12
-
-Completed and verified:
-
-- live Browser → Cloudflare Worker → OVH relay → API-Football path;
-- no direct Worker → API-Football fallback;
-- Worker cache `MISS → HIT`, with `x-cr-relay: 1`;
-- online sequence Milan → Juventus → Inter → Milan without abnormal rate-limit failures;
-- Core V2 raw `milan` + Enter resolves AC Milan and loads the correct fixture;
-- Core V2 physical Search-button path was regression-tested: one click enters the shared search controller, resolves AC Milan and commits its fixture without duplicate team/fixture calls;
-- first-click tabs were manually re-tested across new searches; an already-open tab now resumes automatically when the new fixture becomes valid;
-- searched team's following fixture remains visible;
-- opponent's following fixture loads in background without delaying the main match (verified Lazio → Venezia);
-- main-card standings pills are restored through one non-blocking, stale-safe `/standings` request; opening the full standings panel reuses the same frontend-cache entry;
-- the main card performs one non-blocking official lineup check; an empty result no longer starts the historical estimator automatically and instead exposes an explicit estimate button;
-- `main` remains unchanged;
-- `app.js`, `index.html`, `style.css`, `config.js`, `teamFlow.js` and the existing panel modules remain functionally based on `main`; only the API/state/search orchestration and infrastructure have been changed.
-
-### Four-line formation investigation — 2026-09-12
-
-A focused local test was run on Lazio–AC Milan, including AC Milan's estimated `3-4-2-1`.
-
-What was confirmed:
-
-- the pitch renderer can draw the correct number of visual lines for four-line formations;
-- the existing estimated-XI builder still groups players mainly by macro roles (`GK/DEF/MID/ATT`) and then places them sequentially into formation rows;
-- this allows tactically invalid placements, for example a natural defender appearing on a midfield/advanced row merely to fill the shape;
-- an experimental local attempt using historical lineup `grid` improved row ordering but did not solve the role constraint, so the test was **not approved**;
-- all experimental `teamFlow.js` changes were reverted locally; no lineup code from this investigation was committed or pushed.
-
-Required behavior for the eventual fix:
-
-- natural player role must remain a hard constraint for normal defensive, midfield and attacking rows; a `DEF` must not become a midfielder simply to fill a slot;
-- hybrid advanced rows in shapes such as `4-2-3-1` or `3-4-2-1` may legitimately draw from suitable `MID` and `ATT` candidates, ranked using recent usage/presence;
-- use the role and historical lineup `grid` data already available to the estimator where possible;
-- do not add API calls solely to solve row placement;
-- repeat visual tests before closing the bug.
-
-### Role-aware four-line implementation — 2026-09-13
-
-The estimated-XI builder now consumes every row of the selected formation instead of collapsing it into only `DEF/MID/ATT` totals. This fixes the concrete `4-2-3-1` defect where the final `1` was ignored and the result could contain only ten players.
-
-Implemented behavior:
-
-- goalkeeper, defensive, midfield, hybrid advanced-midfield and final attacking rows are assigned separately;
-- normal defensive, midfield and attacking rows accept only their natural macro role;
-- only the intentional hybrid row in four-line shapes accepts both `MID` and `ATT`;
-- fixed-role rows are reserved before the hybrid row, preventing the only available striker from being consumed as an attacking midfielder;
-- historical lineup `grid` usage is converted into semantic row affinity and used to rank otherwise valid candidates;
-- recent starters missing from the `/players` pool are reused from data already collected by the estimator;
-- no endpoint or request count was added.
-
-Focused automated tests pass for `4-2-3-1`, `4-1-4-1` and `3-4-2-1`: each contains eleven unique players and respects the row-role constraints. Search-button, first-click tab, shared-standings and estimate-on-demand regressions also pass.
-
-The real-data visual test was approved on Inter–Udinese: Inter's `3-5-2` rendered as goalkeeper + 3 defenders + 5 midfielders + 2 attackers; Udinese's `3-4-2-1` rendered as goalkeeper + 3 defenders + 4 midfielders + 2 hybrid MID/ATT players + 1 final attacker. No natural defender appeared on an advanced row. The role-aware four-line bug is closed.
-
-### Panel parity audit — started 2026-09-12
-
-- **Arbitro — VERIFIED.** `js/features/refereePanel.js` is byte-identical to `main`. Manual test on Lazio–AC Milan confirmed fixture referee/stadium/city rendering, referee-history fallback, card summary, grouped match-history toggle and per-team detail toggle. Returning to the panel after visiting Match is immediate and does not reload it. No reproduced regression and no code change required.
-- **Squadre — VERIFIED.** `js/features/teamsPanel.js` is byte-identical to `main`. Manual test on Lazio–AC Milan confirmed both team cards, last-5 results, W/D/L counts, GF/GS, cards and opponent/home-away presentation. Returning to the panel after visiting Match is immediate and does not reload it. Existing shared event caching remains in use; no reproduced regression and no code change required.
-- **Predizione — VERIFIED.** `js/features/predictionPanel.js` is byte-identical to `main`, and its response contract matches the deployed Worker `/predict` route. Manual test on Inter confirmed 1X2 probabilities, confidence/risk, expected goals, likely scorelines, drivers, Over 2.5 and BTTS rendering. Returning from Match to Predizione is immediate and does not issue a second browser `/predict` request. No reproduced regression and no code change required.
-- **Corner — VERIFIED.** `js/features/cornersPanel.js` and its shared helpers in `js/features/panelsShared.js` are byte-identical to `main`. Manual test on Inter confirmed both team cards, averages, minima, maxima, averages conceded and five coherent match rows. Returning from Match to Corner is immediate and does not reload the panel. No reproduced regression and no code change required.
-- **Tiri — VERIFIED.** `js/features/shotsPanel.js` and its shared helpers in `js/features/panelsShared.js` are byte-identical to `main`. Manual test on Inter confirmed both team cards, total/on-target/against averages and five coherent match rows. Opening Tiri immediately after Corner reused the same frontend-cached fixture and `/fixtures/statistics` responses; returning from Match to Tiri was immediate and did not reload the panel. No reproduced regression and no code change required.
-- **Classifica — VERIFIED.** `js/features/standingsPanel.js` is byte-identical to `main`, and the full table uses the same `/standings?league=...&season=...` frontend-cache key as the non-blocking mini-position request on the Match card. The audit reproduced one Core V2 orchestration defect in `app.js`: the Classifica-specific loader ran before the shared already-loaded guard, so every return to the tab invoked `loadStandings()` again and could issue a new request after the three-minute cache TTL. The loader now exits when the current selection's table is already loaded. The visual regression test confirmed that switching away from Classifica and returning shows the existing table immediately without the loading message or another request.
-- Panel help/toast persistence was also checked: `Non mostrare più` is intentionally stored per hint key (`hint_referee`, `hint_teams`, etc.) in `localStorage`; focused retest confirmed the same disabled hint does not reappear. No bug.
-
-### Injuries request optimization — 2026-09-13
-
-The unchanged `main` implementation requested up to four `/players` pages for each team even when `/injuries?fixture=...` returned no unavailable players. A focused test reproduced nine calls for an empty injury list: one `/injuries` request plus eight unnecessary `/players` requests.
-
-`js/features/injuriesPanel.js` now loads player-position pages only for a team that actually has at least one injury record. Focused tests confirm:
-
-- no injuries: one request instead of nine;
-- injuries for one team: only that team's player pages are requested;
-- injuries for both teams: the existing behavior is preserved.
-
-The first real Inter test confirmed that the panel still renders and reopens immediately. It also exposed a separate pre-existing display bug: duplicate API injury records were counted and rendered as duplicate players.
-
-The duplicate-row fix now keeps one record per team/player, preferring the player ID and falling back to a normalized name when the ID is absent. If only one duplicate contains an absence reason, that reason is preserved. A focused test passed without adding API calls, and the follow-up Inter–Udinese visual test confirmed Inter reduced from four rows to the two unique players Dimarco and Spence, while Udinese reduced from twelve rows to six unique players.
-
-The Indisponibili panel and its request optimization are verified.
-
-### Unavailable-player details — 2026-09-14
-
-Unavailable-player chips now open the existing player-details modal on click/tap. The panel keeps the already-fetched `/players?team=...&season=...&page=...` row in memory and passes it to the modal, so opening an unavailable player adds no API request. Formation-player clicks preserve their existing `/players?id=...&season=...` fallback.
-
-The modal now keeps statistics tied to the selected fixture:
-
-- the first block shows only the selected competition and season, for example `Serie A · 2026/27`;
-- it never substitutes the first unrelated competition returned by API-Football when the selected league is missing;
-- a second block aggregates the same club's available statistics across the current season's competitions, deduplicated by team and competition;
-- when API-Football has no statistics associated with the fixture team/competition, the modal displays unavailable values instead of presenting unrelated numbers.
-
-The real-data regression exposed the previous fallback on Spence, which incorrectly showed World Cup statistics for an Inter–Udinese context. After the fix, Spence correctly shows Serie A as the requested competition with unavailable values because no relevant Inter statistics are present. Zaniolo showed one Serie A appearance and two total seasonal appearances, while the existing formation-player path was verified with Dimarco (three Serie A appearances, zero goals and one assist). No request was added to the injuries click path.
-
-### Indicators score semantics — closed 2026-09-13
-
-A visual audit of the Indicators tiles found a real interpretation problem in `js/features/indicatorsPanel.js`.
-
-Reproduced behavior:
-
-- the large percentage shown on Corner, Tiri, Cartellini and Falli tiles is **not a probability of the displayed betting label**;
-- it is a linear 0–100 intensity index produced by `scoreLinear()` from the expected raw volume;
-- example observed: `Cartellini: Under 4.5`, expected cards `2.60`, displayed score `12%`; the 12% comes from scaling 2.60 between 2 and 7 and therefore means low card volume, not 12% probability of Under 4.5;
-- the same issue explains examples such as Corner 20%, Tiri 26% and Falli 5%;
-- the separate Bookmaker section above is different: those percentages are actual historical hit rates (`hit / total`) over recent matches.
-
-Implemented behavior:
-
-- Corner, Tiri, Cartellini and Falli now show `Forza N/100` instead of a percentage that could be mistaken for probability;
-- `50/100` represents a value near the decision boundary and the strength increases, up to `95/100`, as the expected value supports the displayed label;
-- Under labels become stronger as the expected value falls below their threshold, while Over labels become stronger as it rises above the threshold;
-- the medium-shots band is strongest near its center and weaker at its boundaries;
-- Gol 1T and Gol 2T retain their existing percentage presentation;
-- the Bookmaker section remains unchanged and continues to show real historical hit rates;
-- no expected-value calculation, endpoint or request count was changed.
-
-Focused automated tests passed for Under/Over direction, decision boundaries, the medium-shots band, missing values, the new `Forza N/100` rendering and unchanged goal percentages. The real UI test was completed successfully after a hard refresh and one `Carica dati` action. The Indicators score-semantics bug is closed.
-
-### Shared statistics cache and official sample — RELEASED / VERIFIED IN PRODUCTION 2026-10-07
-
-- Corner, Tiri, Falli and Indicatori now reuse one session-wide fixture-statistics cache.
-- Concurrent requests for the same fixture are deduplicated; failed responses are not cached.
-- Friendly matches are excluded from the statistics sample.
-- Corner, Tiri and Falli keep searching backward until they collect the requested number of official matches with statistics available, up to the configured lookback.
-- Missing detailed statistics are no longer converted into fake zero values.
-- The UI now states that the sample uses the latest official matches; Indicatori also explains that Corner, Tiri and Falli require available statistics.
-- Local regression test on Napoli-Frosinone confirmed that the Frosinone-Benevento friendly no longer distorts the sample and Indicatori loads correctly.
-- Automated coverage added for shared cache behavior, missing statistics, official-sample filtering and frontend JavaScript syntax.
-- PR #6 merged into `main` at commit `ecf9d0268bfdc8a542e06a1dbbad018103a76aa3`.
-- Production smoke test on `https://app.calcioreport.com/` passed after Ctrl+F5: Corner/Tiri show the official-sample label, the Frosinone-Benevento friendly is excluded, and Indicatori loads without error.
-## Auth hardening — deployed / production smoke verified 2026-10-07
-
-- Worker auth now verifies session age server-side with a six-hour lifetime; legacy tokens without `exp` remain valid only within six hours of their original `iat`.
-- Login and `/auth/me` now respect disabled accounts consistently.
-- The Worker can validate both legacy single-SHA-256 password hashes and the staged PBKDF2-SHA256 format with random salt.
-- PBKDF2 creation is gated behind `AUTH_PASSWORD_V2=1`; the flag is now **enabled in production**.
-- Existing legacy SHA-256 accounts remain compatible; the rollout does not rewrite existing password records.
-- Automated suite passed 12/12 locally after staging the rollout flag, including Worker syntax, PBKDF2 behavior, legacy compatibility and session expiry.
-- Worker version `e714fba0` was deployed manually to 100% traffic.
-- Production smoke test passed for an existing account: logout/login, Giornata fixture selection and protected Predizione access all worked normally after deployment.
-- Controlled production registration with a new account succeeded with `AUTH_PASSWORD_V2=1`, followed by logout/login with the same credentials; PBKDF2 write/read behavior is therefore verified end-to-end.
-- Cloudflare rate limiting is active for `/auth/login` and `/auth/register`, grouped by IP at 5 requests / 10 seconds with a 10-second block.
-- Production verification confirmed the sixth rapid request is blocked with HTTP 429.
-- Because the Cloudflare Free WAF block response may not be readable by browser JavaScript through CORS, the frontend now also handles blocked `fetch()` calls and shows a clear temporary-block message instead of leaving the stale credential error visible.
-- Local UI verification confirmed the temporary-block message appears after the rate limit triggers.
-- Password recovery implementation is prepared on branch `auth/password-recovery` and is **not deployed yet**:
-  - `POST /auth/forgot` always returns the same generic response, whether or not the account exists;
-  - reset links expire after 20 minutes and use a password-reset-specific HMAC scope, so they cannot be used as session tokens;
-  - reset links are placed in the URL fragment (`#reset=...`) so the reset token is not sent in the page request;
-  - reset tokens are invalidated by a password change and the conditional D1 update makes them single-use even under concurrent requests;
-  - new session tokens carry a password version; changing the password invalidates new sessions immediately, while pre-release sessions remain compatible only until their existing six-hour expiry;
-  - session parsing now rejects license-code-shaped tokens that have no session `iat`;
-  - the central active-user gate and license redemption now enforce `disabled` for already-open sessions too;
-  - frontend adds “Password dimenticata?”, reset-password mode, confirmation field and clear success/error states.
-- Outbound reset email is prepared through Resend using secret `RESEND_API_KEY`. Cloudflare Email Sending to arbitrary customer addresses is not available on the current Workers Free plan, so it is not used for this rollout.
-- Before production rollout: verify a sending domain in Resend, add `RESEND_API_KEY` as a Worker secret, expand the existing Cloudflare rate-limit rule to include `/auth/forgot` and `/auth/reset`, deploy the Worker/frontend, then run a controlled end-to-end reset test.
-- Password recovery field checkpoint (2026-10-09): Resend sending domain `mail.calcioreport.com` was reported Verified; `RESEND_API_KEY` was configured as a Cloudflare production Secret; the existing rate-limit rule was extended to `/auth/forgot` and `/auth/reset` while retaining its limits; `worker/worker.js` from commit `524e1cc16b8224b149f443b1c24dd8d7c208588c` was manually deployed to `calcio-report-proxy`. A controlled POST to `/auth/forgot` returned the expected generic success message and real reset emails arrived (in spam), confirming Resend delivery. On 2026-10-09, the user opened a fresh reset link against the local `localhost:5500` frontend and **successfully changed the password and logged in with the new password**. Single-use token/repeated reuse, old-password rejection, and session invalidation were not separately confirmed by this manual test. Frontend on public `app.calcioreport.com` remains old `main` and does not yet handle reset links. Keep PR #12 draft and `main` unchanged until remaining checks/release decision.
-- Browser-autocomplete login modal regression: selecting an autofilled email had closed the login modal unexpectedly. On `auth/password-recovery`, the backdrop-click-to-dismiss handler was removed from `app.js`, preserving explicit X close; added `tests/auth-modal-autofill.test.mjs`. **User confirmed local Chrome manual fix** on 2026-10-09. User ran `node --test` locally and reported **15 pass**. No frontend release yet.
-- User workflow clarification (2026-10-09, latest): **Assistant must ALWAYS provide the commands**; batch multiple commands (3–8 or more) in ONE message when they form a coherent sequential procedure, so the user can execute them all and send ONE combined report. «Un comando alla volta» was NOT a request to pause for confirmation after each command. Browser test sequences should likewise be fully specified in one concise message. Split only for genuine dependencies or risks. Prefer doing GitHub tasks directly; avoid repetitive screenshots.
-- Additional password recovery manual tests confirmed by user (2026-10-09): reused reset link rejected and old password refused after password change. End-to-end primary flow, non-reuse, old-password rejection and login with new password are therefore VERIFIED manually. Email placement: two reset messages arrived in Libero's spam folder; deliverability remains an OPEN concern, **not** fixed or assumed to be a code bug. Sender defaults to `noreply@mail.calcioreport.com`. Need investigate Resend's Deliverability Insights, SPF/DKIM/DMARC alignment, and sender reputation before altering production DNS or sender. Public frontend on `main` still does not show reset UI.
-- Resend account audit (2026-10-09, via connected Resend app): sending domain `mail.calcioreport.com` is Verified (`eu-west-1`, sending enabled); its DKIM TXT and two SPF-related CNAME records show **verified** in Resend. Open/click tracking disabled. Transactional logs show 3 reset messages (2 delivered, 1 bounced, 0 provider-recorded spam complaints). Both delivered messages nonetheless landed in the recipient's Libero spam folder. `delivered` does **not** prove inbox placement. New sending domain (first configured 2026-10-08), `noreply` sender and bounced recipient are potential reputation concerns, not established root causes. Resend advises checking DMARC, avoiding `noreply`, and avoiding sends to invalid addresses. DMARC alignment/record and the receiving provider's message authentication headers have **not yet been independently checked**. Do NOT claim spam fixed, change DNS blindly, enable tracking, or replace the sender with an unmonitored mailbox. Production `main` remains unchanged.
-- Product decision (2026-10-09): user confirmed spam placement was at **Libero** (not Gmail), and agreed to continue rollout while advising users to check spam. Added a generic post-request reminder in frontend `app.js`: «Controlla anche la cartella Spam / Posta indesiderata.» This warning is identical for existing and non-existing accounts and does not leak registration status. Added regression assertion in `tests/password-recovery.test.mjs`. Sending reputation/inbox placement remains open for future monitoring; it is not a release blocker by user decision. No speculative DNS or sender change. Run tests against updated branch and complete release review before merge.
-- Next auth step after password recovery is verified: account deletion.
-
-## Current follow-up / next work
-
-1. **No known blocking visible-panel regression.** Match, Giornata, Arbitro, Squadre, Predizione, Corner, Tiri, Indisponibili, Classifica and Indicatori have all been exercised during the Core V2/release work. Reopen panel code only for a reproduced defect or measurable request/performance improvement.
-2. **Infrastructure follow-up:** review OVH security-update policy and operational logging; this is non-blocking for the current public app.
-3. **Prediction research:** the Prediction Lab / v3 work remains a separate track. Do not change public prediction behavior casually; continue only with explicit validation and production deployment steps.
-4. **Polish/features:** mobile tab polish, planned Falli visibility or other new UI work are product choices, not unfinished Core V2 blockers.
-
-Closed frontend regressions:
-
-- **Search button:** explicit click-path regression test passed; it uses the shared `startTeamSearch()` flow and did not require a code change.
-- **Tabs/cards first click:** reproduced as a timing race. A tab clicked before `selectedFixture` was committed opened visually but skipped its on-demand loader permanently; `cr:selection` now resumes the already-active tab once the fixture is valid, without starting extra panels or duplicating successful loads.
-- **Main-card parity:** the mini standings/rank pills bypassed by the new controller are loaded in background again, with `searchId` and fixture checks preventing stale re-renders.
-- **Lineup request cost:** automatic loading now stops after one official `/fixtures/lineups` check when data is absent; the existing multi-request estimator runs only after an explicit click, while transport errors remain distinguishable from an empty response.
-- **Four-line estimated formations:** the XI builder now consumes every formation row, preserves natural role constraints and uses historical `grid` affinity for hybrid rows; automated and real-data Inter–Udinese tests passed without adding API calls.
-- **Indicators score semantics:** Corner, Tiri, Cartellini and Falli now expose a direction-aware `Forza N/100` score instead of presenting a raw intensity index as a percentage; focused automated and real UI tests passed without adding API calls.
-- **Indisponibili duplicate rows:** repeated injury records are deduplicated per team/player before counting and rendering; reasons are preserved and the real Inter–Udinese test passed without adding API calls.
-
-### Scope guardrails for the next chat
-
-- The original product was functional; the primary production failure was the API-Football/Cloudflare transport incompatibility, which is now solved by the relay.
-- Core V2 must not become a visual or functional rewrite of `main`.
-- Do not remove, redesign or simplify working features merely to make them "V2".
-- Do not migrate/rewrite a panel that already works; audit and reuse it.
-- Do not work on lineups before Search/Cerca and the first-click tab bug are closed.
-- One bug, one small coherent commit, one focused test.
-- Before each code change, state the reproduced problem, affected files, exact intended behavior and expected API-call impact.
-- Keep localhost-only diagnostics until Core V2 verification is complete; they must remain invisible on the public app.
-
-## Planned Core V2 sequence after relay validation
-
-1. main-card parity: secondary match data without blocking the first render;
-2. verify Enter, Cerca and suggestion click plus stale-search protection;
-3. audit every existing panel against `main`; keep byte-identical code when it already behaves correctly;
-4. add shared panel states `idle/loading/success/empty/error` only where they improve orchestration without changing output;
-5. lightweight official lineup check, with estimated lineup only on demand;
-6. formation parser fixes for multi-line shapes such as 4-2-3-1, 4-1-4-1, 3-4-2-1;
-7. optimize/cache historical calls only after measuring actual request duplication;
-8. agreed mobile search/tabs polish;
-9. full functional parity, security and performance review before merging to `main`.
-
-## Existing UI/product behavior to preserve
-
-- current visual identity, cards, tabs, logos and pitch presentation;
-- search -> suggestions -> selection/Enter/Search;
-- panels for Match, Referee, Teams, Corners, Shots, Injuries, Indicators, Prediction, Standings and planned Fouls visibility as agreed;
-- most expensive panels on demand;
-- PRO elements marked with `data-pro-only="1"`;
-- blocked PRO action -> payment if configured, otherwise login;
-- header status badges for PRO / TRIAL / expired state;
-- auth/login/register/payment flows should not be casually rewritten during Core migration.
-
-## Public deployment checkpoint — current 2026-10-07
-
-- The public site is online at `https://app.calcioreport.com/`.
-- GitHub Pages deploys the stable `main` branch.
-- Core V2 is publicly released; the historical `core-v2` branch is no longer the active development base.
-- Matchday / Giornata is released and verified in production.
-- Shared fixture-statistics caching and the official-match sample rule are released and verified in production.
-- The deployed Cloudflare Worker and OVH relay serve the live backend path.
-- Continue to preserve `main` stability by developing on small branches and merging only after verification.
-
-## Prediction model review — 2026-09-14
-
-The current Worker `/predict` implementation remains a statistically valid and interpretable baseline:
-
-- independent Poisson score probabilities with Dixon-Coles correction for low scores;
-- league averages plus home/away team attack and defence;
-- fixed blend of 70% season context and 30% recent same-league form;
-- fixed home multiplier, Dixon-Coles rho and lambda bounds;
-- 1X2, expected goals, likely scores, Over 2.5 and BTTS output.
-
-The review identified that the model is not yet empirically validated:
-
-- no rolling out-of-sample backtest or probability calibration is recorded;
-- the UI confidence value is derived from the gap between the first and second 1X2 probabilities, not from measured historical reliability;
-- fixed weights and parameters are hand-set rather than learned per league/season;
-- recent results are not sufficiently adjusted for opponent strength;
-- sparse current-season data can fall through to zero averages and then to the minimum lambda clamp, producing a plausible-looking low-score forecast instead of an explicit insufficient-data state;
-- live prediction can require up to six upstream API-Football calls on a cold cache.
-
-Agreed direction:
-
-1. Preserve the current model as `poisson_dc_v1`; do not replace the public prediction panel before comparison.
-2. Build a repeatable offline Prediction Lab with time-ordered historical evaluation and no future-data leakage.
-3. Add a sparse-data fallback hierarchy: current same-league season, previous same-league season with time decay, recent all-competition matches at lower weight, team-strength/league priors, then an explicit insufficient-coverage state.
-4. Benchmark learned/time-decayed Dixon-Coles plus Elo or pi-rating before adding ML.
-5. Benchmark a calibrated tabular model such as CatBoost/XGBoost for 1X2; use deep learning only if the available historical dataset justifies it.
-6. Evaluate a validated ensemble: count model for score/goal markets plus calibrated tabular model for 1X2.
-7. Treat generative AI only as an explanation layer, never as the source of numeric probabilities.
-8. Measure multiclass log loss, Ranked Probability Score, Brier score and calibration; treat exact-score accuracy as secondary.
-9. Compare against simple league priors and, when available, de-margined bookmaker odds or API-Football predictions as external benchmarks.
-10. Prefer scheduled feature snapshots on the VPS so a future model does not increase live API calls.
-
-First test milestone:
-
-- characterize `poisson_dc_v1` deterministically;
-- reproduce the early-season/no-history fallback;
-- verify probability normalization and finite non-negative outputs;
-- record the current behavior before proposing any production code change.
-
-### First prediction characterization results — 2026-09-14
-
-A repeatable Node characterization script is stored in:
-
-```text
-tests/prediction-model-characterization.test.mjs
-```
-
-Initial offline assertions passed and consumed no API-Football calls. They confirm:
-
-- all tested outputs are finite, non-negative and normalized to a total 1X2 probability of 1;
-- with no current-season statistics and no recent fixtures, both lambdas fall to the minimum `0.2`;
-- that no-history case produces approximately 70.28% draw probability, with 0-0 at approximately 67.30%;
-- the current edge-based formula labels that artificial no-history forecast with confidence 100/100, proving that it must not be presented as measured reliability;
-- at the maximum lambdas `3.2 / 3.2`, limiting the matrix to scores 0–5 discards approximately 19.97% of the independent Poisson mass before renormalization;
-- the allowed extreme `rho=+0.3` can create a negative low-score cell before the existing zero clamp, so parameter bounds also require validation.
-
-No production Worker/frontend behavior changed during this milestone. The next Prediction Lab task is to define historical input snapshots and a leakage-safe rolling backtest before testing replacement formulas.
-
-## Working rules
-
-- one coherent task at a time;
-- explain what will change, why, affected files/services and expected result before implementation;
-- prefer direct GitHub changes over asking the user to edit code manually;
-- never expose secrets;
-- never mix old/new flows accidentally;
-- test after each block;
-- if a failure can be diagnosed in-app, add diagnostics rather than requiring browser developer tools;
-- update this file whenever a meaningful milestone or architectural decision changes.
-
-## Historical release-first decision — 2026-09-15 (completed)
-
-The immediate product objective is to publish the tested Core V2 frontend as soon as the essential release checks pass.
-
-Scope decision:
-
-- freeze Prediction Lab development and keep the current production prediction model unchanged for the first Core V2 release;
-- defer previous-season decay, schedule pressure, likely-turnover context, ML and other prediction refinements until after Core V2 is online;
-- do not merge the experimental `codex/prediction-lab-baseline` branch into `core-v2` for this release;
-- do not add new panels, redesign the interface or reopen closed infrastructure work before release;
-- limit remaining work to automated regression tests, a short real-data smoke test, authentication/PRO verification, quick responsive-layout verification and deliberate deployment;
-- keep `main` unchanged until the release candidate has passed those checks.
-
-Fast release path:
-
-1. return the local checkout to `core-v2` and pull the branch;
-2. run the existing automated regression suite;
-3. perform one compact desktop smoke test covering search, main match and all visible tabs without exhaustive re-auditing;
-4. verify login plus one PRO-gated interaction;
-5. perform one compact mobile-width visual check;
-6. review the `core-v2...main` diff for unexpected files or secrets;
-7. merge/deploy only after explicit approval of the release candidate;
-8. immediately run an online smoke test and keep the previous stable `main` commit available as the rollback point.
-
-Prediction research remains documented on `codex/prediction-lab-baseline` and is not a release blocker.
-
-### Core V2 release-candidate verification — 2026-09-15
-
-Release-candidate checks completed:
-
-- `tests/prediction-model-characterization.test.mjs`: PASS;
-- syntax check: all 18 frontend JavaScript files passed;
-- raw lowercase `milan` + Enter resolved AC Milan and loaded the next match on the first attempt;
-- live local diagnostics showed HTTP 200, Worker cache MISS and relay path active;
-- searched-team and opponent following fixtures rendered;
-- all visible tabs opened on the first click and returned coherent content;
-- PRO account loaded Indicatori and Predizione data;
-- newly registered TRIAL account was correctly blocked from PRO content and shown the upgrade action;
-- a clock-source display bug was reproduced: an exact seven-day trial could show `8g rim.` when the client clock lagged the Worker;
-- `app.js` now calculates remaining days using the Worker-provided `now`; the Worker still grants exactly seven days and no API request was added;
-- `tests/auth-days-left.test.mjs`: PASS; real UI retest shows `TRIAL · 7g rim.`;
-- all 18 local CSS/JavaScript asset references now use release cache version `20260915r1`;
-- `tests/release-assets.test.mjs`: PASS;
-- compact mobile-width test passed for header, search, horizontally scrollable tabs, match card and estimated `4-2-3-1` formation;
-- the visible mobile tab scrollbar is accepted as non-blocking polish for a later release;
-- `core-v2...main` review found no embedded secret, no direct API-Football frontend URL and no public literal IP;
-- localhost diagnostics are guarded by hostname and remain absent from the public site.
-
-Historical result: this release-candidate phase was completed and Core V2 was subsequently merged/released. See the current operating state at the top of this file.
-
-## Prediction v3 production integration candidate — 2026-09-18
-
-The leakage-safe Prediction Lab selected a dynamic attack/defence model with
-locked parameters `learning-rate 0.075` and `blend 1.00`. Its one-time final
-evaluation on the untouched Serie A 2025/26 target improved the full-season
-metrics versus the current model:
-
-- accuracy: `47.37%` to `49.21%` (`+1.84` points);
-- log loss: `1.0770` to `1.0221`;
-- Brier score: `0.6418` to `0.6121`;
-- Ranked Probability Score: `0.2198` to `0.2098`;
-- calibration error: `0.0739` to `0.0134`.
-
-The first-30 subset did not improve every metric: accuracy fell by `3.33`
-points and RPS increased by `0.0003`, although log loss, Brier and calibration
-improved. For this reason the production candidate is deliberately limited:
-
-- activate the v3 model only for API-Football league `135` (Serie A), the only
-  competition validated so far;
-- retain `poisson_v1_3_dc_cached` unchanged for every other competition;
-- use only fixture details, the completed previous Serie A season and completed
-  current-season fixtures before the target kickoff;
-- cache the previous season for seven days and the current season for ten
-  minutes;
-- update matches sharing the same kickoff as one batch so their ordering cannot
-  leak results into one another;
-- use previous-season results in the estimate, but require three current-season
-  matches for both teams and eight current league matches before presenting a
-  model signal as evaluable;
-- do not add player/injury or schedule-pressure adjustments until each has a
-  separate historical validation.
-
-Automated candidate checks pass:
-
-- Worker syntax and the complete existing test suite;
-- locked parameters and Serie A-only routing contract;
-- same-kickoff order invariance;
-- exclusion of results at or after the target kickoff;
-- previous-season carry and expected-goal bounds;
-- normalized 1X2 probabilities and frontend-compatible payload;
-- end-to-end mocked Worker route with exactly three upstream calls and no
-  duplicate legacy calls for Serie A;
-- early-season signal guard and unchanged legacy route for other competitions.
-
-This candidate belongs on `codex/prediction-v3-integration`. It must remain
-experimental until the local real-data smoke test passes; no merge to `main`
-and no Worker deployment is authorized yet.
-
-### Reduced-history signal guard — 2026-09-18
-
-The preview smoke test with Frosinone–Como confirmed that expected goals and
-1X2 probabilities remain available for a promoted team, but also exposed an
-overstated signal label: Frosinone had four current-season matches and no
-previous Serie A history, while the raw 30-point 1X2 gap was shown as a net
-signal.
-
-The experimental candidate now keeps probabilities and expected goals
-unchanged while treating team-history depth separately from the mathematical
-edge:
-
-- if a team has fewer than ten previous-season league matches and fewer than
-  eight current-season matches, `coverage.historyLimited` is true;
-- an otherwise evaluable prediction is labelled `Segnale da confermare` and
-  its exposed signal score is capped at 45;
-- the raw edge remains available as `rawSignalScore` for diagnostics;
-- the explanation now distinguishes the full league training sample from each
-  team's actual current/previous-season coverage;
-- once the short-history team reaches eight current-season matches, the guard
-  is removed automatically;
-- the prediction formula, dynamic ratings, probabilities and expected goals
-  are not modified.
-
-## Matchday / Giornata — RELEASED (2026-10-05)
-
-Branch: `feature/matchday` (created from current `main`, which is newer than the historical `core-v2` branch).
-
-Implemented and released:
-
-- new on-demand tab `📅 Giornata` inside the existing viewport, preserving the current UI identity;
-- curated first release: Serie A, Premier League, La Liga, Bundesliga, Ligue 1;
-- current round resolved through API-Football `/fixtures/rounds?league=...&season=...&current=true`;
-- current-round pointer cached for 2 hours;
-- fixed `league + season + round` fixture list cached for 30 days at Worker edge;
-- browser stores the stable matchday composition (fixture id + home/away teams/logos) in persistent `localStorage`;
-- dates/times are intentionally not rendered in the matchday list;
-- clicking a match reloads `/fixtures?id=...` and then commits that exact fixture directly into Core V2 selection;
-- direct fixture selection does not spoof/re-run the team search flow;
-- after direct selection, existing Match rendering, standings mini-load, official-lineup check and on-demand panels continue to use the shared selected fixture;
-- stale-response protection added when the user changes league quickly;
-- release asset version bumped to `20261005r1`;
-- added `tests/matchday-feature.test.mjs` and updated the release-assets expected version.
-
-Validation performed from Chat:
-
-- static integration checks passed;
-- JavaScript syntax parsing passed for `app.js`, `js/features/matchdayPanel.js`, `js/features/searchController.js` and versioned `worker/worker.js`;
-- runtime clone/test execution was not possible from the Chat container because direct outbound GitHub network access is blocked.
-
-Local verification completed on 2026-10-05:
-
-- local branch updated successfully;
-- automated checks verified: the six pre-existing tests remained green and the dedicated `matchday-feature.test.mjs` now passes after fixing a test-only assertion;
-- Serie A matchday list loaded correctly;
-- direct click Inter–Parma opened the exact selected fixture;
-- Premier League matchday list loaded correctly;
-- direct click Sunderland–Brighton opened the exact selected fixture;
-- next-fixture rendering was aligned with existing `main` behavior (next absolute commitment across competitions): Sunderland → Torrense and Brighton → Kauno Žalgiris verified manually;
-- a race condition that could erase one side's already-resolved "Prossima" fixture was fixed;
-- local diagnostic noise for direct fixture selection was removed.
-
-Worker production deployment completed on 2026-10-05:
-
-- Cloudflare Worker `calcio-report-proxy` manually deployed from the dashboard;
-- deployed version shown by Cloudflare: `3ddffc3f`, promoted to 100% traffic;
-- deployment changes limited to cache policy:
-  - `/fixtures/rounds` -> 2 hours;
-  - `/fixtures?league=...&season=...&round=...` -> 30 days;
-- auth, relay transport, prediction logic and other routes were not intentionally changed.
-
-Production Worker smoke test completed on 2026-10-05:
-
-- local frontend reloaded after Worker deployment;
-- Giornata → Serie A loaded normally through the deployed Worker path;
-- no regression observed in the tested path.
-
-Release completed on 2026-10-05:
-
-- PR #4 merged into `main` at commit `ee71d8e7367aac9c5392bdbaff55ddc8c8250775`;
-- GitHub Pages production at `https://app.calcioreport.com/` verified manually after merge;
-- the `📅 Giornata` tab is visible and functional in production;
-- Serie A and multiple other leagues reopen immediately after reload / Ctrl+F5 thanks to the intended cache reuse;
-- production behavior confirmed stable after repeated matchday navigation.
-
-Status: **RELEASED / VERIFIED IN PRODUCTION**.
-
+# Calcio Report — STATO OPERATIVO CORRENTE
+
+## Requisiti residui e cattura iPad — 30 ottobre 2026, sera
+
+- Add for review bloccato da categoria, diritti, iPad13, età, prezzo.
+- Sport salvata; questionario completato mostra 4+, Non applicabile.
+  Utente prosegue dopo istruzioni salvataggio e prezzo app Gratis;
+  ultimo salvataggio prezzo non verificato visivamente.
+- Diritti contenuti ancora aperti: dati/logo/foto API-Football, non dichiarare
+  assenza di terzi o presumere licenze dal solo piano Pro.
+- Proprietario non ha iPad. Workflow ios-prototype aggiornato per cattura
+  reale simulatore iPad Pro13 della app Production, senza login/dati inventati.
+  Commit a6c4bf1 avvia compilazione unsigned e PNG home: esito/immagine da
+  verificare prima upload. Non cambia candidata firmata34.1 né backend.
+- Da valutare pubblicità in futuro aggiornamento, assente dalla versione attuale.
+- QR biglietti esistenti: futura landing con link App Store e accesso web;
+  URL esatto QR ancora da acquisire, nessuna modifica effettuata.
+- Review non inviata; gate AppleProduction0 e rilascio manuale invariati.
+
+## Screenshot PRO salvato e build 34.1 selezionata — 30 ottobre 2026
+
+- Screenshot proprietario 174809: prodotto PRO30, sezione Informazioni per
+  la verifica, miniatura offerta reale presente, Salva disabilitato;
+  pulsante Aggiungi alla verifica disponibile. Note IAP ancora vuote.
+  Stato esatto prodotto non visibile nella schermata, non assumere approvato.
+- Proprietario conferma fatto dopo sostituzione 33.1 con 34.1 nella
+  scheda iOS 1.0 e salvataggio. Evidenza riferita, non nuovo audit API.
+- Prossimo passo: Aggiungi alla verifica dalla versione iOS per creare/
+  completare bozza submission, poi aggiungere PRO30 alla stessa richiesta.
+  Verificare eventuali errori/campi mancanti e riepilogo prima invio.
+- Nessun invio review ancora confermato; rilascio manuale mantenuto,
+  acquisti Production disabilitati. Non rifare screenshot/build/acquisti.
+
+## Device 34.1 e schermate acquisto — 30 ottobre 2026
+
+- Delivery run 41087773153, job 124173352720 SUCCESS: validazione e upload
+  della stessa 34.1 completati. Proprietario conferma aggiornamento installato.
+- IMG_4681.png 1320x2868: Mostra e pulsanti Login/Registrati più grandi/distanti.
+  IMG_4678: account PRO 21g e Estendi PRO · 30 giorni visibile.
+  IMG_4679: conferma offerta 30 giorni, senza rinnovo automatico.
+  IMG_4680: foglio Apple 9,99 EUR, unico addebito, solo test senza addebito.
+- Proprietario riferisce nuovo acquisto riuscito. Immagini provano apertura
+  checkout Sandbox; non mostrano da sole accredito finale o nuova scadenza.
+  Non richiedere altro acquisto. Non interpretare come acquisto Production.
+- Screenshot IAP scelto: originale di IMG_4679, mostra offerta senza account Apple.
+  Copia allegata JPEG 707x1536, ridotta: recuperare originale iPhone sul Desktop,
+  non ridimensionare artificialmente e non usare screenshot login IMG_4681.
+- Prossimo passo: originale offerta poi caricamento nella sezione revisione
+  del prodotto PRO30. Screenshot Store già completi non da rifare.
+- Selezione 34.1 nella scheda Store non ancora confermata; review non inviata.
+  Gate acquisti Production resta 0.
+
+## Candidata 34.1 firmata e avvio consegna — 30 ottobre 2026
+
+- Signing run 41086301264, job 124168239719 SUCCESS; build Production 34.1.
+  Controlli test/IPA/privacy/risorse passati; upload nello signing SKIPPED.
+- Sorgente 74cec873bd4221b8cd9867f924c957f02d4c9a1f, artifact 12992755642,
+  calcio-report-production-ipa-34-1, digest
+  sha256:e972b8b30f8c86b80617eb64cae5c746f6f23fba9cb9cfe0bf21a5bc8cf72aa9.
+- Uploader fissato a questa candidata; commit avvia validazione e upload della
+  stessa IPA, senza ricompilarla. Autorizzazione completamento già acquisita.
+  Esito consegna/elaborazione Apple ancora pendente.
+- Poi installazione reale, verifica UI/offerta e screenshot IAP. 33.1 resta
+  selezionata finché non confermata sostituzione. Nessun invio App Review.
+- Backend acquisti Production resta disabilitato.
+
+## Login iPhone riuscito e nuova candidata UI — 30 ottobre 2026
+
+- Proprietario conferma ingresso anche nell'app: blocco credenziali CHIUSO.
+  Nessuna registrazione/reset necessario.
+- Individuato ostacolo screenshot: refreshTopAuthUI nascondeva l'acquisto
+  agli account già PRO (review inclusa). Ora mostra Estendi PRO · 30 giorni
+  e usa lo stesso flusso StoreKit e controlli server; nessun bypass del gate.
+- Nuova candidata include pulsanti login 52px/distanze, Mostra/Nascondi password,
+  rimascheramento e pulsante estensione. Trigger signing include app.js.
+- Sintassi precedente e controllo comportamento password con DOM minimo passati
+  (mostra/nascondi, stato aria, rimascheramento, valore conservato/idempotenza).
+  Layout browser non verificato localmente: conferma reale prossima build.
+- Commit avvia build Production firmata, senza upload implicito.
+  Esito build ancora pendente; 33.1 resta selezionata e installata.
+- Poi uploader fissato al nuovo artefatto, validazione/upload, installazione
+  e screenshot offerta reale. Non ripetere acquisti per ottenere la foto.
+- Backend Apple Production resta 0; App Review non inviata.
+
+## Password visibile e login web — 30 ottobre 2026
+
+- Proprietario conferma login web riuscito con le credenziali review salvate;
+  screenshot mostra PRO 21g. Su iPhone riprova: esito ancora pendente.
+  Non creare account o reimpostare password per il precedente errore.
+- Su richiesta aggiunto Mostra/Nascondi al campo password login/registrazione:
+  type=button, etichetta accessibile, aria-controls/pressed, bersaglio 52px.
+  Rimaschera a chiusura dialogo e quando app/documento diventa nascosto.
+  Non modifica valore password né autenticazione.
+- JS syntax e diff check passati; verifica browser locale non disponibile
+  (eseguibile Chromium e jsdom assenti). Conferma device nella prossima build.
+- Modifica solo sorgenti release con skip ci, insieme al precedente ingrandimento
+  pulsanti; nuova compilazione/upload non avviati. 33.1 resta installata/selezionata.
+- Credenziali visibili nell'allegato utente: non copiarle in repo/log/documenti.
+- Prossimo passo utente: esito nuovo login iPhone; poi offerta e screenshot IAP.
+
+## Ripresa login review e pulsanti — 30 ottobre 2026, sera
+
+- Proprietario rientrato: nella 33.1 senza login vede Passa a PRO.
+  Tentativo con credenziali ritenute review restituisce credenziali errate.
+  Non creare account nuovo: email review riservata, signup/reset gestiti
+  separatamente; errore non identifica ancora password errata o routing.
+- Prossimo singolo passo: verificare sul PC le credenziali già salvate in ASC,
+  scheda iOS 1.0 > Informazioni per la revisione, senza condividerle in chat.
+  Confrontare/inserire esattamente account Calcio Report, non Apple ID.
+  Se fallisce ancora, diagnosi mirata del login senza acquisti o reset live.
+- Segnalazione UI accolta: nel solo dialogo accesso, pulsanti alti almeno
+  52px, Login/Registrati con spazio equo, gap 16px e distacco recupero 16px.
+  CSS committato con skip ci; non ancora compilato/installato su iPhone.
+  33.1 resta la candidata attuale; una nuova build servirà per la correzione.
+- Screenshot IAP ancora pendente; nessun nuovo account, deploy o invio review.
+
+## Preparazione PRO30 senza proprietario — 30 ottobre 2026
+
+- Proprietario chiede di preparare le fondamenta; screenshot reali rinviati
+  alla sera. Nessuna azione richiesta durante il lavoro.
+- Preparato docs/pro30-review-preparation.md: note inglesi prodotto,
+  percorso reale della 33.1, piano cattura/caricamento e limiti dell'audit.
+- Lettura sorgenti: manager.product interroga /apple/token prima dell'offerta.
+  Account live con flag 0 non può aprirla; percorso review Sandbox isolato
+  già predisposto. Non attivare Production per la foto, non rifare acquisti.
+- Tenere conto di pulsante upgrade nascosto per account PRO; verificare UI
+  reale senza modificare diritti/scadenze o creare nuovi account.
+- Prezzo/territori solo evidenza storica, non riverificati. Nessuna nuova
+  configurazione inventata. Note pronte ma non caricate in ASC.
+- Prossimo passo serale: cattura reale offerta PRO nella 33.1 e caricamento
+  nella scheda IAP; poi verificare MISSING_METADATA e associazione submission.
+- Solo documentazione aggiunta; nessun deploy/build/test acquisti/review.
+
+## Verifica autonoma finale — 30 ottobre 2026
+
+- Proprietario autorizza avanzamento mentre è al lavoro; pausa conclusa.
+- Audit ASC read-only aggiornato alla candidata 33.1 e agli stati screenshot/IAP.
+  Run 41015746779 SUCCESS (precedente 41015567161 SUCCESS).
+  Nessuna credenziale review/email stampata, nessuna mutazione App Store.
+- Evidenza API: versione 1.0 PREPARE_FOR_SUBMISSION, rilascio MANUAL,
+  build selezionata 33.1 VALID, non scaduta, crittografia non esente=false.
+  Tre screenshot APP_IPHONE_67 tutti COMPLETE; descrizione/parole chiave
+  presenti, supportUrl e privacyPolicyUrl corretti. Non richiedere nuovi
+  screenshot Store né selezione build.
+- BLOCCO concreto: IAP 6822393280, com.calcioreport.app.pro30,
+  NON_RENEWING_SUBSCRIPTION, MISSING_METADATA; appStoreReviewScreenshot
+  assente. Localizzazione italiana con nome/descrizione presenti.
+  Non assumere che sia l'unico campo mancante: prezzi/disponibilità e
+  associazione alla prima submission non verificati da questo audit.
+- Prossimo passo col proprietario: aprire scheda PRO30, Informazioni per
+  la revisione, predisporre screenshot reale dell'offerta PRO nella 33.1.
+  Non usare screenshot generati o una schermata Match al posto dell'offerta.
+  Prima submission deve includere IAP e nuova versione app.
+- PR16 ancora draft aperta/non integrata (head 5882d41). Diff diagnostico:
+  database diverso da review etichettato sempre test; test solo Sandbox.
+  Non integrare automaticamente sul Production. Il logger aggiunge
+  transactionId verificato; nessuna modifica alla consegna/accredito.
+  Non è prova di un difetto nel flusso live né test Production.
+- Backend resta a30c419c, gate 0 verificato ieri. Nessun deploy/build firmata,
+  invio review, nuovo acquisto o modifica main. Controlli CI automatici
+  attivati dal commit dello script: non sono una nuova candidata Store.
+- docs/app-store-final-preparation.md aggiornato con evidenze e residui.
+
+## PAUSA proprietario e controllo post-deploy chiuso — 29 ottobre 2026
+
+- Proprietario conferma GET pubblico /apple/token: HTTP 503,
+  {"error":"APPLE_PURCHASES_DISABLED"}. Blocco acquisti Apple verificato
+  dopo deploy a30c419c-dec0-4122-bbd2-47b3a54dbf73.
+- Non ripetere deploy, dry-run, controllo gate, HMAC o acquisti già accettati.
+- Proprietario va a dormire e rinvia a domani: nessuna ulteriore operazione
+  di rilascio durante la pausa.
+- Alla ripresa: controllo finale dei requisiti residui per App Review,
+  inclusa situazione patch audit PR16; build 33.1 selezionata, screenshot
+  completati, privacy pubblicata e URL notifiche configurati già confermati.
+- App Review non inviata. Acquisti Production disabilitati, rilascio manuale.
+
+## Candidato attivazione distribuito — 29 ottobre 2026
+
+- Proprietario conferma deploy riuscito, Current Version ID:
+  a30c419c-dec0-4122-bbd2-47b3a54dbf73; variabili e segreti remoti preservati.
+- Comando previsto: Wrangler 4.152.0 deploy --keep-vars dalla nuova
+  wrangler.apple-activation.json, dopo controlli nome Worker, SHA256,
+  APPLE_PRODUCTION_ENABLED=0 e invocation_logs=false.
+- Nessuna migrazione o rotazione segreti. Non ripetere deploy/dry-run/HMAC.
+- Prossimo passo: singolo GET pubblico /apple/token dal PC proprietario,
+  senza credenziali, atteso HTTP 503 APPLE_PURCHASES_DISABLED.
+  Conferma HTTP post-deploy ancora pendente; non equivale a test acquisti.
+- App Review non inviata; attivazione acquisti Production non eseguita.
+
+## Dry-run attivazione riuscito — 29 ottobre 2026
+
+- Proprietario conferma: candidato verificato, dry-run riuscito, Invocation logs
+  disattivati nella nuova copia, Apple Production=0; nessun deploy eseguito.
+- Config sorgente verificata sul PC:
+  C:\Users\stefa\calcio-report-maintenance-candidate-20261024-103247\wrangler.apple-readiness.json.
+  Worker calcio-report-proxy, DB live 45681187-3565-4d36-8627-131c18ff1885,
+  review 5b5458eb-4a69-454d-a5ac-76ffc93b8af7. Apple=0, review=1, ledger=1,
+  pausa=0, cutover=1792845158779. Invocation logs sorgente True, corretti SOLO
+  nella nuova wrangler.apple-activation.json a false.
+- Bundle apple-activation-worker-candidate.mjs scaricato dal commit bf1435a,
+  SHA256 9bcbc82eb0e1794432eba130116162f31269a0a605b70b82d141e1e42777a599.
+  Wrangler 4.152.0. Log dry-run locale apple-activation-dry-run.log.
+- Prossimo passo autorizzato: deploy con --keep-vars della sola nuova config
+  dopo controllo hash/logs/flag, senza migrazioni o reinstallazione segreti.
+  Esito remoto e nuova versione ancora da ricevere. Non ripetere HMAC readiness.
+- App Review non inviata, acquisti Production disabilitati.
+
+## URL notifiche Production configurato — 29 ottobre 2026
+
+- Schermata proprietario 214046: URL Production inizialmente vuoto;
+  Sandbox https://calcio-report-test.stemoro84.workers.dev/apple/notifications.
+- Proprietario conferma "fatto" dopo istruzione di impostare Production
+  https://api.calcioreport.com/apple/notifications, Versione 2 se richiesta,
+  e salvare senza modificare Sandbox. Evidenza riferita, non test consegna.
+- Non ripetere configurazione URL. Acquisti Apple Production ancora disabilitati;
+  non confondere salvataggio URL con verifica di consegna notifiche.
+- Prossimo passo: predisporre deploy bundle apple-activation candidato con flag 0
+  usando configurazione locale già adottata, preservando invocation_logs=false,
+  binding D1 live/review, cutover e segreti. Non ripetere migrazioni o HMAC readiness.
+  Prima verificare branch/stato checkout e presenza config sul PC del proprietario.
+- App Review non inviata. Autorizzazioni di completamento già acquisite.
+
+## Screenshot completati e ripresa — 29 ottobre 2026, sera
+
+- Proprietario comunica "screen pronti" con schermata 213446: tutte le tre
+  anteprime Match/Indicatori/Giornata visibili, nessuna icona nuvola;
+  Salva disabilitato. Visualizzate come utilizzo di risorse esistenti nella
+  vista display medio, dopo upload originali nel display grande.
+  Blocco elaborazione immagini CHIUSO. Non richiedere nuovi screenshot.
+- 33.1 selezionata, privacy pubblicata, URL assistenza/privacy salvati come
+  confermato in precedenza. Rilascio manuale mantenuto.
+- Prossimo requisito aperto: leggere URL notifiche server App Store
+  Production e Sandbox in App Store Connect, prima di modificarli.
+  Non presumere configurazione esistente. Poi completare piano backend
+  candidato a flag 0 e controllo finale di idoneità alla review.
+- Review non inviata; acquisti Production disabilitati. Questa ripresa supera
+  la pausa sottostante; autorizzazioni generali già acquisite.
+
+## PAUSA proprietario — 29 ottobre 2026, caricamento screenshot
+
+- Proprietario deve uscire e rinvia a domani. Non avviare nuove build/deploy.
+- Conferma utente: 33.1 selezionata e salvata nella scheda iOS 1.0,
+  rilascio manuale. Screenshot 33.1 verificati: nessuna diagnostica Match visibile.
+- Scelti nell'ordine IMG_4673.PNG (Match), IMG_4675.PNG (Indicatori),
+  IMG_4672.PNG (Giornata Serie A). Copie in chat 942x2048, non originali.
+- iCloud pieno: originali trasferiti via USB da iPhone al Desktop Windows.
+  Upload iniziale fallito nel riquadro Dynamic Island display medio.
+  Proprietario poi apre Gestione risorse multimediali, Dynamic Island display
+  grande: contatore tre screenshot con elaborazione in corso.
+- Ultima schermata 180943: vista display medio con "Utilizzo di risorse
+  esistenti"; due anteprime (Indicatori/Giornata) visibili ma attenuate,
+  prima (Match) ancora icona nuvola. NON confermare tre upload completati.
+  Salvataggio finale dopo elaborazione non confermato.
+- PRIMO PASSO domani: riaprire Gestione risorse, Dynamic Island display grande,
+  verificare stato delle tre immagini e salvataggio. Non ricaricare tutto né
+  rifare screenshot senza verificare quale immagine è effettivamente pendente.
+- Indisponibili e safe area già accettati; privacy pubblicata chiusa.
+  App Review non inviata, Apple Production disabilitato; prerequisiti backend
+  e notifiche da completare secondo piano esistente.
+
+## Verifica device Indisponibili 33.1 — 29 ottobre 2026
+
+- Proprietario invia 19719.jpg dopo installazione candidata richiesta:
+  Fiorentina, cinque indisponibili. Giocatori allineati a sinistra, metadati
+  sotto ogni chip, nessun taglio laterale visibile; safe area mantenuta.
+  Difetto layout Indisponibili CHIUSO per evidenza reale ricevuta.
+- Alcuni ruoli mostrano trattino (dato assente), motivi injury in inglese:
+  non confondere con regressione layout. Nessuna nuova modifica eseguita.
+- Assenza diagnostica Match non verificabile dalla sola schermata Indisponibili.
+- Prossimo passo: sostituire la candidata selezionata nella scheda iOS 1.0 con
+  33.1, mantenendo rilascio manuale; selezione non ancora confermata.
+  Restano screenshot Store originali della candidata finale, verifica diagnostica
+  Match e prerequisiti backend/notifiche già documentati. Review non inviata.
+
+## Ripresa UI e candidata finale — 29 ottobre 2026
+
+- Proprietario chiede di proseguire: pausa del 28 ottobre conclusa.
+- Indisponibili: la kv-row con etichetta fissa 170px comprimeva tutta la lista.
+  Scheda specifica a larghezza piena, metadati sotto il giocatore su mobile,
+  nomi lunghi a capo e foto non comprimibili. Desktop mantiene due colonne
+  giocatore/dettaglio; nessuna modifica alle altre schede o alle API.
+- Diagnostica Match: isLocalDebug accettava localhost anche con capacitor:.
+  Ora richiede http/https oltre all'host locale, escludendo l'app installata.
+- Controlli sintassi JS e diagnostica (capacitor/pubblico spenti, server locale
+  attivo) passati. Layout Chromium verificato a 320/430/768/1280px, liste
+  popolate/vuote e nomi lunghi senza overflow; anteprima ispezionata. WebKit
+  locale non disponibile: conferma finale da fare su iPhone.
+- Workflow signing ora include modifiche style.css/js, asset inclusi nell'IPA.
+  Production 33.1 firmata: run 40899843422, job 123538791427 SUCCESS;
+  test e controlli IPA/risorse passati. Delivery 40900279493, job 123540352336
+  SUCCESS: validazione e upload Apple riusciti. Elaborazione/distribuzione
+  TestFlight ancora da verificare. Prossimo passo: assegnare 33.1 a Test interno,
+  installare e verificare Indisponibili/assenza diagnostica sul device. Safe area 32.1 conservata, privacy pubblicata resta chiusa.
+- Residui: installazione nuova candidata, screenshot definitivi, associazione
+  build alla versione Store, prerequisiti backend/notifiche e controllo finale.
+
+## PAUSA richiesta dal proprietario — 28 ottobre 2026, dopo test 32.1
+
+- Proprietario sospende per crediti esauriti; non avviare modifiche/build/deploy.
+- 32.1 installata su iPhone, conferma utente e sei screenshot IMG_4659–4664:
+  barra sistema scura, contenuti non si sovrappongono più a orologio/batteria.
+  Correzione safe area verificata visivamente dopo scroll. Tastiera/rotazione
+  non documentate da questi screenshot.
+- PRIMO PUNTO alla ripresa: layout Indisponibili (IMG_4662.PNG).
+  Ampio spazio vuoto a sinistra; giocatori spostati a destra e descrizioni
+  tagliate fuori viewport. Diagnosticare CSS/struttura, non attribuire ancora causa.
+- IMG_4659 mostra diagnostica tecnica fase/searchId/http/cache/relay nel Match:
+  verificare e disattivare la visualizzazione nella candidata finale.
+- IMG_4663/4664 mostrano spiegazioni Tiri/Corner aperte; non sono screenshot
+  Store definitivi. Nei nuovi scatti è visibile indicatore rosso registrazione.
+- Allegati preservati in conversazione. Screenshot finali e associazione 32.1
+  alla versione Store ancora pendenti; non assumere sostituita la 31.1 in ASC.
+  Privacy pubblicata chiusa. Non ripetere acquisti o prove precedenti.
+- Nessuna correzione Indisponibili eseguita. Review non inviata, gate invariati.
+
+## Correzione area sicura iOS — 28 ottobre 2026
+
+- Proprietario conferma installazione 31.1 da gruppo Test interno. Cinque
+  screenshot reali ricevuti: contenuti sovrapposti a orologio/batteria scorrendo.
+- CRBridgeViewController ora contiene WKWebView in una UIView separata,
+  vincolata sui quattro lati alla safe area iOS; fondo scuro nelle aree sistema.
+  Disabilitato l'inset automatico della scroll view per evitare doppio margine.
+- Compilazione Production 32.1 firmata SUCCESS: run 40714282107, job
+  122907590497; test e controlli IPA/manifest/icona/pagine legali passati.
+  Uploader fissato a questa origine e digest, invio Apple avviato separatamente.
+  Delivery run 40714804368, job 122909466259 SUCCESS: validazione e upload
+  Apple riusciti. Elaborazione/distribuzione ai tester ancora da verificare.
+  Prossimo passo: assegnare 32.1 al gruppo Test interno e installarla su iPhone;
+  poi verifica area sicura e screenshot. Non ripetere build o caricamento.
+- Necessaria verifica reale della nuova build in alto, dopo scroll e con tastiera
+  prima di screenshot definitivi. Privacy pubblicata già chiusa, nessun nuovo
+  test acquisti richiesto. Gate Apple Production invariato.
+
+## App Privacy pubblicata — conferma proprietario 28 ottobre 2026
+
+- Proprietario conferma salvataggio URL assistenza e privacy già verificati:
+  https://app.calcioreport.com/support.html e https://app.calcioreport.com/privacy.html.
+- Aggiunta Assistenza clienti: Funzionalità app, collegata all'identità,
+  nessun monitoraggio. Email e ID utente: mantenute Analisi + Funzionalità;
+  nelle schermate di modifica erano ancora impostati non collegati, corretti a Sì.
+- Screenshot finale mostra tutte le cinque categorie soltanto nei dati collegati,
+  senza sezione dati non collegati. Supera le precedenti osservazioni discordanti.
+- Proprietario conferma «fatto» dopo Pubblica e conferma App Privacy.
+  Evidenza tramite utente, non audit API della pubblicazione.
+- Build 31.1 selezionata come già confermato. Prossimo punto: screenshot reali
+  per scheda Store; verificare prima quale build è disponibile su TestFlight.
+  Non assumere che selezione ASC implichi distribuzione ai tester.
+- App Review non inviata; rilascio manuale e gate Apple Production invariati.
+  Restano prerequisiti backend/notifiche e controllo finale scheda.
+
+## Verifica pagine pubbliche — 28 ottobre 2026
+
+- GET HTTPS senza autenticazione: https://app.calcioreport.com/support.html
+  HTTP 200, 3438 byte; https://app.calcioreport.com/privacy.html HTTP 200,
+  10058 byte. Entrambi identici byte per byte ai candidati della release.
+  Pagine già pubblicate, nessun nuovo deploy eseguito in questa ripresa.
+  Questo supera le precedenti note di pubblicazione ancora pendente.
+- Prossimo passo proprietario: inserire URL assistenza nella scheda iOS 1.0
+  e salvare; URL privacy da inserire in App Privacy nel passo successivo.
+  Screenshot reali e allineamento dichiarazioni ancora da completare.
+
+## Ripresa verificata e candidata 31.1 — 28 ottobre 2026
+
+- Verificato stato remoto oltre il precedente messaggio interrotto: correzione
+  fixture installer già presente; signing run 40696104256 SUCCESS.
+- Delivery run 40704029949, job 122871183161 SUCCESS: IPA Production 1.0
+  (31.1), controlli risorse/privacy passati, VERIFY SUCCEEDED e UPLOAD SUCCEEDED
+  alle 14:17:57 UTC. Non ripetere compilazione o caricamento.
+- Corretto YAML del workflow metadati: condizione if in scalare multilinea;
+  il precedente testo con "release: audit" non quotato impediva il parsing.
+  Commit 8797092187a738936f115eadd5052aa85cc9c7ea.
+- Audit read-only run 40705518490, job 122876442897 SUCCESS:
+  31.1 VALID, non scaduta, usesNonExemptEncryption ancora null.
+  Versione 1.0 PREPARE_FOR_SUBMISSION, rilascio MANUAL; selezionata ancora 29.1.
+  Descrizione e parole chiave italiane presenti; screenshot assenti,
+  supportUrl e privacyPolicyUrl null. Nessuna mutazione ASC dall'audit.
+- Proprietario conferma «FATTO» alla sostituzione della build con 31.1.
+  Selezione registrata come conferma utente; nessun nuovo audit ASC eseguito.
+  Prossimo passo: completare pubblicazione/verifica URL, screenshot reali, App Privacy
+  e prerequisiti backend/notifiche prima dell'invio. Review NON inviata.
+- Questa sezione aggiorna gli esiti pendenti sottostanti; Apple Production
+  resta disabilitato. Autorizzazione generale già acquisita, non richiederla.
+
+## Preparazione autonoma finale — 28 ottobre 2026
+
+- Proprietario rinnova autorizzazione a completare autonomamente quanto serve
+  per lo Store mentre è assente. Non chiedere nuovamente consenso ai passaggi
+  già autorizzati; verificare comunque gli esiti e i prerequisiti tecnici.
+- Aggiunta candidata privacy.html, link prima della registrazione e nel footer,
+  assistenza collegata; entrambe incluse offline nel pacchetto iOS.
+  Decisioni e limiti documentati in docs/privacy-release-decisions.md.
+- Manifest privacy app aggiunto come risorsa Xcode, con email/ID, acquisti,
+  interazione e assistenza clienti, collegati e senza tracking. ASC richiede
+  allineamento della categoria assistenza; nessuna modifica ASC eseguita qui.
+- Nuovo controllo dell'IPA esportato: manifest app corrispondente al sorgente,
+  manifest SDK senza tracking dichiarato, risorse icona compilate e pagine
+  legali esatte. Non equivale a valutazione completa SDK né confronto pixel.
+- 4 nuovi test di rifiuto/accettazione e 9 test IPA passati localmente;
+  installer idempotente, packaging Production e sintassi shell/JS verificati.
+- Questo commit avvia build Production firmata con icona approvata. Esito
+  remoto ancora pendente; niente upload implicito e gate acquisti invariato.
+- Pubblicazione web, verifica visiva, upload candidata e metadati/screenshot
+  reali ancora da completare. Non selezionare automaticamente la vecchia 29.1.
+
+## Ripresa e autorizzazione — 28 ottobre 2026
+
+- Proprietario autorizza le operazioni necessarie per portare l'app sullo Store,
+  inclusi i passaggi di rilascio descritti in sessione. Non richiedere nuovamente
+  consenso per gli stessi passaggi; restano obbligatori prerequisiti tecnici,
+  verifiche residue e ordine di attivazione. Rilascio manuale mantenuto.
+- Proprietario conferma esito "Vecchio log eliminato" dopo il comando mirato
+  su /var/log/caddy/calcio-report-relay.log (prima 5488926 byte), con verifica
+  di assenza. Evidenza riferita dal proprietario, non accesso diretto al server.
+  Smaltimento di questo file CHIUSO; non ripetere cancellazione o configurazione
+  access log già disattivati. Non equivale ad assenza di altri log o copie.
+- Journal VPS configurato il 28 ottobre: MaxRetentionSec=30day,
+  MaxFileSec=1day nel drop-in 99-calcio-retention.conf. Proprietario conferma
+  active e valori corretti. Vacuum: 0B liberati; spazio finale 261.3M.
+  Non ripetere applicazione/pulizia. Limite per file ruotati, intero journal VPS.
+- rsyslog active, ForwardToSyslog=yes; logrotate configurato weekly/rotate 4,
+  archivi compressi più corrente. Esecuzione rotazioni e backup ancora da verificare.
+  Bozza privacy allineata anche alla correzione ASC già confermata il 27 ottobre.
+- Backup OVH verificato da schermate proprietario il 28 ottobre: Standard
+  attivo, snapshot disattivato; VPS a Gravelines (Francia). Esecuzione giornaliera
+  alle 19:04 UTC; tabella mostra una copia del 27 ottobre 2026 19:04.
+  Il testo "Non sono presenti punti di ripristino" contrasta con la riga visibile:
+  nessun ripristino effettuato o disponibilità collaudata.
+- Documentazione OVH Standard: copia giornaliera conservata 24 ore;
+  sette giorni riguardano Premium, non il piano attivo.
+  Fonte: https://www.ovhcloud.com/it/vps/vps-backup/
+  OVH dichiara replica su tre server nello stesso datacenter. Non è ispezione
+  delle copie fisiche. Il vecchio log può essere nella copia del 27 ottobre:
+  scadenza documentata non è prova di eliminazione già avvenuta.
+  Backup mantenuto attivo, nessun upgrade/cancellazione/ripristino.
+- D1 calcio_users: screenshot del 28 ottobre conferma Time Travel di 7 giorni.
+  Nessun ripristino/bookmark richiesto o eseguito; non ripetere la verifica.
+  Bozza privacy aggiornata con evidenze D1 e OVH, limiti e cautele al ripristino.
+- Dump 23 ottobre: proprietario conferma di aver seguito soltanto le istruzioni
+  e lasciato il file sul PC, senza creare altre copie. Non richiedere di nuovo
+  dove lo ha copiato. Nessuna cancellazione eseguita; conservato per ora come
+  copia precedente alla migrazione, non ripristinabile automaticamente sul live.
+  Termine/procedura di smaltimento ancora da finalizzare.
+- Controllo operativo Invocation logs CHIUSO il 28 ottobre: Observability
+  Last 1 hour senza eventi; Metrics successiva Last 1 hour mostra 93 invocazioni,
+  0 errori runtime, versione a4e384d4 al 100%. Finestre mobili sovrapposte,
+  non identiche. Coerente con disattivazione già confermata; non prova assenza
+  di ogni log dei fornitori o successo HTTP di tutte le richieste.
+  Non richiedere altre schermate per ripetere questo controllo.
+  Preservare invocation_logs=false nelle configurazioni dei futuri deploy.
+- Prossimo passo: finalizzare conservazione registri e dump manuale,
+  base analisi e fornitori nella privacy. Pubblicare pagine completate,
+  nuova build con icona/manifest verificati, screenshot reali e consegna Apple.
+- Supporto e policy ancora non pubblicati; App Review non inviata.
+  Apple Production ancora disabilitato: autorizzazione non equivale ad
+  attivazione eseguita. Non ripetere test accettati o riaprire Core V2.
+- Questo blocco supera lo STOP e la mancanza di autorizzazione del checkpoint
+  del 27 ottobre; le evidenze tecniche sottostanti restano valide.
+
+## Checkpoint privacy — 27 ottobre 2026, pomeriggio
+
+- Proprietario conferma casella support@calcioreport.com operativa e accessibile.
+- App Store Connect: salvate quattro categorie preliminari (email, ID utente,
+  acquisti, interazione prodotto); email/ID Funzionalità + Analisi,
+  acquisti Funzionalità, interazione Analisi,
+  dati collegati all'utente, nessun tracking. NON pubblicate; verifica incompleta.
+- docs/privacy-policy-draft.md contiene bozza concreta e punti da completare;
+  non è informativa pubblicabile. support.html già preparata, non pubblicata.
+- Restano conservazione/log effettivi, assistenza, ricerche e fornitori; base
+  giuridica analisi da definire con conseguenze tecniche, non confondere con
+  finalità selezionate nell'etichetta Apple.
+- Cloudflare Production: screenshot conferma Logs e persistenza attivi,
+  campionamento 100%, Traces/Issues spenti, nessuna esportazione. Piano Free:
+  retention Workers Logs attuale 3 giorni (documentazione Cloudflare).
+- Un evento web /telemetry/ping conteneva IP, geolocalizzazione da IP, user-agent
+  e tempi CPU/wall; Authorization mascherata. Non copiare il JSON con dati
+  personali nel repo. Non è una prova specifica del client nativo.
+- Proprietario conferma disattivazione Include Invocation logs il 27 ottobre;
+  Logs/persistenza restano attivi. Verifica post-modifica ancora da fare.
+  Nei prossimi deploy preservare observability.logs.invocation_logs=false
+  anche nella configurazione Wrangler locale: --keep-vars non garantisce
+  preservazione delle impostazioni Observability. Nessun file locale PC
+  modificato da questa sessione.
+- OVH: Caddyfile importa /etc/caddy/sites/*.caddy. Il proprietario ha
+  autorizzato rimozione del solo blocco access log in calcio-report.caddy.
+  Confermati backup /root/caddy-backup-379ys6d6/calcio-report.caddy,
+  validazione, reload e servizio attivo. Non ripetere questa operazione.
+- Vecchi file /var/log/caddy/calcio-report-relay*.log* NON cancellati:
+  definire smaltimento; senza nuove rotazioni non presumere scadenza automatica.
+  Log operativi/journal e altri servizi non ancora caratterizzati.
+  Esempio relay/deploy/Caddyfile.example allineato senza access log.
+- Supporto: proprietario conferma Cloudflare Email Routing con inoltro a
+  casella Libero personale. Non pubblicare l'indirizzo personale nel repo/policy.
+  Approvati 12 mesi dalla chiusura della richiesta, salvo contestazioni/obblighi
+  specifici, con pulizia manuale periodica; nessun automatismo configurato
+  né eliminazione di email eseguita. Bozza aggiornata.
+- Verifica sorgente: handleTelemetryPing sovrascrive last_seen_at dell'utente
+  tramite email; non conserva ogni ping. ID usato per deduplica community.
+  Proprietario conferma correzione ASC completata: Analisi aggiunta a email
+  e ID utente, mantenendo Funzionalità, collegamento Sì e tracking No.
+- Nel bundle live apple-readiness e nei percorsi ricerca esaminati non risultano
+  scritture a trial_search_log/trial_usage: riferimenti solo alla cancellazione.
+  Non equivale ad assenza di cache/log dei fornitori o dati storici.
+- Schema acquisti: cancellazione users ritira il token Apple, non cancella
+  ledger/eventi PRO. Registri pseudonimi conservati per anti-riutilizzo;
+  durata e procedura di conservazione da definire, non dichiarare anonimizzazione.
+- Dipendenze iOS censite da lockfile; manifest del binario finale da verificare.
+- Riparato asset icona troncato nel precedente trasferimento (blob 66749f8,
+  786444 byte). Rigenerato solo formato RGB 1024 dal medesimo originale
+  approvato, PNG verificato; 1201283 byte, blob d202a44f4032f7aa48bb8eb773ca4d84c8b3e687.
+  Installer controlla SHA256 per bloccare file incompleti; installazione locale
+  riuscita e PNG troncato rifiutato. Nessuna nuova build Xcode o upload.
+- Nessun deploy Worker/merge/upload/review; solo reload Caddy autorizzato.
+  Build con nuova icona ancora da eseguire.
+
+
+_Aggiornato: 2026-10-26 (login review sul sito pubblico confermato)._
+_Questo è il PUNTO DI INGRESSO per le prossime sessioni Work. Leggerlo una sola volta a inizio attività._
+
+## Obiettivo unico attuale
+
+**Preparare infrastruttura di produzione e release finale per App Store Review.**
+NON ripetere acquisti, restore, ricerca Milan o altri test già accettati solo per "ricontrollare".
+NON riaprire il refactoring Core V2; NON lavorare ai pannelli.
+Nessuna pubblicazione, migrazione su database live o invio ad App Review senza autorizzazione esplicita del proprietario.
+
+## Dove lavorare (verificare il branch effettivo prima di leggere il codice)
+
+- **Branch di rilascio operativo:** `release/apple-production-preparation` (PR #15 verso `mobile/ios-preparation`).
+- **Branch patch notifiche Apple:** `fix/apple-notification-audit` (PR #16 verso il branch di rilascio; aperta al controllo del 23 ottobre).
+- **Branch STORICO, DA NON CONSULTARE:** `core-v2` (settembre). Non usarlo come fonte di stato.
+- `main` è stabile: NON modificare e NON usarlo per ricostruire il lavoro recente.
+- `mobile/ios-preparation` è base di confronto storico, NON il branch operativo per la release.
+
+## Accettazioni e prove CHIUSE (non rieseguire senza motivo nuovo documentato)
+
+- **TestFlight 1.0 (27.1), 2026-10-21:** build caricata, profilo review avviato correttamente su iPhone.
+  Proprietario ha confermato login account review isolato, ricerca/fixture Milan,
+  acquisto Sandbox, badge PRO, accesso immediato a Indicatori e Prediction senza logout.
+  Il build 26.1 aveva un errore di namespace sessione, corretto in 27.1. NON ritestare 26.1.
+- **Registro PRO su Worker TEST, 2026-10-20:** test remoto admin grant + retry
+  stesso operation ID superato; nessun giorno duplicato e scadenza /auth/me coerente.
+  Non confondere con collaudo remoto di Stripe, redeem, refund.
+- **Notifica Apple dell'acquisto review, 2026-10-22:** confronto read-only con
+  getNotificationHistory Apple dal verifier OVH, con verifica firme, ha confermato
+  ONE_TIME_CHARGE Sandbox, stessa transazione della prova sul DB review, consegna
+  Apple SUCCESS e chiamata Cloudflare POST /apple/notifications HTTP 200.
+  È chiusa l'indagine su identità/consegna della notifica storica.
+  L'HTTP 200 non prova *da solo* una nuova scrittura della notifica nel DB:
+  l'acquisto era già registrato prima della chiamata.
+- **Audit notifiche future:** PR #16 aggiunge log sicuri di esito; il proprietario
+  ha confermato il deploy del bundle SOLO sul Worker TEST il 22 ottobre.
+  Il nome/versione remota e un evento dei nuovi log non sono stati verificati
+  indipendentemente. NON ripetere acquisto storico o creare un replay inutile.
+- **Flusso Worker -> relay OVH -> API-Football:** verificato nel progetto in passato;
+  non tornare ai test di settembre senza regressione pertinente.
+- I test automatici già registrati nel file storico rimangono evidenze valide per
+  i commit indicati; non scambiarli per nuove prove su iPhone o in produzione.
+
+## Checkpoint produzione — riprendere da qui (23 ottobre)
+
+- Screenshot Cloudflare del proprietario: Worker Production `calcio-report-proxy`,
+  binding D1 `DB` -> `calcio_users`; versione visualizzata `c59345ba`
+  (identificativo parziale, non un commit Git).
+  UUID D1 verificato nello screenshot Overview di `calcio_users` del 23 ottobre:
+  `45681187-3565-4d36-8627-131c18ff1885`.
+- Ispezione schema già completata il 22 ottobre, riportata dal proprietario:
+  tabelle Apple e nuovo registro PRO assenti. NON richiedere di ripetere il controllo.
+- Query aggregata `users` già completata: 23 utenti, 1 disabilitato,
+  6 con `paid_until > 0` (non necessariamente ancora attivi).
+  Scadenza minima 1774800857114; massima 1796750470265;
+  ultima registrazione 1791477327458. Preservare utenti e diritti PRO esistenti.
+- **Backup completo esportato il 23 ottobre**, Wrangler 4.152.0, dopo autorizzazione
+  Cloudflare. Il proprietario ha riportato l'esito `Downloaded ... successfully!`:
+  `C:\Users\stefa\calcio_users_backup_2026-10-23.sql`.
+  Esportazione/download completati; ripristino e integrità del dump non ancora collaudati.
+  Non richiedere una nuova esportazione per riconfermare questo checkpoint.
+  Il dump resta sul PC del proprietario, senza caricarne i dati in chat/Git.
+- PR #16: conflitto risolto il 23 ottobre allineando il solo riepilogo del branch
+  audit alla release (commit `c84cebb`); GitHub conferma `mergeable=true`.
+  Rimane aperta, draft e non merged. Codice notifiche invariato; test già
+  accettati non ripetuti. Descrizione PR aggiornata alle evidenze reali.
+
+## Configurazione live rilevata — screenshot 23 ottobre
+
+- Elenco Runtime variables and secrets, scheda Production: nove voci visibili.
+  `AUTH_PASSWORD_V2=1`, `CR_RELAY_URL=https://relay.calcioreport.com`;
+  variabile `ACCOUNT_DELETION_ENA...` con valore 1 (nome troncato nello screenshot).
+- Segreti presenti, valori non letti: `ADMIN_KEY`, `APISPORTS_KEY`,
+  `CR_RELAY_SECRET`, `LICENSE_SECRET`, `RESEND_API_KEY`, `STRIPE_WEBHOOK_SECRET`.
+- Nell'elenco non compaiono impostazioni `APPLE_*`, `APP_REVIEW_*` o
+  `PRO_LEDGER_*`. Non è una verifica del codice effettivamente distribuito.
+- Il 23 ottobre il proprietario conferma che i PRO esistenti sono solo test.
+  Non trattarli come vendite reali. Preservare comunque utenti e scadenze.
+- Piano: riconciliare eventuali pagamenti/codici preesistenti; predisporre schemi
+  e configurazione candidata con Apple Production disabilitato; verificare UUID
+  review distinto dal live e verifier Production dedicato; pianificare cutover
+  senza writer legacy concorrenti e rollback che conservi gli accrediti successivi.
+  Il backup del 23 ottobre non va ripristinato automaticamente sul live dopo nuovi
+  pagamenti. Nessuna configurazione, migrazione o deploy eseguiti in questo blocco.
+- Consultati solo i documenti pertinenti `docs/pro-payment-migration.md` e
+  `docs/app-review-isolation.md`; i loro vecchi pending TestFlight/notifiche non
+  riaprono le accettazioni chiuse sopra.
+
+## Cruscotto amministrativo — aggiornato 23 ottobre
+
+- Ripristino confermato dal proprietario con API `https://api.calcioreport.com`:
+  screenshot con 22 utenti elencati e 1 attivo negli ultimi 7 giorni.
+- Aggiunto `admin.html` dalla copia fornita: URL corretto, funzioni esistenti conservate,
+  escaping dei dati mostrati, requestId sulle rettifiche. Commit `79174a0`.
+- Clic concorrenti nella pagina bloccati; esiti incerti persistiti in localStorage
+  impediscono ulteriori rettifiche dello stesso utente fino a verifica esplicita.
+  ADMIN_KEY non salvata. Nessun retry automatico: il live legacy può ignorare requestId.
+  Il retry con stesso ID resta da verificare/abilitare dopo il cutover del registro.
+  Il blocco locale non coordina dispositivi diversi o schede simultanee.
+- Test mirati locali con fetch simulato superati (commit `7bc47c5`): concorrenza,
+  successo, risposta persa, rettifica opposta, reload, sblocco esplicito, nuovo ID,
+  storage non disponibile ed escaping. Nessuna rettifica reale o test remoto ripetuto.
+- Nuovi coupon del registro account-bound e monouso; vecchi email-only da riemettere.
+  Utenti iOS sul medesimo backend Production visibili; review/Sandbox separati.
+  Compatibilità finale da verificare sul candidato.
+- Contatore pubblico utenti/attività rinviato al post-release; non equivale a download.
+
+## Preparazione migrazione — 23 ottobre
+
+- Generatore locale `scripts/prepare-production-schema.mjs` (commit `654a241`):
+  assembla i tre schemi versionati in `worker/dist/production-initial.sql`,
+  senza connessioni remote né modifiche a flag/configurazione live.
+- Verifica locale con SQLite e utenti sintetici superata: cinque nuove tabelle
+  vuote, sei trigger, chiavi esterne coerenti, utenti/scadenze invariati e
+  riesecuzione rifiutata. Non è collaudo della migrazione D1 remota.
+- Piano e matrice configurazione in `docs/production-cutover.md` (`d8847c3`).
+  Verifier Production ora predisposto e ID Stripe Payment Link acquisito;
+  vedere checkpoint aggiornati sotto.
+  Gate Apple chiuso; migrazione e cutover non autorizzati né eseguiti.
+
+## Configurazione candidata e controlli offline — 23 ottobre
+
+- `deploy/apple-production-inputs.json`: destinazione live nota, gate Apple 0,
+  valori ignoti lasciati vuoti. Verifier Sandbox recuperato dal lavoro precedente:
+  `https://apple-test.calcioreport.com` (non è l'URL notifiche del Worker).
+- `deploy/apple-verifier-production.env.example`: servizio separato, ambiente
+  Production, porta candidata 8791; nessun segreto inserito.
+- `scripts/check-production-inputs.mjs` controlla offline destinazione, UUID
+  distinti, origini HTTPS separate, ID app distinto dal prodotto e gate chiuso.
+  Quattro nuovi test mirati superati; nessuna chiamata Apple, D1 o deploy.
+  Ultimo commit del blocco: `cd959b5`.
+- UUID D1 review comunicato dal proprietario il 23 ottobre:
+  `5b5458eb-4a69-454d-a5ac-76ffc93b8af7`, distinto dall'UUID live.
+  Screenshot precedente conferma APP_REVIEW_DB -> calcio_users_review sul Worker review;
+  non dimostra il binding futuro sul Worker pubblico.
+- UUID D1 test comunicato dal proprietario il 23 ottobre:
+  `2aa786a8-6a61-495e-9c41-507496c39325`. I tre UUID live/review/test sono distinti;
+  registrati nel manifest candidato. Nessuna modifica ai binding remoti.
+- APP Apple ID numerico `6821570508` confermato dal proprietario e screenshot
+  App Store Connect il 23 ottobre; bundle `com.calcioreport.app`. Inserito nel
+  manifest e nel modello env Production. Nessun aggiornamento del servizio remoto.
+- Origine Production candidata compilata: `https://apple.calcioreport.com`.
+  ID Stripe live fornito dal proprietario tramite URL dashboard:
+  `plink_1T6a4ZLCMe9gtpTW2ticsWmF`, inserito nel manifest (`4b81ffd`).
+  Screenshot link attivo Calcio Report PRO: prezzo web 4,99 EUR, distinto da Apple 9,99 EUR.
+  Checker offline eseguito sul manifest ora completo: exit 0, metadati coerenti.
+  Nessuna suite già accettata ripetuta; nessuna verifica API Stripe effettuata.
+  Manifest compilato non equivale a readiness remota o approvazione del rilascio.
+  Test della fixture incompleta indipendente dalla compilazione del manifest.
+  Nessun test accettato ripetuto per il solo inserimento dell'UUID test.
+- Il blocco hard-coded `APPLE_PRODUCTION_NOT_READY` è ancora presente in
+  worker/apple-handler.mjs: il solo flag NON abilita Production. Rimozione futura
+  subordinata alla migrazione e alle accettazioni previste.
+
+## Verifier OVH — ispezione read-only 23 ottobre
+
+- Output fornito dal proprietario: Sandbox `calcio-report-apple` active,
+  utente `calcioapple`, directory `/opt/calcio-report-apple`,
+  unit `/etc/systemd/system/calcio-report-apple.service`.
+- Runtime effettivo `/opt/calcio-report-node24/bin/node`;
+  EnvironmentFile `/etc/calcio-report-apple/service.env` obbligatorio.
+  Porta TCP 8791 libera all'ispezione; nessun contenuto segreto letto/stampato.
+- Predisposto `deploy/calcio-report-apple-production.service`: utente/gruppo
+  candidati `calcioappleprod`, directory `/opt/calcio-report-apple-production`,
+  env `/etc/calcio-report-apple-production/service.env`, stesso runtime Node.
+  Unit solo su GitHub: non installata o verificata con systemd sul server;
+  account, codice, permessi e credenziali Production ancora da predisporre.
+- Caddy attivo; configurazione `/etc/caddy/Caddyfile`. Output filtrato di
+  `caddy adapt` fornito dal proprietario: `apple-test.calcioreport.com` ->
+  `127.0.0.1:8790`. È evidenza della configurazione su disco, non di TLS remoto.
+  Nginx non disponibile; non installarlo né ripetere il controllo Nginx.
+- Aggiunto `deploy/Caddyfile.apple-production.example` (commit `e7ff21a`):
+  hostname proposto `apple.calcioreport.com` -> `127.0.0.1:8791`.
+  DNS/TLS ancora da verificare; candidato non installato, Caddy non ricaricato.
+  Non sostituire il Caddyfile esistente; integrare il sito solo nel deploy autorizzato.
+- DNS predisposto dal proprietario il 23 ottobre, screenshot conferma record A
+  `apple.calcioreport.com` -> `51.254.212.179`, DNS only, TTL Auto; Sandbox invariato.
+  Origine inserita nel manifest (`b67f847`). Risoluzione da OVH confermata dal
+  proprietario: `51.254.212.179`; TLS ancora da predisporre/verificare.
+- Prerequisiti verificati dal proprietario: utente `calcioappleprod`, directory
+  `/opt/calcio-report-apple-production`, env e unit Production assenti.
+  Nel Sandbox APPLE_KEY_ID e APPLE_ISSUER_ID configurati, file chiave Apple presente;
+  valori non esposti. Presenza locale non prova autorizzazione API Production.
+- Proprietario conferma account `calcioappleprod` e directory isolate creati.
+  Creati env Production (root, 0600) e copia chiave Apple (root:calcioappleprod,
+  0640), con APPLE_APP_ID=6821570508, Production, porta 8791 e nuovo segreto
+  HMAC casuale dedicato. Nessun valore segreto esposto; nessun servizio avviato.
+- Codice verifier predisposto dal commit release
+  `d95e7c51bda3de71731f624eabf10192e6980075`, con RELEASE_COMMIT locale.
+  Proprietario conferma `npm ci --omit=dev --ignore-scripts --no-audit --no-fund`
+  riuscito: 48 pacchetti. Codice root:calcioappleprod, non scrivibile dal servizio.
+  Avviso npm: jsrsasign@11.1.5 deprecato/non mantenuto; nessun aggiornamento
+  automatico di dipendenze o npm. Da valutare separatamente, non è un audit vulnerabilità.
+- Verifica unit systemd e accesso a codice/chiave come utente servizio superati.
+  Avvisi CPUAccounting relativi a unit XFS di sistema, non al verifier.
+- Proprietario ha autorizzato esplicitamente installazione e avvio SOLO locale
+  del verifier Production. Unit installata; da nuova sessione SSH confermati
+  LoadState=loaded, ActiveState=active, SubState=running, ExecMainStatus=0, Job vuoto.
+  GET locale /health -> {"ok":true}; ss conferma solo `127.0.0.1:8791`.
+  La prima sessione terminale non restituiva output; non ripetere installazione.
+  Avvio automatico al boot successivamente abilitato: proprietario conferma
+  symlink multi-user.target.wants e `is-enabled=enabled`.
+- Caddy importa `/etc/caddy/sites/*.caddy`. Candidato preparato fuori dai siti
+  attivi in `/etc/calcio-report-apple-production/caddy-stage`; `caddy adapt`
+  ha accettato sintassi e import. Il proprietario ha poi autorizzato HTTPS.
+  Installato `/etc/caddy/sites/apple-production.caddy`, reload Caddy riuscito.
+  Output del proprietario: HTTPS OK, certificato verificato e health OK da OVH
+  su `https://apple.calcioreport.com/health`.
+  Worker/database invariati. Health prova solo liveness, non accesso API Apple
+  Production o accrediti. Non richiedere nuovamente autorizzazione per questo avvio/HTTPS.
+- Controllo HTTPS senza firma completato dal proprietario: POST /v1/transaction
+  e POST /v1/notification -> HTTP 401 AUTH_INVALID. Avvio automatico enabled.
+  Blocco provisioning/TLS/rifiuto richieste anonime chiuso; non ripeterlo.
+  Restano verifica del percorso firmato Worker->verifier e accesso Apple Production;
+  non confondere questi esiti con accettazione acquisti o notifiche Production.
+- ID Payment Link Stripe acquisito e manifest completo (vedi sopra).
+  Prossimo blocco: completare configurazione/cutover Worker e piano migrazione D1,
+  verificando coerenza importo web 499 centesimi, associazione account e gestione
+  pagamenti/coupon pre-cutover. Migrazione e deploy Worker non autorizzati né eseguiti.
+
+## Ripresa 24 ottobre — candidato Stripe e sospensione PRO
+
+- PR #16 verificata: open, draft, non merged, mergeable=true. Nessun merge.
+- Piano docs/production-cutover.md aggiornato con destinazioni confermate,
+  matrice Worker, riconciliazione pre-cutover e rollout/drenaggio ancora da completare.
+- Stripe conserva associazione tramite email checkout; nessun client_reference_id.
+  Account assente/ricreato dopo checkout: 200 senza accredito; riconciliare i casi
+  anomali, non creare automaticamente account.
+- Nuovo controllo Production (f46ec5e): currency eur e amount_total numerico 499
+  prima di qualsiasi accesso DB. Altri importi richiedono riconciliazione; webhook
+  risponde 503 generico, non successo. Prezzo Apple 999 distinto. Sandbox invariato.
+  Non cambia il fingerprint delle operazioni esistenti.
+- Nuovi test prezzo (49e9721): 20 pass, inclusi 15 sottocasi monetari; verificato
+  blocco prima della persistenza, accettazione EUR499 fino al confine DB simulato,
+  unpaid/asincrono, link/ambiente/cutover e compatibilità Sandbox.
+  Non è collaudo di accredito reale o persistenza D1.
+- Guardia PRO_WRITES_PAUSED candidata (0f4ca17, collegata al ramo Production
+  01fc96a): 503 su Stripe/redeem/admin grant-adjust-mint e delete/disable;
+  login, dashboard in lettura, football e review isolata restano disponibili.
+  Cinque nuovi test passati (d4172cd), inclusa integrazione del router review
+  con handler simulati. Il flag non è stato configurato sul live.
+- Piano aggiornato b2c02cb: prima dello schema serve deploy autorizzato del
+  candidato in pausa, ledger=0, Apple=0, completamento rollout e drenaggio
+  verificabile dei writer legacy; la guardia non annulla richieste già in corso.
+  Schema/migrazione/Worker live/backup invariati. Nessuna suite accettata ripetuta.
+- Proprietario 24 ottobre: nessun codice sconto; screenshot conferma promozioni No.
+  Conversione non attestata, ma documentazione Stripe chiarisce Adaptive Pricing
+  nei Payment Links: webhook mantiene valuta/importo originali, presentment_details
+  separato. Corretto il precedente assunto che EUR499 escludesse ogni conversione.
+  Nuovo test mirato a7dbc18 passato; nessuna suite precedente ripetuta.
+- Bundle completo costruito con script versionato ed esbuild 0.28.2 dal commit
+  runtime b356307: 105160 byte, SHA256 in docs/production-cutover.md.
+  Smoke bundle passato: pausa Stripe 503 e gate Apple 0 503 senza accessi DB/rete.
+  Non equivale a deploy/dry-run Wrangler/verifica binding. PR16 non integrata.
+- Screenshot Stripe: imposte automatiche Sì; conferma ancora su vecchio GitHub
+  Pages /calcio_report/?stripe=success, da verificare prima della release.
+- Proprietario conferma nessun acquisto, app non ancora promossa/distribuita.
+  Screenshot 24 ottobre: sola creazione link, ultimi tre mesi volume 0 EUR,
+  sessioni 0 e nessuna attività. Nessun pagamento emerso da riconciliare.
+  Non è elenco esaustivo di ogni sessione, ma non richiedere ancora gli stessi
+  screenshot/conteggi. Conservare controlli pre-cutover e utenti/PRO test.
+- Predisposte variabili della prima fase in deploy/apple-worker-maintenance-vars.json
+  (e623951): overlay additivo, pause=1, registro=0, Apple=0, mai sostituzione
+  dell'intera configurazione. Nessuna applicazione sul live.
+- Preparato scripts/manual/export-live-worker.ps1 (f09b073): copia locale del
+  Worker distribuito/configurazione e riepilogo senza valori delle variabili.
+  Wrangler 4.152.0 --delegate-c3=false esaminato localmente: download-only,
+  niente wizard C3/deploy. Script non ancora eseguito dal proprietario.
+- Download live completato dal proprietario 24 ottobre: Worker calcio-report-proxy,
+  compatibility_date 2026-02-10, nessun compatibility flag (riepilogo [null]).
+  Variabili: ACCOUNT_DELETION_ENABLED, AUTH_PASSWORD_V2, CR_RELAY_URL.
+  Binding unico DB -> 45681187-3565-4d36-8627-131c18ff1885; 1 modulo scaricato.
+  Copia locale C:\\Users\\stefa\\calcio-report-worker-copy-20261024-101546\\calcio-report-proxy.
+  Chiavi config includono routes, workers_dev, preview_urls, observability;
+  valori conservati localmente, non pubblicati. Non ripetere questo download.
+- Preparatore offline scripts/prepare-worker-maintenance.mjs (b4a2efc):
+  clona configurazione scaricata, conserva route/vars/binding/runtime,
+  aggiunge solo overlay di manutenzione e seleziona bundle verificato SHA256.
+  Rifiuta identità/DB/nomi variabili/flag o chiavi inattesi; non modifica la copia.
+  keep_vars=true, no_bundle=true, nessun cutover impostato o review abilitata.
+- Quattro nuovi test preparatore passati (8dd4500).
+  Wrangler 4.152.0 deploy --dry-run eseguito localmente sul bundle e configurazione
+  sintetica coerente con inventario: exit 0, 102.70 KiB, gzip 23.73 KiB.
+  Non è verifica della configurazione reale sul PC, né deploy né accesso D1.
+- Script PC scripts/manual/prepare-worker-maintenance.ps1 (95b1d20) predisposto:
+  scarica solo 12 moduli pertinenti e 2 script dal commit 8dd4500, installa
+  esbuild 0.28.2 in cartella isolata, compila e controlla hash, prepara config dalla
+  copia live ed esegue esclusivamente dry-run. Log/config restano sul PC.
+  Wrapper PowerShell non eseguito qui (pwsh assente); helper Node e dry-run
+  Linux verificati. Prossimo passo: esecuzione sul PC, non nuova esportazione.
+- Residui: esito dry-run con impostazioni reali, poi proposta concreta di deploy
+  della sola manutenzione e modalità rollout/drenaggio. Migrazione e deploy
+  restano non autorizzati. Backup D1 già completato, non ripeterlo.
+  Non chiedere di nuovo backup, ID, HTTPS, grant TEST o acquisto TestFlight.
+- Telegram resta da configurare prima della pubblicazione.
+
+## Candidato pronto per autorizzazione manutenzione — 24 ottobre
+
+- Proprietario ha eseguito prepare-worker-maintenance.ps1: tutte e quattro le
+  fasi riuscite, incluso dry-run Wrangler con configurazione realmente scaricata.
+- Directory PC: C:\Users\stefa\calcio-report-maintenance-candidate-20261024-103247.
+  Sorgenti: 8dd45006cdd3e447d4d1dc2c4943cf7d563f9296.
+  SHA256 bundle: ed9d15719b2a0e9b4291fa1c0a8fd4f8c9f88cac4b8e67ea2c934054c187871c.
+  compatibility_date conservata: 2026-02-10.
+- Config candidata wrangler.maintenance.json: pausa=1, registro=0, Apple=0.
+  Configurazione live invariata; nessun deploy o migrazione D1.
+  Wrapper PowerShell ora eseguito con successo sul PC; chiuso il relativo pending.
+  Non ripetere build, export o dry-run senza cambiamenti pertinenti.
+- Prossima azione subordinata a consenso esplicito: deploy SOLO del candidato
+  di manutenzione sul Worker calcio-report-proxy. Effetto previsto: sospensione
+  temporanea accrediti Stripe/redeem/admin, emissione coupon e delete/disable;
+  login/consultazione disponibili. Apple e registro restano disabilitati.
+  Nessuna migrazione, merge o invio App Review inclusi in questa autorizzazione.
+  Dopo deploy verificare versione/pausa e completamento rollout prima dello schema.
+
+## Autorizzazione ricevuta — 24 ottobre
+
+Il proprietario autorizza il SOLO deploy di manutenzione precedentemente proposto
+("Se tutto questo è necessario per procedere fai quello che devi fare").
+Usare il candidato già verificato nella directory PC terminante 20261024-103247,
+pause=1, registro=0, Apple=0. Non richiedere nuovamente questo consenso.
+Comando di deploy da eseguire sul PC autenticato; esito ancora pendente.
+Nessuna migrazione D1, apertura gate Apple, merge o App Review inclusi.
+Dopo l'esito verificare versione distribuita e pausa, senza ripetere i test chiusi.
+
+## Deploy manutenzione completato — 24 ottobre
+
+- Proprietario conferma upload e deploy triggers riusciti tramite npx.cmd
+  wrangler@4.152.0 deploy --config wrangler.maintenance.json --keep-vars.
+  npx.ps1 era stato bloccato da ExecutionPolicy PRIMA di avviare il deploy;
+  risolto usando npx.cmd senza modificare policy di sistema.
+- Version ID: 1bf92e06-81d2-45f7-aac9-387a60266449.
+  Custom domain api.calcioreport.com, production enabled, previews disabled.
+  Bundle 102.70 KiB / gzip 23.73 KiB.
+- Output conferma DB live corretto, tre variabili preesistenti conservate,
+  APPLE_PRODUCTION_ENABLED=0, PRO_LEDGER_ENABLED=0, PRO_WRITES_PAUSED=1,
+  ambiente Production e verifier dedicato. Nessuna migrazione D1 eseguita.
+- NON ripetere il deploy o chiedere nuovamente il relativo consenso.
+  Prossimo passo: controllo HTTP pubblico non autenticato di pausa/gate.
+  Questo controllo non prova da solo drenaggio delle richieste già in corso.
+  Migrazione D1, apertura Apple, merge e App Review restano non autorizzati.
+
+## Verifica pubblica manutenzione — 24 ottobre, 14:25 Europe/Rome
+
+- Output curl del proprietario: POST /stripe/webhook non autenticato -> HTTP 503
+  PRO_MAINTENANCE, Retry-After 60, no-store (12:25:32 UTC).
+  GET /apple/token -> HTTP 503 APPLE_PURCHASES_DISABLED (12:25:33 UTC).
+- Pausa e gate verificati sul dominio api.calcioreport.com. Controllo chiuso;
+  non ripetere queste richieste senza regressione pertinente.
+- Prossimo controllo read-only: deployments list del Worker per verificare
+  assegnazione del traffico alla versione 1bf92e06-81d2-45f7-aac9-387a60266449.
+  Due risposte HTTP non certificano da sole il completamento del rollout globale
+  o il drenaggio di richieste legacy in corso.
+- D1 ancora invariato; migrazione non autorizzata. Prima del consenso rendere
+  disponibile lo schema candidato e la verifica post-migrazione.
+
+## Distribuzione verificata e schema pronto — 24 ottobre
+
+- deployments list fornito dal proprietario: deployment 2026-10-24T12:24:17.455Z,
+  versione 1bf92e06-81d2-45f7-aac9-387a60266449 al 100%.
+  Versione precedente c59345ba-bd17-44d9-93dc-50407c5d94fd.
+  Nessuna distribuzione percentuale concorrente indicata. Controllo chiuso.
+  L'elenco attesta assegnazione traffico, non misura richieste già in corso.
+- Generato lo schema usando lo script già collaudato, sorgenti fissate a 0109f336.
+  Nessun test accettato ripetuto. File revisionabile deploy/production-initial.sql
+  al commit 023403445853231bc88cf2ec3a673c0f4f26192d.
+  SHA256: 045879b80e69a821d87e3d421bcdd87d29ac31ad039c075787d8e7fc610ff9ad.
+- Schema additivo: cinque tabelle vuote, un indice e sei trigger. Nessun backfill
+  o modifica iniziale di users/paid_until. Non è idempotente; stop su errore,
+  niente rilancio alla cieca o drop.
+- Prossima autorizzazione richiesta: applicazione di questo solo schema a
+  calcio_users, UUID 45681187-3565-4d36-8627-131c18ff1885, con manutenzione
+  attiva e registro/Apple disabilitati. D1 non ancora migrato.
+  Non include cutover, abilitazione Apple, acquisti, merge o App Review.
+  Backup del 23 ottobre già sul PC; nessuna nuova esportazione richiesta.
+
+## Autorizzazione migrazione D1 — 24 ottobre
+
+- Proprietario risponde "si procedi" alla proposta dello schema al commit
+  023403445853231bc88cf2ec3a673c0f4f26192d: autorizzata applicazione di
+  deploy/production-initial.sql SOLO a calcio_users
+  (45681187-3565-4d36-8627-131c18ff1885).
+- Consenso non include cutover/attivazione registro, apertura Apple, merge o review.
+  Pausa PRO=1, registro=0, Apple=0 rimangono attivi come configurati.
+- Esecuzione da PowerShell autenticata, con verifica hash SQL e binding DB.
+  Comando fornito; esito ancora pendente. NON dichiarare lo schema applicato.
+  Su errore fermarsi e diagnosticare; non ripetere automaticamente la migrazione.
+  Non richiedere nuovamente questo consenso.
+
+## Migrazione D1 applicata — 24 ottobre
+
+- Proprietario conferma import remoto riuscito dello schema autorizzato su DB
+  45681187-3565-4d36-8627-131c18ff1885: 12 query, 4.38 ms,
+  8 righe lette / 25 scritte secondo contatori D1, dimensione 0.10 MB.
+  I contatori non rappresentano automaticamente utenti modificati.
+- Bookmark restituito:
+  0000334f-00000007-0000510e-510019ba1cfe03f56e6dce4618634619.
+- Migrazione conclusa: NON ripetere l'import. Pausa PRO rimane attiva;
+  PRO_LEDGER_ENABLED=0 e APPLE_PRODUCTION_ENABLED=0 invariati.
+- Prossimo passo: unica verifica read-only post-migrazione di strutture,
+  registri vuoti e aggregati users/scadenze; esito ancora pendente.
+  La verifica precedente dello schema assente non viene ripetuta: è verifica
+  del nuovo stato conseguente all'import autorizzato.
+- Attivazione registro/cutover, apertura Apple, merge e review non autorizzati.
+
+## Verifica post-migrazione CHIUSA — 24 ottobre
+
+- Elenco sqlite_master fornito dal proprietario conferma tutte le cinque nuove
+  tabelle, indice e sei trigger. Primo comando multilinea ha mostrato solo schema;
+  completati i conteggi con unica SELECT su una riga (nessuna nuova migrazione).
+- Registri tutti vuoti: token_apple=0, acquisti_apple=0, account_registro=0,
+  eventi_pro=0, operazioni_pro=0.
+- Aggregati users coincidono col checkpoint precedente: 23 utenti, 1 disabilitato,
+  6 paid_until positivi; min 1774800857114, max 1796750470265.
+  È confronto aggregato, non confronto individuale del dump.
+- Migrazione e verifica concluse; non rieseguire import o controlli già chiusi.
+- Prossimo passo: preparare SOLO configurazione locale wrangler.pro-ledger.json
+  dalla maintenance, con PRO_LEDGER_ENABLED=1, PRO_WRITES_PAUSED=0,
+  PRO_LEDGER_CUTOVER_MS fissato una volta e APPLE_PRODUCTION_ENABLED=0.
+  Non modificare bundle/binding/segreti. Non distribuire prima del consenso
+  esplicito al cutover. Vecchi coupon richiedono riemissione v2 come già documentato.
+  Nessun acquisto pregresso da riconciliare secondo il proprietario.
+- Produzione attuale ancora in manutenzione, registro=0, Apple=0.
+
+## Configurazione cutover preparata sul PC — 24 ottobre
+
+- Proprietario conferma creazione locale wrangler.pro-ledger.json nella directory
+  candidata già verificata. PRO_LEDGER_CUTOVER_MS=1792845158779 fissato:
+  non rigenerare o abbassare questo valore per tentare di accreditare vecchi checkout.
+- Config candidata: registro=1, pausa=0, Apple=0. Nessun deploy eseguito.
+- Prossima autorizzazione: deploy di questo file per riaprire accrediti web,
+  admin e redeem attraverso il registro, con bundle/binding invariati.
+  Coupon legacy da riemettere v2; eventuali checkout pre-cutover richiedono
+  riconciliazione. Apple resta disabilitato; nessun merge o App Review incluso.
+- Stato live resta manutenzione, registro=0, Apple=0 finché non arriva esito deploy.
+
+## Autorizzazione attivazione registro PRO — 24 ottobre
+
+- Proprietario risponde "si andiamo avanti" alla proposta concreta di deploy
+  wrangler.pro-ledger.json: autorizzata attivazione PRO_LEDGER_ENABLED=1 e
+  rimozione pausa PRO_WRITES_PAUSED=0, con cutover fisso 1792845158779.
+- APPLE_PRODUCTION_ENABLED resta 0. Nessun consenso a merge o App Review.
+  Non richiedere nuovamente questa autorizzazione.
+- Comando di deploy da eseguire sul PC nella directory candidata già verificata.
+  Esito ancora pendente: non dichiarare attivazione effettuata prima dell'output.
+  Nessuna nuova migrazione o rigenerazione cutover necessaria.
+
+## Registro PRO attivato — 24 ottobre
+
+- Proprietario conferma deploy autorizzato riuscito con wrangler.pro-ledger.json,
+  versione b9021019-3b86-4b16-954c-93315a84f3cf.
+  Custom domain api.calcioreport.com, production enabled, previews disabled.
+- Output conferma DB live corretto, PRO_LEDGER_ENABLED=1, PRO_WRITES_PAUSED=0,
+  PRO_LEDGER_CUTOVER_MS=1792845158779 invariato, APPLE_PRODUCTION_ENABLED=0.
+  Variabili live preesistenti conservate; bundle invariato 102.70 KiB.
+- Non ripetere deploy o richiedere nuovamente consenso al cutover.
+  Verifica HTTP successiva ancora pendente: richiesta Stripe senza firma deve
+  essere respinta (400 Invalid signature), non più PRO_MAINTENANCE.
+  Nessun acquisto/accredito reale eseguito o dichiarato collaudato da questo output.
+- Da questo punto preservare ogni nuova scrittura nel registro: nessun ritorno
+  automatico al writer legacy o ripristino del vecchio dump D1.
+- Restano percorso firmato/verifier Production, isolamento review sul pubblico,
+  casi di accettazione ancora aperti e gate Apple sorgente/flag chiusi.
+  Nessuna autorizzazione ad abilitare Apple, fare merge o inviare App Review.
+
+## Webhook dopo cutover verificato — 24 ottobre, 14:36 Europe/Rome
+
+- Proprietario conferma POST pubblico /stripe/webhook senza firma -> HTTP 400
+  Invalid signature alle 12:36:08 UTC. Manutenzione rimossa e controllo firma
+  raggiunto. Nessun pagamento/accredito eseguito; non è collaudo Stripe reale.
+- Questo controllo è chiuso, non ripeterlo. Schema e registro Production attivi
+  come documentato; Apple rimane disabilitato.
+- Prossimo blocco: verifier Production con richiesta HMAC firmata e corpo {}
+  (atteso 400 BAD_INPUT dopo autenticazione). Usare segreto già su OVH senza
+  stamparlo. Non coinvolge API Apple o D1; non prova ancora Worker->verifier.
+  Trasferimento protetto del segreto al Worker e isolamento review restano aperti.
+  Non riaprire provisioning/TLS o test anonimi già superati.
+
+## Verifier Production: richiesta firmata accettata — 24 ottobre
+
+- Proprietario conferma esito atteso del comando OVH: HTTP 400 BAD_INPUT
+  su /v1/transaction con HMAC corretto e corpo {} attraverso HTTPS pubblico.
+  Segreto letto localmente da service.env, mai stampato.
+- Verificato passaggio autenticazione HMAC e rifiuto payload incompleto.
+  Nessuna chiamata API Apple o scrittura D1. Non prova ancora Worker->verifier
+  né autorizzazione delle credenziali alle API Apple Production.
+  Controllo chiuso: non ripeterlo.
+- Prossimo passo: predisporre sul server file temporaneo HMAC mode 0600,
+  proprietario ubuntu, per trasferimento SSH al PC e successiva configurazione
+  protetta APPLE_VERIFIER_SECRET sul Worker. Nessun valore in Git/chat/log.
+  File non ancora creato; secret Worker non ancora configurato.
+  Apple rimane disabilitato. Eliminare copie temporanee dopo trasferimento.
+
+## Segreto Worker Production configurato — 24 ottobre
+
+- Proprietario ha trasferito il file HMAC temporaneo tramite SCP usando la chiave
+  SSH calcio_report_ovh, in cartella Windows con ACL limitata al proprio utente.
+  Primo tentativo senza -i fallito (publickey); secondo trasferimento e formato riusciti.
+- Eseguito consapevolmente wrangler 4.152.0 secret put APPLE_VERIFIER_SECRET
+  con wrangler.pro-ledger.json: output Success! Uploaded secret.
+  Deployment Secret Change confermato dal proprietario: 2026-10-24T12:44:25.655Z,
+  versione b2d20f2b-9f9a-4294-b042-705888e93cf4 al 100%.
+  b9021019 è la versione precedente. Nessun valore segreto esposto.
+- Proprietario conferma eliminazione delle copie temporanee sul PC e su OVH.
+  Configurazione persistente del servizio conservata. Apple resta disabilitato.
+- Identificazione deployment conclusa, non ripeterla. Codice Apple ispezionato:
+  gate flag e sorgente precedono la chiamata al verifier, quindi una richiesta
+  pubblica a gate chiuso non collauda Worker->verifier. Nessun gate rimosso.
+  getNotificationHistory Production eseguito: HTTP 401, nessun codice Apple numerico.
+  Orologio OVH sincronizzato NTP (2026-10-24 12:48:29 UTC).
+  Confronto locale: KEY_ID, ISSUER_ID e byte chiave privata coincidono col Sandbox;
+  formato Key ID OK. Non emerge errore di copia; causa del 401 non determinata.
+  Non dichiarare credenziali Production accettate o attribuire con certezza il 401
+  all'app non pubblicata. Non rigenerare chiavi o ripetere richieste senza nuovo motivo.
+  Worker->verifier e isolamento review sul pubblico restano da completare.
+  Prossimo passo: preparare config locale review con binding dedicato e flag 0,
+  senza deploy. Email riservata e due segreti review ancora da configurare.
+
+## Candidato isolamento review sul PC — 24 ottobre
+
+- Proprietario conferma creazione locale wrangler.app-review-preparation.json
+  dalla config pro-ledger: aggiunto APP_REVIEW_DB con UUID review già noto,
+  account ID riservato e URL verifier Sandbox; APP_REVIEW_ENABLED=0, Apple=0.
+- Query SELECT mirata al solo account review sul DB review eseguita con Wrangler:
+  email acquisita e salvata nel candidato locale, senza mostrarla in chat.
+  Nessuna scrittura D1 o deploy. Account esistente non ricreato.
+- Proprietario conferma export temporaneo HMAC Sandbox mode 0600 su OVH,
+  trasferimento SCP con chiave esplicita e preparazione di review-secrets.json
+  in nuova cartella Windows con ACL riservata. HMAC grezzo locale eliminato.
+  Nuovo APP_REVIEW_LICENSE_SECRET casuale 32 byte per il percorso pubblico;
+  APP_REVIEW_VERIFIER_SECRET copiato dal Sandbox. Nessun valore esposto.
+  Credenziali del Worker review esistente non ruotate.
+- Variabili PowerShell: calcioReviewSecretsDir e calcioReviewSecretsFile.
+  Copia temporanea OVH .calcio-report-apple-review-hmac ancora da eliminare,
+  insieme al JSON locale dopo installazione riuscita.
+- Proprietario conferma wrangler.app-review.json creato e dry-run superato.
+  Hash bundle invariato ed9d15719b2a0e9b4291fa1c0a8fd4f8c9f88cac4b8e67ea2c934054c187871c;
+  binding live/review verificati contro UUID noti. Candidato review=1, Apple=0,
+  registro PRO=1, pausa=0. Nessun upload o deploy eseguito.
+- Proposta pronta per consenso: singolo deploy con wrangler.app-review.json,
+  --keep-vars e --secrets-file del JSON protetto per aggiungere due segreti review
+  e binding review insieme. Nessuna migrazione, apertura Apple Production, merge
+  o invio App Review inclusi. Non ripetere dry-run/build o test accettati.
+  Consenso ricevuto dal proprietario: "autorizzo tutto quello che serve".
+  Procedere al deploy review proposto, senza richiedere nuovamente consenso.
+  Non interpretare il consenso come evidenza tecnica per aprire Apple Production
+  con API ancora 401. Nessun esito deploy review ancora ricevuto.
+
+## Attività ancora APERTE — solo il blocco App Store
+
+1. **Inventario READ-ONLY della produzione:** identificare branch/commit candidati,
+   Worker pubblico, binding D1 e relativi UUID, schemi, flag, endpoint di verifier
+   Production e configurazioni esistenti. Non stampare segreti e non toccare il live.
+2. **Piano di migrazione sicuro:** backup e rollback, inventario pagamenti/codici
+   pre-cutover, schema `worker/schema/pro-payment-operations.sql` sul DB giusto,
+   cutover e registro PRO senza doppie scritture legacy. Un checkout precedente
+   al cutover richiede riconciliazione, non un accredito automatico.
+3. **Percorso Apple Production:** verifier dedicato, configurazione e notifiche,
+   isolamento review/Sandbox dal live, e verifica dei gate di produzione.
+   Non aprire `APPLE_PRODUCTION_ENABLED` prima dell'accettazione necessaria.
+4. **Accettazione finale mirata al rilascio:** eventuali casi realmente ancora
+   scoperti (in particolare refund/deletion e gate produzione), evitando ogni
+   test già chiuso. Non dichiarare superato ciò che resta da verificare.
+5. **Release App Store:** bundle/build firmata corretta, metadati/screenshot,
+   privacy/supporto, istruzioni e account di revisione, approvazione proprietario
+   prima di deploy pubblico o invio alla review.
+6. **Telegram — rinviato dal proprietario il 26 ottobre:** nessun gruppo/canale
+   necessario per il rilascio. Preparare pulsante “Community · In arrivo” con
+   conteggio univoco degli account interessati, visibile soltanto in admin.
+
+## Documenti di dettaglio SOLO SE pertinenti al blocco
+
+- `docs/pro-payment-migration.md` — schema e rischi migrazione PRO.
+- `docs/app-review-isolation.md` — isolamento account e notifiche di revisione.
+- `docs/app-store-release-handoff.md` — piano originario del 19 ottobre:
+  **alcuni "pending" sono obsoleti**; prevalgono i checkpoint chiusi sopra.
+- `docs/apple-purchases.md` e `docs/ios-preparation.md` — solo per uno specifico problema.
+- `docs/archive/` — snapshot integrale dello storico per consultazione occasionale.
+  NON leggere questi archivi a inizio sessione o per risolvere task non correlati.
+
+## Protocollo a basso consumo di Work
+
+1. Conferma repository `CiccioGamer00/calcio_report`, branch ATTIVO e ultimo commit;
+   leggi questo riepilogo. **Mai leggere `core-v2/PROJECT_STATUS.md`.**
+2. Fissa UN SOLO obiettivo e i file effettivamente coinvolti, poi apri solo
+   quei file o i blocchi/range pertinenti; non sfogliare tutto GitHub.
+3. Prima delle modifiche spiega in 3 righe cosa/come/file/risultato.
+4. Fai direttamente su GitHub quello che è possibile, in commit piccoli e coerenti;
+   testa solo il cambiamento introdotto, evitando suite complete e controlli
+   già accettati salvo requisito tecnico reale.
+5. Se serve un'azione manuale, comunica **un solo comando o passo alla volta**.
+   Niente richieste F12 se è possibile una diagnostica nell'app.
+6. Dopo una milestone aggiorna **solo** questo stato sintetico:
+   data, fatto verificato, evidenza/commit, prossimo passo. Niente diari ripetitivi.
+7. Non inventare esiti di test, deploy o collegamenti a database. Non inserire
+   segreti, password, token o chiavi in GitHub, nei log o in chat.
+
+**PUNTO DI RIPRESA — 24 ottobre, deploy review COMPLETATO:**
+Il proprietario conferma Current Version ID
+143ec334-8f10-4afa-a2dd-e663fb2b5002 sul Worker calcio-report-proxy,
+tramite wrangler.app-review.json --keep-vars --secrets-file.
+APP_REVIEW_ENABLED=1, binding DB live e APP_REVIEW_DB distinti, due segreti review
+installati insieme al deploy; APPLE_PRODUCTION_ENABLED=0, PRO_LEDGER_ENABLED=1,
+PRO_WRITES_PAUSED=0, cutover invariato 1792845158779.
+Proprietario conferma PULIZIA COMPLETATA: JSON temporaneo PC e file HMAC OVH
+eliminati. Non richiedere trasferimenti o rigenerazione dei segreti già installati.
+Non ripetere il deploy. Questo esito NON è collaudo funzionale del login review
+sul dominio pubblico né del percorso Worker->verifier.
+
+Prossimo blocco: verifica mirata login/account review sul Worker pubblico e
+isolamento dal live, senza ripetere acquisti Sandbox/TestFlight o test chiusi.
+API Apple Production getNotificationHistory ha restituito HTTP 401:
+NTP sincronizzato, KEY_ID/ISSUER_ID/chiave privata identici al Sandbox,
+causa non determinata; non dichiarare accesso Production riuscito né imputare
+con certezza il 401 all'app non pubblicata. Non rigenerare chiavi alla cieca.
+Restano Worker->verifier Production, accettazioni residue realmente scoperte,
+build finale, metadati e invio App Review, link Telegram prima della pubblicazione.
+Autorizzazione operativa del proprietario già ricevuta: "autorizzo tutto quello
+che serve". Non ripetere consensi già concessi; non aprire gate senza requisiti
+tecnici risolti. Nessun merge o invio App Review eseguito; PR15/16 non merged.
+Main invariato. Non rileggere archivi/core-v2/allegati obsoleti o ripetere backup,
+migrazione D1, cutover PRO e test accettati.
+
+## Login review sul sito pubblico confermato — 26 ottobre
+
+- Proprietario conferma accesso con account review su app.calcioreport.com:
+  badge PRO, 25 giorni rimasti; aperte alcune schede con funzionamento regolare.
+- Accettazione manuale del login e delle schede provate conclusa; non ripeterla
+  senza regressione. Non è prova indipendente del database usato o del verifier.
+- Prossimo passo: controllo mirato instradamento della sessione review sul Worker
+  pubblico e rifiuto della stessa firma nel contesto live, senza acquisti,
+  cancellazioni o modifiche alle scadenze. Apple Production resta disabilitato.
+- Credenziali recuperate dal documento privato Calcio_Report_Credenziali_Review.md;
+  nessuna credenziale riportata nel repository. Nessun deploy o merge eseguito.
+
+## Correzione diagnostica isolamento — 26 ottobre
+
+- Script manuale ha riportato review ACCETTATA e isolamento live NON SUPERATO,
+  ma controllava solo lo status HTTP. Ispezione handleMe in worker/worker.js:
+  una sessione non valida restituisce HTTP 200 con {ok:false}. Il risultato
+  NON dimostra accesso al DB live né un difetto di isolamento.
+- Serve verificare il corpo JSON: token review con prefisso -> ok:true;
+  stesso token senza prefisso -> ok:false nel percorso Production. Nessun
+  cambiamento runtime o deploy necessario; login UI già accettato resta chiuso.
+
+## Isolamento sessione review verificato — 26 ottobre
+
+- Proprietario conferma dal controllo corretto sul Worker pubblico:
+  "ISOLAMENTO OK: review accettata, percorso live rifiutato".
+- /auth/me con token cr-review restituisce ok:true; lo stesso token senza
+  prefisso, instradato al contesto Production, restituisce ok:false.
+  Chiusa questa accettazione del confine di autenticazione; non equivale a
+  un audit completo DB o al collaudo Worker->verifier Production.
+- Nessun acquisto, modifica scadenze, deploy o merge in questo blocco.
+  Prossimo blocco: diagnosi motivata del 401 API Apple Production;
+  non ripetere login/isolamento né rigenerare chiavi senza causa individuata.
+
+## Diagnostica credenziali Production offline — 26 ottobre
+
+- Screenshot App Store Connect: chiave Calcio Report acquisti attiva nella
+  sezione Acquisti in-app. Proprietario conferma KEY_ID e ISSUER_ID del file
+  env Production coincidenti con la pagina Apple; valori non riportati qui.
+- Intercettato offline il JWT generato dalla libreria installata sul server:
+  ambiente Production, algoritmo/identificativi, bundle/audience, validità
+  temporale e firma crittografica locale tutti OK secondo output del proprietario.
+  Nessuna richiesta Apple, modifica servizi o chiavi durante questa verifica.
+  La verifica locale della firma non prova che Apple riconosca la chiave.
+- Prossimo controllo mirato: storia notifiche Production con diagnostica sicura
+  della risposta; solo se 401 confronto Sandbox usando esattamente lo stesso
+  JWT. Nuova motivazione: isolare il rifiuto per ambiente, non ripetere
+  acquisti o accettazioni notifiche storiche. Nessun retry automatico.
+  Causa 401 ancora aperta; gate Apple Production chiuso.
+
+## Confronto autenticazione Apple e vincolo primo rilascio — 26 ottobre
+
+- Proprietario conferma nuova diagnostica: Production HTTP 401 senza codice
+  Apple; Sandbox HTTP 200 usando esattamente lo stesso JWT e la stessa
+  richiesta di storia notifiche. Nessun acquisto o scrittura account.
+  La chiave è accettata da Apple Sandbox: non rigenerarla né ripetere la
+  diagnostica JWT/identificativi già conclusa senza nuovi elementi.
+- Trovato chiarimento di alexanderjordanbaker, Collaborator nel repository
+  ufficiale Apple (4 maggio 2024): senza un primo rilascio Production dell'app
+  non è consentito usare le API Production.
+  Fonte: https://github.com/apple/app-store-server-library-java/issues/92
+  Il requisito documentato è coerente col caso Calcio Report non ancora
+  pubblicata e col confronto 401/200. È una spiegazione supportata del blocco,
+  NON una nuova accettazione API Production né prova certa della causa interna.
+- Superato il precedente vuoto di evidenze sull'ipotesi app non pubblicata:
+  ora c'è una fonte primaria pertinente, con il limite temporale del 2024.
+  Non dichiarare Production funzionante o sbloccare i gate sulla sola ipotesi.
+- Pianificare separatamente build/review e attivazione al primo rilascio:
+  il collaudo API Production non va preteso come prerequisito impossibile della
+  prima submission. Mantenere review Sandbox isolata e gate Production chiuso
+  finché non è definito un piano di attivazione coerente con il primo rilascio.
+- Restano percorso Worker->verifier Production, gate sorgente/flag, accettazioni
+  residue, build finale, Telegram e metadati/review. Nessun deploy/merge/invio.
+
+## Preparazione IPA Production — 26 ottobre
+
+- Esteso il workflow iOS signing check al profilo production sul branch release;
+  backend pubblico, namespace Production già esistente, export App Store locale.
+  Profili interni Sandbox/review mantenuti; numerazione nello stesso workflow.
+- Production richiede selezione esplicita o commit di avvio esatto, guardie di
+  repository/branch/evento; nessuno step Apple validation/upload viene eseguito.
+  Export interno rimane internal-testing-only; candidata Production no.
+- Verifica dell'IPA esportato tramite scripts/verify-ios-artifact.py:
+  bundle, numero build, URL esatto nel JSON e assenza pagamenti web/header.
+  Manifest Production separato e rifiutato dall'uploader interno esistente.
+- Nove test Python mirati passati localmente; sintassi Bash e YAML verificate.
+  Test con IPA sintetici: NON provano compilazione Xcode o firma reale.
+- Commit di questo blocco avvia la compilazione firmata Production senza upload.
+  Esito workflow ancora pendente; nessun IPA firmato dichiarato disponibile.
+  Procedura e limiti in docs/app-store-candidate.md.
+- Backend live, gate Apple, DB e main invariati. Restano Telegram/supporto,
+  accettazioni residue e piano attivazione acquisti al primo rilascio.
+
+## IPA Production 28.1 compilato e firmato — 26 ottobre
+
+- Workflow iOS signing check run 40362687965 sul commit e66a0ffff13d47cb6508585d85e16c1d2bb953a0:
+  job archive SUCCESS. Nove test Python e 152 test Node passati su runner macOS;
+  packaging production, compilazione Xcode, codesign ed export completati.
+- Verificatore dell'IPA esportato ha confermato backend Production, bundle/build
+  attesi e link di pagamento web disabilitati. Build 28.1, profilo production.
+- Artifact GitHub calcio-report-production-ipa-28-1, ID 12669196406,
+  799675 byte, scadenza 2026-10-29T16:50:36Z (ZIP artifact, non hash IPA).
+  Digest ZIP sha256:5763f5f3cf59f175067ef11f8e9b928dacdadc9018e08197558a28553a4679d4.
+  Include IPA e manifest commit/versione/build/hash. Non confondere la
+  conservazione su GitHub con un caricamento su App Store Connect.
+- Step Apple validation/upload SKIPPED. Nessun nuovo TestFlight/App Review,
+  merge, deploy backend o modifica DB. Gate Apple Production invariato e chiuso.
+- PR15 aggiornata allo stato corrente; PR15/16 rimangono draft, open, non merged.
+- Prossimo passo: acquisire URL Telegram definitivo, richiesto dal proprietario,
+  e completare i contatti mobili. Il packaging attuale azzera telegramUrl e
+  supportEmail: correggere il solo percorso contatti senza introdurre pagamenti
+  esterni in iOS. Supporto web già configurato support@calcioreport.com.
+  La 28.1 prova la procedura di firma Production, non è ancora la build finale
+  completa di contatti da caricare. Non rifare acquisti o controlli accettati.
+
+## Community in arrivo e contatore — 26 ottobre
+
+- Proprietario rinvia Telegram e autorizza pulsante in preparazione + contatore
+  account unici. Non è requisito di rilascio aprire un gruppo o fornire un URL.
+- Implementati UI con messaggio reale dopo conferma server, POST autenticato
+  /community/interest, aggregato admin e scheda Community · interessati.
+  Deduplica per account, review/Sandbox esclusi, disabilitati esclusi dal totale;
+  FK cascade elimina la preferenza alla cancellazione. Nessun dato email/IP.
+- Nuovo schema additivo/ripetibile worker/schema/community-interest.sql,
+  solo sul DB live già identificato. NON ancora applicato.
+- Bundle pronto deploy/community-worker-candidate.mjs, 108055 byte,
+  SHA256 cdf050b645fd3c2cdd1299800cba9c806292144ad707420dd5014c49f6c7ae8a. Non ancora distribuito.
+  Config/binding/segreti/flag Apple e registro PRO da preservare invariati.
+- 32 test mirati superati; SQLite reale e autenticazione firmata, concorrenza,
+  cancellazione, admin, review e messaggi UI. Patch nativa e smoke bundle passati.
+  Non sono nuove prove su iPhone o sul DB live.
+- Main/GitHub Pages invariati; frontend candidato sul branch release.
+  IPA 28.1 precedente al pulsante: ricompilare dopo l'attivazione backend.
+  Dettagli e piano operativo in docs/community-interest.md.
+- Prossimo passo manuale: creare SOLO tabella community_interest su calcio_users,
+  UUID 45681187-3565-4d36-8627-131c18ff1885, con config locale review verificata.
+  Poi distribuire il bundle preservando gate Apple=0 e configurazione corrente;
+  verificare contatore con account live del proprietario, non con account review.
+  Nessun esito remoto ricevuto: non dichiarare attivato o ripetere vecchie migrazioni.
+
+## Tabella interesse community creata sul live — 26 ottobre
+
+- Proprietario riporta Wrangler 4.152.0: eseguito 1 comando, 0.37 ms,
+  su calcio_users (45681187-3565-4d36-8627-131c18ff1885).
+  Confermata esecuzione della CREATE TABLE community_interest autorizzata.
+  Non ripetere questa creazione o le precedenti migrazioni PRO/Apple.
+- Prossimo passo: scaricare bundle dal commit 19692a568742dcf171478c1eb83377e2f3894575,
+  verificarne hash cdf050b645fd3c2cdd1299800cba9c806292144ad707420dd5014c49f6c7ae8a,
+  creare copia wrangler.community-interest.json dalla config locale review,
+  cambiare solo main, verificare i due UUID e flag/cutover, dry-run e deploy
+  --keep-vars. Nessuna nuova installazione o rotazione dei segreti.
+- Realizzazione/attivazione contatore già autorizzata con "ok procedi";
+  non richiedere nuovamente consenso. Non include apertura gate Apple,
+  merge main o invio App Review. Deploy community ancora pendente.
+
+## Backend community distribuito — 26 ottobre
+
+- Proprietario conferma upload/deploy calcio-report-proxy su api.calcioreport.com,
+  production enabled, previews disabled. Versione 618af24a-d0bf-4c30-8ef9-a9c87d318e53.
+- Comando eseguito prevedeva verifica hash del bundle 19692a5, UUID live/review,
+  Apple=0, review=1, ledger=1, pausa=0, cutover invariato e --keep-vars.
+  Nessuna nuova installazione di segreti. Non ripetere deploy/schema.
+- Tentativo HTTP da ambiente Work senza credenziali ha ricevuto Cloudflare
+  403/error 1010: non prova la risposta dell'handler né una regressione dell'app.
+  Non cambiare WAF/protezioni per questo esito dell'ambiente di esecuzione.
+- Verifica funzionale interesse ancora pendente dal PC proprietario con account
+  live normale (non review); due richieste devono confermare recorded:true senza
+  duplicare il record. Quindi contatore aggregato e frontend/admin aggiornati.
+- Frontend ancora solo nel branch release; main/Pages e IPA 28.1 non includono
+  il nuovo pulsante. Preparare nuova candidata iOS dopo conferma funzionale.
+
+## Conteggio community verificato sul live — 26 ottobre
+
+- Proprietario conferma due POST autenticati: interesse confermato entrambe.
+  Query remota su calcio_users mostra interessati=1. Registrazione e deduplica
+  remota chiuse; non ripetere schema, deploy o questi clic di prova.
+- Il singolo interesse è quello espresso dall'account usato dal proprietario.
+  Non è un iscritto Telegram né un download o un acquisto.
+- Preparata nuova compilazione Production con il pulsante Community · In arrivo;
+  supportEmail mobile ora conserva support@calcioreport.com già configurato web,
+  telegramUrl e link di pagamento web rimangono vuoti. Non è prova della casella.
+- Questo commit avvia il workflow di firma senza upload Apple. Esito build
+  ancora pendente; la 28.1 precedente non contiene il nuovo pulsante.
+- Admin aggiornato nel branch release già al commit 19692a5; fornire copia locale
+  al proprietario per visualizzare Community · interessati. Main/Pages invariati.
+
+## Candidata iOS community 29.1 firmata — 26 ottobre
+
+- Run 40372908094 SUCCESS, commit 047c45140d350b81c17a637dd843d02e9a3247d8.
+  159 test Node e 9 Python passati; compilazione/firma/export Production riusciti.
+  Verifica IPA: backend Production, bundle/build e link pagamento web corretti.
+- Include pulsante Community Telegram · In arrivo e supportEmail web conservata.
+  Backend 618af24a già distribuito; due POST proprietario -> un interessato.
+- Artifact calcio-report-production-ipa-29-1, ID 12672364036, 800331 byte,
+  scadenza 2026-10-29T17:56:56Z; digest ZIP
+  sha256:6f2c004cb5d85f5805d565eb6c80b2d18396988b90140b63406b35199f14dd03.
+  IPA e manifest conservati su GitHub. Step Apple validation/upload SKIPPED.
+  Nessun nuovo TestFlight/App Review o modifica dei gate Apple.
+- Prossimo passo: aprire copia locale admin.html del commit 19692a5 per vedere
+  Community · interessati=1 con la consueta ADMIN_KEY, senza comunicarla in chat.
+  Il contatore tramite API admin non è ancora stato confermato dal proprietario.
+- Main/Pages invariati. Non riaprire migrazione, deploy community o deduplica.
+  Restano piano attivazione Apple al primo rilascio, verifiche residue realmente
+  necessarie, metadati/privacy e caricamento/review finale da autorizzare.
+
+## Contatore admin live confermato — 26 ottobre
+
+- Pagina admin locale inizialmente mostrava HTTP 403 FORBIDDEN su /admin/users.
+  Elenco segreti del proprietario conferma ADMIN_KEY presente, insieme agli
+  altri segreti attesi; nessun valore esposto o ruotato.
+- GET /admin/stats con chiave inserita localmente in prompt protetto ha
+  restituito al proprietario: "Accesso admin OK — interessati: 1".
+  Autenticazione admin e aggregato community sul Worker pubblico verificati.
+  Il 403 precedente non dimostra perdita del segreto o difetto del contatore.
+- Ultimo passo UI: svuotare Admin Key nella pagina locale aggiornata, inserire
+  la stessa chiave appena verificata e premere Carica Utenti. Visualizzazione
+  della scheda ancora da confermare; nessuna nuova prova API necessaria.
+- Nessun nuovo deploy/rotazione chiavi o modifica dati in questa verifica.
+
+## Blocco community CHIUSO — 26 ottobre
+
+- Proprietario conferma "si ok ora funziona" dopo aver reinserito nella pagina
+  admin locale la chiave già verificata. Visualizzazione admin accettata.
+- Chiusi: backend pubblico, registrazione interesse, deduplica remota (2 POST,
+  1 account), API admin e pagina admin. Non ripetere test, schema o deploy.
+- Frontend Community · In arrivo incluso nella candidata Production 29.1
+  firmata (run 40372908094), non caricata su Apple. Main/Pages invariati.
+- Riprendere la release App Store dai requisiti residui: piano di attivazione
+  Production al primo rilascio, percorso Worker->verifier/gate sorgente e flag,
+  accettazioni ancora scoperte, metadati/privacy e caricamento finale.
+  Nessun nuovo consenso a merge, upload o App Review implicito nella conferma UI.
+
+## Preparazione diagnostica Worker→verifier — 26 ottobre
+
+- Aggiunto POST /admin/apple-readiness, protetto dalla consueta ADMIN_KEY,
+  solo nel ramo pubblico Production e fuori dal percorso review.
+- Firma condivisa col client transazioni: corpo {} su /v1/transaction,
+  esito atteso 400 BAD_INPUT dopo autenticazione HMAC. Nessuna chiamata API
+  Apple né lettura/scrittura D1. Non è un collaudo di pagamenti Production.
+- Trenta test mirati passati, incluso server verifier reale su loopback:
+  corretta firma, nessun reconciler/DB, rifiuto admin/HMAC errati, redirect,
+  risposte inattese/eccessive e rete. Regressione review/isolation/community OK.
+- Bundle deploy/apple-readiness-worker-candidate.mjs: 110122 byte,
+  SHA256 dd2dc9ff804c12df859a3fd4935acd62a8400cad23e30287e20ff521df3e7c1b. Smoke: admin assente 403,
+  community senza login 401, gate Apple chiuso 503.
+- Nessun deploy eseguito. Prossimo passo: copia configurazione locale
+  wrangler.community-interest.json, verificare UUID/flag/cutover, sostituire
+  solo main, dry-run e deploy --keep-vars; poi singolo POST admin di verifica.
+  Nessuna migrazione o reinstallazione di segreti. Dettagli docs/apple-readiness.md.
+- Gate sorgente e flag Apple=0 invariati. IPA 29.1 non richiede ricompilazione
+  per questa diagnostica solo server. Nessun upload/merge/App Review.
+
+## Diagnostica Apple distribuita — 26 ottobre
+
+- Proprietario conferma deploy calcio-report-proxy su api.calcioreport.com,
+  production enabled, previews disabled, versione
+  a4e384d4-50d7-4927-8243-670d4abc183f.
+- Bundle dal commit 564f99a, verificato dal comando con SHA256
+  dd2dc9ff804c12df859a3fd4935acd62a8400cad23e30287e20ff521df3e7c1b.
+  Config clonata dalla community: controlli UUID/flag/cutover, --keep-vars,
+  nessuna migrazione o reinstallazione segreti. Gate Apple invariati.
+- Non ripetere deploy. Prossimo passo: singolo POST /admin/apple-readiness
+  con ADMIN_KEY inserita localmente in prompt protetto, mai comunicata in chat.
+  Atteso HTTP 200 e {ok:true,verifier:HMAC_OK_BAD_INPUT,upstreamStatus:400}.
+  Il 400 è del verifier dopo HMAC e prima di Apple/D1; esito ancora pendente.
+
+## Worker→verifier Production CHIUSO — 26 ottobre
+
+- Proprietario conferma dal POST admin sul Worker pubblico:
+  {ok:true,verifier:HMAC_OK_BAD_INPUT,upstreamStatus:400}.
+  Collegamento firmato accettato; il verifier ha rifiutato {} prima di Apple/D1.
+  Non ripetere diagnostica/deploy a4e384d4. Non equivale a API Apple Production OK.
+
+## Gate Production candidato preparato — 26 ottobre
+
+- Nel solo candidato sostituito blocco sorgente assoluto con prerequisiti espliciti:
+  registro 1, pausa 0, cutover valido, Payment Link, DB non alias review,
+  origine/segreto verifier Production. Flag Apple e controlli ambiente restano.
+- 27 test mirati passati, inclusi quattro nuovi casi con SQLite reale per il
+  percorso Production (risposta verifier simulata), accredito/retry, baseline,
+  rimborso, proprietario cancellato, schema assente e ambiente errato.
+  NON collaudo API Apple o acquisti reali. Smoke flag 0 e flag 1 incompleto chiusi.
+- Bundle deploy/apple-activation-worker-candidate.mjs, 110761 byte,
+  SHA256 9bcbc82eb0e1794432eba130116162f31269a0a605b70b82d141e1e42777a599. NON distribuito.
+  Live ancora versione a4e384d4 con blocco sorgente precedente e Apple flag 0.
+- Piano candidato docs/apple-first-activation.md: metadati/privacy, uploader
+  Production dedicato, URL notifiche V2 da verificare, deploy futuro a flag 0,
+  rilascio manuale e decisione separata per eventuale finestra TRIAL iniziale.
+  Non assumere API disponibili alla sola approvazione e non accendere flag ora.
+- Prossimo passo con proprietario: leggere stato attuale della versione 1.0
+  in App Store Connect (build selezionata, metadati e campi mancanti), senza
+  invio. IPA 29.1 non richiede ricompilazione per queste sole modifiche server.
+  Main/Pages invariati; nessun upload/merge/App Review autorizzato o eseguito.
+
+## Preparazione consegna App Store 29.1 — 26 ottobre
+
+- Screenshot Distribuzioni/iOS 1.0: sezione Build senza build associata.
+  La 29.1 non è ancora su Apple; non selezionare vecchie build internal-only.
+- Preparato workflow ios-app-store-delivery.yml, con modalità validate/upload
+  separate e sorgente fissata in deploy/app-store-candidate.json (run 40372908094,
+  commit 047c451, artifact 12672364036). Riusa l'IPA firmato, non ricompila.
+- Controlli repo/run/fork/branch/commit/digest/scadenza e manifest/IPA effettivo:
+  bundle, versione 1.0, build 29.1, Production, hash e pagamenti web disabilitati.
+  Sei test locali superati; sintassi Bash/YAML valida. Nessuna chiave nuova.
+- Questo commit avvia SOLO validate-app con Apple. Nessun upload richiesto.
+  Esito remoto pendente; dettagli in docs/app-store-delivery.md.
+- Dopo successo preparare consenso al solo caricamento 29.1; nessuna App Review
+  o pubblicazione inclusa. Live a4e384d4/Apple=0 invariato; gate candidato 8ebdca7
+  ancora NON distribuito. Non ripetere test acquisto o migrazioni.
+
+## Validazione Apple della 29.1 RIUSCITA — 26 ottobre
+
+- Workflow iOS App Store delivery run 40379596702, commit 2ad1c1d, mode validate,
+  job 121771924643 SUCCESS. Sei test Python passati; origine e IPA 1.0 (29.1)
+  verificati dopo download dell'artefatto originale 12672364036.
+- altool --validate-app ha restituito "VERIFY SUCCEEDED with no errors"
+  alle 18:40:43 UTC. Non è upload né approvazione App Review.
+- IPA originale non ricompilato/rifirmato; nessuna modifica ad app/live/DB/gate.
+  La sezione Build in App Store Connect resta senza associazione finché non
+  si carica ed elabora la candidata. Non selezionare una vecchia build interna.
+- Proposta concreta pronta: SOLO upload della stessa Production 29.1 tramite
+  workflow già verificato, senza invio review, pubblicazione o gate Apple.
+  Attendere consenso del proprietario a questo caricamento; non richiedere
+  nuovo consenso alle prove/delivery software già completate.
+
+## Upload Production 29.1 autorizzato — 26 ottobre
+
+- Proprietario conferma «si certo autorizzo» al SOLO caricamento della stessa
+  IPA 1.0 (29.1) già validata. Nessuna nuova compilazione o firma.
+- Avvio workflow delivery in modalità upload, con origine e digest invariati.
+  Esito remoto ancora pendente: non dichiarare caricamento completato.
+- Nessun invio App Review, pubblicazione, merge main o apertura gate Apple.
+
+## Upload Apple Production 29.1 RIUSCITO — 26 ottobre
+
+- Dopo consenso esplicito del proprietario, workflow iOS App Store delivery
+  run 40382507054, commit d542173f134a2aa739843986b514fd9ec1112466,
+  job 121782169791 SUCCESS in modalità upload. Sei test Python e controlli
+  origine/digest/manifest/IPA passati prima del trasferimento.
+- Riutilizzata la stessa IPA Production 1.0 (29.1), sorgente 047c451,
+  artifact 12672364036: nessuna ricompilazione/rifirma o modifica al contenuto.
+- Apple: VERIFY SUCCEEDED senza errori alle 18:59:41 UTC e
+  UPLOAD SUCCEEDED senza errori alle 19:00:51 UTC. Trasferimento confermato,
+  NON conferma dell'elaborazione Apple o dell'idoneità/selezione della build.
+- Prossimo passo: proprietario aggiorna App Store Connect, sezione Build,
+  Aggiungi build; verificare presenza Production 29.1 dopo elaborazione.
+  Non scegliere 27.1 internal-only, non ripetere upload per la sola attesa.
+- Nessun invio App Review o pubblicazione; main/Pages, live a4e384d4,
+  Apple flag 0 e gate candidato non distribuito restano invariati.
+
+## Scheda App Store e nuova icona — 26 ottobre
+
+- Proprietario ha associato 29.1 alla versione 1.0; avviso crittografia risolto.
+  Conferma inserimento credenziali review, contatti, note inglesi, rilascio manuale,
+  descrizione italiana/parole chiave/copyright. Nessun invio alla review.
+- Screenshot reali dell'app ancora mancanti (sezione media vuota). Intestazione
+  e risultati ricerca sono risorse creative facoltative, lasciate vuote.
+- URL assistenza ancora da completare: support@calcioreport.com configurata;
+  accesso ai domini tramite ricerca web non riuscito, nessuna pagina verificata.
+- Nuova icona pallone/barre verde smeraldo su blu notte approvata dal proprietario.
+  Asset assets/branding/calcio-report-icon.png RGB 1024x1024 senza alpha;
+  scripts/install-app-icon.mjs invocato dall'installazione iOS già esistente.
+  Installazione catalogo e riesecuzione verificate localmente su fixture;
+  compilazione Xcode/IPA della nuova icona ancora da eseguire.
+- Commit con skip ci per raccogliere modifiche prima di UNA nuova build Production.
+  29.1 contiene ancora l'icona predefinita; dovrà essere sostituita nella scheda.
+- Prossimi passi: completare assistenza/privacy e asset, nuova build con icona,
+  upload e associazione; restano prerequisiti Production del checkpoint precedente.
+
+## Preparazione autonoma assistenza/privacy — 27 ottobre
+
+- Proprietario autorizza avanzamento mentre lavora, conclusione insieme la sera.
+- Preparata support.html con email configurata, FAQ accesso/PRO/ripristino,
+  cancellazione e community. HTML parsato, asset locale presente, nessuno script,
+  form o iframe; NON pubblicata né verificata visualmente in browser.
+- docs/app-store-final-preparation.md raccoglie evidenze privacy e residui.
+  Interesse community è collegato ad account anche se admin mostra aggregato.
+  Consultate guide ufficiali Apple; nessuna etichetta o policy pubblicata.
+- Blocco concreto per completare privacy: recuperare policy pubblica attuale e
+  schermata App Privacy già configurata; conservazione log/partner e operatività
+  supporto da verificare. Non inventare URL, dichiarazioni o tempi conservazione.
+- Nuova build non avviata per includere eventuali link/privacy necessari una sola
+  volta. Uploader ancora fissato a 29.1; non usarlo per altra candidata.
+- Primo passo proprietario stasera: URL policy attuale + schermata App Privacy.
+  Poi pubblicazione pagine, build con icona, screenshot reali e associazione;
+  restano tutti i prerequisiti Production precedenti. Nessun invio review.
