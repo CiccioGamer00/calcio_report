@@ -1,5 +1,35 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
+## Verifica autonoma finale — 30 ottobre 2026
+
+- Proprietario autorizza avanzamento mentre è al lavoro; pausa conclusa.
+- Audit ASC read-only aggiornato alla candidata 33.1 e agli stati screenshot/IAP.
+  Run 41015746779 SUCCESS (precedente 41015567161 SUCCESS).
+  Nessuna credenziale review/email stampata, nessuna mutazione App Store.
+- Evidenza API: versione 1.0 PREPARE_FOR_SUBMISSION, rilascio MANUAL,
+  build selezionata 33.1 VALID, non scaduta, crittografia non esente=false.
+  Tre screenshot APP_IPHONE_67 tutti COMPLETE; descrizione/parole chiave
+  presenti, supportUrl e privacyPolicyUrl corretti. Non richiedere nuovi
+  screenshot Store né selezione build.
+- BLOCCO concreto: IAP 6822393280, com.calcioreport.app.pro30,
+  NON_RENEWING_SUBSCRIPTION, MISSING_METADATA; appStoreReviewScreenshot
+  assente. Localizzazione italiana con nome/descrizione presenti.
+  Non assumere che sia l'unico campo mancante: prezzi/disponibilità e
+  associazione alla prima submission non verificati da questo audit.
+- Prossimo passo col proprietario: aprire scheda PRO30, Informazioni per
+  la revisione, predisporre screenshot reale dell'offerta PRO nella 33.1.
+  Non usare screenshot generati o una schermata Match al posto dell'offerta.
+  Prima submission deve includere IAP e nuova versione app.
+- PR16 ancora draft aperta/non integrata (head 5882d41). Diff diagnostico:
+  database diverso da review etichettato sempre test; test solo Sandbox.
+  Non integrare automaticamente sul Production. Il logger aggiunge
+  transactionId verificato; nessuna modifica alla consegna/accredito.
+  Non è prova di un difetto nel flusso live né test Production.
+- Backend resta a30c419c, gate 0 verificato ieri. Nessun deploy/build firmata,
+  invio review, nuovo acquisto o modifica main. Controlli CI automatici
+  attivati dal commit dello script: non sono una nuova candidata Store.
+- docs/app-store-final-preparation.md aggiornato con evidenze e residui.
+
 ## PAUSA proprietario e controllo post-deploy chiuso — 29 ottobre 2026
 
 - Proprietario conferma GET pubblico /apple/token: HTTP 503,
