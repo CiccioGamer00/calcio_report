@@ -1,5 +1,19 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
+## Candidata 34.1 firmata e avvio consegna — 30 ottobre 2026
+
+- Signing run 41086301264, job 124168239719 SUCCESS; build Production 34.1.
+  Controlli test/IPA/privacy/risorse passati; upload nello signing SKIPPED.
+- Sorgente 74cec873bd4221b8cd9867f924c957f02d4c9a1f, artifact 12992755642,
+  calcio-report-production-ipa-34-1, digest
+  sha256:e972b8b30f8c86b80617eb64cae5c746f6f23fba9cb9cfe0bf21a5bc8cf72aa9.
+- Uploader fissato a questa candidata; commit avvia validazione e upload della
+  stessa IPA, senza ricompilarla. Autorizzazione completamento già acquisita.
+  Esito consegna/elaborazione Apple ancora pendente.
+- Poi installazione reale, verifica UI/offerta e screenshot IAP. 33.1 resta
+  selezionata finché non confermata sostituzione. Nessun invio App Review.
+- Backend acquisti Production resta disabilitato.
+
 ## Login iPhone riuscito e nuova candidata UI — 30 ottobre 2026
 
 - Proprietario conferma ingresso anche nell'app: blocco credenziali CHIUSO.
