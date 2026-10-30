@@ -85,6 +85,7 @@ async function refreshTopAuthUI() {
   const btn = document.getElementById("btnOpenAuth");
   if (!btn) return;
   const up = document.getElementById("btnUpgrade");
+  if (up) up.textContent = "⚡ Passa a PRO";
 
   // sessione scaduta localmente
   if (getToken() && isSessionExpired()) {
@@ -119,7 +120,10 @@ async function refreshTopAuthUI() {
     btn.classList.remove("trial-active", "expired");
     setBadge("pro", `PRO • ${daysLeft(paidUntil, now)}g rim.`);
     __IS_PRO__ = true;
-    if (up) up.classList.add("hidden");
+    if (up) {
+      up.textContent = "⚡ Estendi PRO · 30 giorni";
+      up.classList.remove("hidden");
+    }
     return;
   }
 

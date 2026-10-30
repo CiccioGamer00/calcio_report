@@ -19,6 +19,7 @@ on:
       - 'scripts/install-storekit.mjs'
       - 'mobile/**'
       - 'style.css'
+      - 'app.js'
       - 'js/**'
   workflow_dispatch:
     inputs:

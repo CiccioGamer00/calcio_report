@@ -1,5 +1,23 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
+## Login iPhone riuscito e nuova candidata UI — 30 ottobre 2026
+
+- Proprietario conferma ingresso anche nell'app: blocco credenziali CHIUSO.
+  Nessuna registrazione/reset necessario.
+- Individuato ostacolo screenshot: refreshTopAuthUI nascondeva l'acquisto
+  agli account già PRO (review inclusa). Ora mostra Estendi PRO · 30 giorni
+  e usa lo stesso flusso StoreKit e controlli server; nessun bypass del gate.
+- Nuova candidata include pulsanti login 52px/distanze, Mostra/Nascondi password,
+  rimascheramento e pulsante estensione. Trigger signing include app.js.
+- Sintassi precedente e controllo comportamento password con DOM minimo passati
+  (mostra/nascondi, stato aria, rimascheramento, valore conservato/idempotenza).
+  Layout browser non verificato localmente: conferma reale prossima build.
+- Commit avvia build Production firmata, senza upload implicito.
+  Esito build ancora pendente; 33.1 resta selezionata e installata.
+- Poi uploader fissato al nuovo artefatto, validazione/upload, installazione
+  e screenshot offerta reale. Non ripetere acquisti per ottenere la foto.
+- Backend Apple Production resta 0; App Review non inviata.
+
 ## Password visibile e login web — 30 ottobre 2026
 
 - Proprietario conferma login web riuscito con le credenziali review salvate;
