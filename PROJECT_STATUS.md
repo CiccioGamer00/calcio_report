@@ -1,5 +1,21 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
+## Ripresa login review e pulsanti — 30 ottobre 2026, sera
+
+- Proprietario rientrato: nella 33.1 senza login vede Passa a PRO.
+  Tentativo con credenziali ritenute review restituisce credenziali errate.
+  Non creare account nuovo: email review riservata, signup/reset gestiti
+  separatamente; errore non identifica ancora password errata o routing.
+- Prossimo singolo passo: verificare sul PC le credenziali già salvate in ASC,
+  scheda iOS 1.0 > Informazioni per la revisione, senza condividerle in chat.
+  Confrontare/inserire esattamente account Calcio Report, non Apple ID.
+  Se fallisce ancora, diagnosi mirata del login senza acquisti o reset live.
+- Segnalazione UI accolta: nel solo dialogo accesso, pulsanti alti almeno
+  52px, Login/Registrati con spazio equo, gap 16px e distacco recupero 16px.
+  CSS committato con skip ci; non ancora compilato/installato su iPhone.
+  33.1 resta la candidata attuale; una nuova build servirà per la correzione.
+- Screenshot IAP ancora pendente; nessun nuovo account, deploy o invio review.
+
 ## Preparazione PRO30 senza proprietario — 30 ottobre 2026
 
 - Proprietario chiede di preparare le fondamenta; screenshot reali rinviati
