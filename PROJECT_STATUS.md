@@ -1,5 +1,22 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
+## Requisiti residui e cattura iPad — 30 ottobre 2026, sera
+
+- Add for review bloccato da categoria, diritti, iPad13, età, prezzo.
+- Sport salvata; questionario completato mostra 4+, Non applicabile.
+  Utente prosegue dopo istruzioni salvataggio e prezzo app Gratis;
+  ultimo salvataggio prezzo non verificato visivamente.
+- Diritti contenuti ancora aperti: dati/logo/foto API-Football, non dichiarare
+  assenza di terzi o presumere licenze dal solo piano Pro.
+- Proprietario non ha iPad. Workflow ios-prototype aggiornato per cattura
+  reale simulatore iPad Pro13 della app Production, senza login/dati inventati.
+  Commit a6c4bf1 avvia compilazione unsigned e PNG home: esito/immagine da
+  verificare prima upload. Non cambia candidata firmata34.1 né backend.
+- Da valutare pubblicità in futuro aggiornamento, assente dalla versione attuale.
+- QR biglietti esistenti: futura landing con link App Store e accesso web;
+  URL esatto QR ancora da acquisire, nessuna modifica effettuata.
+- Review non inviata; gate AppleProduction0 e rilascio manuale invariati.
+
 ## Screenshot PRO salvato e build 34.1 selezionata — 30 ottobre 2026
 
 - Screenshot proprietario 174809: prodotto PRO30, sezione Informazioni per
