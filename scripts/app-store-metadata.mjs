@@ -45,5 +45,12 @@ try {
     report.appInfos.push({id:info.id,state:info.attributes.appStoreState,
       localizations:localizations.map(l=>({id:l.id,locale:l.attributes.locale,privacyPolicyUrl:l.attributes.privacyPolicyUrl}))});
   }
+  const purchases = await get('/v1/apps/'+app+'/inAppPurchasesV2?filter[productId]=com.calcioreport.app.pro30&include=appStoreReviewScreenshot,inAppPurchaseLocalizations');
+  report.inAppPurchases = purchases.data.map(p=>({
+    id:p.id,productId:p.attributes.productId,type:p.attributes.inAppPurchaseType,state:p.attributes.state,
+    reviewScreenshotPresent:Boolean(p.relationships?.appStoreReviewScreenshot?.data),
+    reviewScreenshotState:(purchases.included || []).find(i=>i.id===p.relationships?.appStoreReviewScreenshot?.data?.id)?.attributes.assetDeliveryState?.state ?? null,
+    localizations:(purchases.included || []).filter(i=>i.type==='inAppPurchaseLocalizations' && (p.relationships?.inAppPurchaseLocalizations?.data || []).some(link=>link.id===i.id)).map(i=>({locale:i.attributes.locale,state:i.attributes.state,hasName:Boolean(i.attributes.name),hasDescription:Boolean(i.attributes.description)}))
+  }));
   console.log('ASC_METADATA_AUDIT '+JSON.stringify(report));
 } catch(error) { console.error(error.message); process.exitCode=1; }
