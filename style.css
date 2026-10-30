@@ -2658,3 +2658,22 @@ body {
 #authStandardBox .auth-buttons + .auth-buttons {
   margin-top: 16px !important;
 }
+
+#authStandardBox .auth-password-field {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+}
+#authStandardBox .auth-password-field input {
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+}
+#toggleAuthPassword {
+  flex: 0 0 auto;
+  min-width: 88px;
+  min-height: 52px;
+  padding: 10px;
+  font-size: 14px;
+}

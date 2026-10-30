@@ -1,5 +1,21 @@
 # Calcio Report — STATO OPERATIVO CORRENTE
 
+## Password visibile e login web — 30 ottobre 2026
+
+- Proprietario conferma login web riuscito con le credenziali review salvate;
+  screenshot mostra PRO 21g. Su iPhone riprova: esito ancora pendente.
+  Non creare account o reimpostare password per il precedente errore.
+- Su richiesta aggiunto Mostra/Nascondi al campo password login/registrazione:
+  type=button, etichetta accessibile, aria-controls/pressed, bersaglio 52px.
+  Rimaschera a chiusura dialogo e quando app/documento diventa nascosto.
+  Non modifica valore password né autenticazione.
+- JS syntax e diff check passati; verifica browser locale non disponibile
+  (eseguibile Chromium e jsdom assenti). Conferma device nella prossima build.
+- Modifica solo sorgenti release con skip ci, insieme al precedente ingrandimento
+  pulsanti; nuova compilazione/upload non avviati. 33.1 resta installata/selezionata.
+- Credenziali visibili nell'allegato utente: non copiarle in repo/log/documenti.
+- Prossimo passo utente: esito nuovo login iPhone; poi offerta e screenshot IAP.
+
 ## Ripresa login review e pulsanti — 30 ottobre 2026, sera
 
 - Proprietario rientrato: nella 33.1 senza login vede Passa a PRO.

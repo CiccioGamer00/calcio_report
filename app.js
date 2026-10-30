@@ -317,6 +317,7 @@ function openAuthModal(message = "") {
 }
 
 function closeAuthModal() {
+  document.getElementById("authPass")?.dispatchEvent(new Event("cr:hide-password"));
   document.getElementById("authModal")?.classList.add("hidden");
 }
 
@@ -345,6 +346,38 @@ function setupUpgradeButton() {
 
   });
 }
+function setupPasswordVisibility() {
+  const input = document.getElementById("authPass");
+  if (!input || document.getElementById("toggleAuthPassword")) return;
+  const wrapper = document.createElement("div");
+  wrapper.className = "auth-password-field";
+  input.before(wrapper);
+  wrapper.append(input);
+  const button = document.createElement("button");
+  button.id = "toggleAuthPassword";
+  button.type = "button";
+  button.setAttribute("aria-controls", input.id);
+  const hide = () => {
+    input.type = "password";
+    button.textContent = "Mostra";
+    button.setAttribute("aria-label", "Mostra password");
+    button.setAttribute("aria-pressed", "false");
+  };
+  hide();
+  button.addEventListener("click", () => {
+    if (input.type === "text") hide();
+    else {
+      input.type = "text";
+      button.textContent = "Nascondi";
+      button.setAttribute("aria-label", "Nascondi password");
+      button.setAttribute("aria-pressed", "true");
+    }
+  });
+  wrapper.append(button);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) hide(); });
+  input.addEventListener("cr:hide-password", hide);
+}
+
 function setupAuthActions() {
   const loginBtn = document.getElementById("btnLogin");
   const registerBtn = document.getElementById("btnRegister");
@@ -1099,6 +1132,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Se l'utente ha già usato la ricerca, non mostrare più la welcome
   if (isWelcomeDone()) hideWelcomeCard();
   setupTopButton();
+  setupPasswordVisibility();
   setupAuthActions();
   setupPasswordRecovery();
   setupAccountDeletion();
