@@ -1,3 +1,23 @@
+# Allineamento web / Apple — 3 novembre 2026
+
+Preparato su fix/web-apple-ui-alignment-20261103 il frontend comune già
+verificato nella candidata Apple: password visibile, pulsanti accesso 52px,
+Indisponibili a larghezza piena, estensione PRO e community In arrivo.
+Copiati app.js, style.css, index.html, injuriesPanel.js e searchController.js
+ dal ramo release/apple-production-preparation; asset web 20261103r1.
+Stripe e configurazione web preservati; nessun deploy Worker, modifica DB,
+compilazione Apple o invio review. Versione Apple installata resta 34.1.
+Verifiche: 12 test mirati superati (sintassi, login, cancellazione account,
+pagamento Stripe, asset), più toggle/rimascheramento password e diff check.
+Layout trasferito dalla candidata già verificata su device; nuovo controllo
+visivo locale non eseguibile perché Chromium non disponibile.
+Pubblicazione main ancora PENDENTE: auto-review ha bloccato il push diretto
+richiamando il vincolo storico su main. Richiesta approvazione esplicita
+del merge/pubblicazione; nessun aggiornamento pubblico confermato.
+Il ramo Apple resta fonte dello stato App Store; core-v2 è storico.
+
+---
+
 # Calcio Report — Project Status
 
 _Last updated: 2026-10-10_
