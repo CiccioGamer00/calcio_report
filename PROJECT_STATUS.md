@@ -1,3 +1,14 @@
+## Allineamento web autorizzato e integrato — 3 novembre 2026
+
+- Il proprietario ha autorizzato esplicitamente merge su main e pubblicazione,
+  superando il precedente blocco storico su main per questo aggiornamento.
+- PR #17 integrata, commit 967ea483f520373bb6ff64bf857c746a1da754c3.
+- Frontend comune riallineato alla candidata Apple: pulsanti accesso 52px,
+  Mostra/Nascondi password, layout Indisponibili, Estendi PRO e community.
+- Asset web 20261103r1; 12 test mirati e controllo password superati.
+- Stripe web preservato. Nessuna modifica DB/Worker/build Apple/App Review.
+- Propagazione GitHub Pages da verificare; non confondere merge e sito live.
+
 # Allineamento web / Apple — 3 novembre 2026
 
 Preparato su fix/web-apple-ui-alignment-20261103 il frontend comune già
