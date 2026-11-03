@@ -1,3 +1,13 @@
+## Ricerca marcatori/ammoniti — avviata 3 novembre 2026
+
+- PR #18 draft: research/player-prediction-feasibility, commit fc109186.
+- Collector prospettico Worker-only e audit dati implementati; 13 test sintetici PASS.
+- Nessun modello/ranking/probabilità o modifica pubblica; nessun backtest reale.
+- Individuato vecchio fallback errori eventi -> zero in refereePanel, non riusato.
+- Sessione PRO non disponibile nell’ambiente: raccolta live ancora da eseguire.
+- Prossimo: campione copertura/minuti/ufficiali/arbitro, poi benchmark temporale.
+- Piano, definizioni esiti e limiti in research/player-predictions/README.md sulla PR.
+
 ## Admin web mobile — 3 novembre 2026
 
 - Richiesta proprietario: amministrare/bloccare/riabilitare utenti dal telefono.
