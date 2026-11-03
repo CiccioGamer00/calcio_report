@@ -1,7 +1,10 @@
 <!doctype html>
-<html>
+<html lang="it">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
     <title>Admin Calcio Report</title>
     <style>
       body {
@@ -77,28 +80,52 @@
       .danger{ color:#ff6b6b; font-weight:700; }
       .ok{ color:#00ff88; font-weight:700; }
 
+      * { box-sizing: border-box; }
+      body { max-width: 1500px; margin: auto; padding: 16px; }
+      input, select, button, textarea { font: inherit; font-size: 16px; }
+      input, select, button { min-height: 48px; max-width: 100%; }
+      input { width: min(100%, 540px); }
+      button { border-radius: 8px; padding: 10px 14px; }
+      button:disabled { opacity: .55; cursor: wait; }
+      td { overflow-wrap: anywhere; }
+      .access-box { padding: 16px; border: 1px solid #444; border-radius: 12px; margin: 16px 0; }
+      @media (max-width: 760px) {
+        table, tbody, tr, td { display: block; width: 100%; }
+        tr:first-child { display: none; }
+        tr { border: 1px solid #555; border-radius: 12px; padding: 8px; margin-bottom: 16px; }
+        td { border: 0; padding: 7px; }
+        td::before { content: attr(data-label); display: block; color: #aaa; font-size: 13px; margin-bottom: 3px; }
+        .rowbtn button { flex: 1 1 130px; }
+        .dashcard { flex: 1 1 140px; min-width: 0; }
+        #searchEmail { min-width: 0 !important; }
+      }
     </style>
   </head>
 
   <body>
     <h1>Admin Utenti</h1>
 
-    <label>Worker URL:</label><br />
-    <input
-      id="workerUrl"
-      size="60"
-      value="https://api.calcioreport.com"
-    /><br />
-
-    <label>Admin Key:</label><br />
+    <p>Gestisci accessi e giorni PRO dal computer o dal telefono.</p>
+    <input id="workerUrl" type="hidden" value="https://api.calcioreport.com" />
+    <label for="adminKey">Chiave amministratore:</label><br />
     <input
       id="adminKey"
       size="60"
       type="password"
-      placeholder="incolla la ADMIN_KEY"
+      placeholder="Inserisci la tua chiave amministratore" autocomplete="off" autocapitalize="none" spellcheck="false"
     /><br />
 
-    <button id="btnLoad">Carica Utenti</button>
+    <button id="btnLoad">Carica utenti</button>
+    <button id="btnLock">Esci e cancella la chiave</button>
+    <p class="muted">La chiave non viene salvata dalla pagina. Inseriscila solo qui; non condividerla in chat.</p>
+    <section class="access-box">
+      <h2>Riabilita un utente</h2>
+      <p>Gli utenti bloccati non compaiono nell’elenco. Inserisci l’email esatta per riabilitare un account esistente.</p>
+      <label for="reenableEmail">Email utente</label><br />
+      <input id="reenableEmail" type="email" autocomplete="off" autocapitalize="none" spellcheck="false" />
+      <button id="btnReenable">Riabilita accesso</button>
+      <p class="muted">Non aggiunge giorni PRO e non ricrea account cancellati.</p>
+    </section>
     <div
       style="
         margin-top: 10px;
@@ -154,7 +181,7 @@
 
             function getCfg() {
               return {
-                url: document.getElementById("workerUrl").value.trim(),
+                url: "https://api.calcioreport.com",
                 key: document.getElementById("adminKey").value.trim(),
                 out: document.getElementById("output"),
                 mini: document.getElementById("miniStatus"),
@@ -164,6 +191,9 @@
            
       async function loadUsers() {
         const { url, key, out, mini } = getCfg();
+        __USERS__ = [];
+        document.getElementById("dashboard").innerHTML = "";
+        if (!key) { out.textContent = "Inserisci la chiave amministratore."; return; }
         out.innerHTML = "Caricamento...";
         mini.textContent = "";
 
@@ -302,12 +332,18 @@
 
               html += "</table>";
               out.innerHTML = html;
+              const labels = ["Email", "Stato", "Giorni trial", "Fine trial", "Giorni PRO", "Fine PRO", "Ultima attività", "Registrato", "Note", "Azioni"];
+              out.querySelectorAll("tr").forEach((row) => {
+                row.querySelectorAll("td").forEach((cell, index) => cell.setAttribute("data-label", labels[index]));
+              });
 
               out.querySelectorAll("button[data-act]").forEach((btn) => {
                 btn.addEventListener("click", async () => {
                   const email = btn.getAttribute("data-email");
                   const act = btn.getAttribute("data-act");
-                  if (!email || !act) return;
+                  if (!email || !act || btn.disabled) return;
+                  btn.disabled = true;
+                  try {
 
                   if (act === "resolveAdjust") resolveAdjustment(email);
                   if (act === "mint") await mintCode(email);
@@ -323,6 +359,8 @@
                     if (!ok) return;
                     await disableUser(email, true);
                   }
+                  } catch { alert("Operazione non confermata. Ricarica gli utenti per verificarne l’esito."); }
+                  finally { btn.disabled = false; }
                 });
               });
             }
@@ -424,8 +462,12 @@
                 return;
               }
 
-              // ricarica lista + dashboard
+              // The legacy endpoint can return ok even for an unknown email.
               await loadUsers();
+              if (!disabled) {
+                const found = __USERS__.some(u => String(u.email || "").toLowerCase() === email.toLowerCase());
+                alert(found ? "Accesso riabilitato per " + email : "Riabilitazione non verificata: l’email non compare tra gli utenti attivi. Controlla l’indirizzo e ricarica.");
+              }
             }
 
 
@@ -456,6 +498,25 @@
               await loadUsers();
             }
 
+            document.getElementById("btnLock").addEventListener("click", () => {
+              document.getElementById("adminKey").value = "";
+              __USERS__ = [];
+              document.getElementById("output").textContent = "";
+              document.getElementById("dashboard").textContent = "";
+              location.reload();
+            });
+            document.getElementById("btnReenable").addEventListener("click", async () => {
+              const input = document.getElementById("reenableEmail");
+              const email = input.value.trim().toLowerCase();
+              if (!email || !input.checkValidity()) { input.reportValidity(); return; }
+              if (!getCfg().key) { alert("Inserisci la chiave amministratore."); return; }
+              const btn = document.getElementById("btnReenable");
+              if (btn.disabled || !confirm("Riabilitare l’accesso per " + email + "?")) return;
+              btn.disabled = true;
+              try { await disableUser(email, false); }
+              catch { alert("Operazione non confermata. Ricarica gli utenti e controlla l’email prima di riprovare."); }
+              finally { btn.disabled = false; }
+            });
             document.getElementById("btnLoad").addEventListener("click", loadUsers);
             document
               .getElementById("btnApplyFilters")
