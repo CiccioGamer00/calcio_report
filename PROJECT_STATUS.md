@@ -1,3 +1,15 @@
+## Ricerca marcatore/ammonito avviata — 3 novembre 2026
+
+- Branch research/player-prediction-feasibility, base main e3e7dce.
+- Richiesta: prima verificare titolarità, minuti, arbitro e utilità predittiva.
+- Implementati collector Worker-only e audit copertura in research/player-predictions.
+- 13 test sintetici PASS: null/zero, API errors, XI, contesto statistico,
+  leakage temporale, paginazione, arbitro, budget, autenticazione e rate limit.
+- Nessun modello/ranking/probabilità pubblicato. Nessuna modifica app/backend/DB.
+- Trovato rischio nel vecchio refereePanel: errori eventi -> zero; non riusato.
+- Dati live e backtest NON eseguiti: serve sessione PRO autorizzata per raccolta.
+- README definisce esiti, campionamento, benchmark temporali e criteri di rilascio.
+
 ## Admin web mobile — 3 novembre 2026
 
 - Richiesta proprietario: amministrare/bloccare/riabilitare utenti dal telefono.
