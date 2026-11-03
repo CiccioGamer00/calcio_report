@@ -7,7 +7,10 @@
   Mostra/Nascondi password, layout Indisponibili, Estendi PRO e community.
 - Asset web 20261103r1; 12 test mirati e controllo password superati.
 - Stripe web preservato. Nessuna modifica DB/Worker/build Apple/App Review.
-- Propagazione GitHub Pages da verificare; non confondere merge e sito live.
+- PUBBLICATO: GitHub Pages run 41596328260 build/deploy SUCCESS.
+- Verifica HTTPS pubblica: index.html, app.js, style.css, injuriesPanel.js e
+  searchController.js corrispondono al candidato testato (normalizzati CRLF).
+- Le note storiche sottostanti su blocco/pending sono superate da questo esito.
 
 # Allineamento web / Apple — 3 novembre 2026
 
