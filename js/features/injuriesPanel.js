@@ -194,7 +194,7 @@ function renderTeamInjuries(teamName, teamLogo, items, posMap) {
     .join("");
 
   return `
-    <div class="kv-row">
+    <div class="kv-row injTeamCard">
       <div class="k">Indisponibili: ${safeHTML(teamName)}</div>
       <div class="v">
         <span class="teamline">

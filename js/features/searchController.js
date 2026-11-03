@@ -90,7 +90,8 @@
   }
 
   function isLocalDebug() {
-    return ["localhost", "127.0.0.1"].includes(location.hostname);
+    return ["http:", "https:"].includes(location.protocol) &&
+      ["localhost", "127.0.0.1"].includes(location.hostname);
   }
 
   function debug(label, data) {
