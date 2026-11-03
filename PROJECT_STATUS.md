@@ -1,3 +1,16 @@
+## Admin web mobile — 3 novembre 2026
+
+- Richiesta proprietario: amministrare/bloccare/riabilitare utenti dal telefono.
+- Pubblicata admin.html, derivata dalla pagina del ramo Apple: layout responsive,
+  pulsanti 48px, URL API fisso, chiave solo nel campo password (non salvata).
+- Riabilitazione tramite email esatta: /admin/users esclude i disabilitati;
+  endpoint /admin/disable già supporta disabled=false. Verifica presenza in lista
+  dopo riabilitazione: un ok del vecchio endpoint non prova esistenza account.
+- Nessuna modifica Worker/DB, nessun utente reale alterato per i test.
+- Test admin access e rettifiche passati; GET live senza chiave rifiutato 403.
+- Nuovo controllo visivo mobile non disponibile in questo ambiente.
+- Marcatore/ammonito: discussione progettuale, non ancora implementati.
+
 ## Allineamento web autorizzato e integrato — 3 novembre 2026
 
 - Il proprietario ha autorizzato esplicitamente merge su main e pubblicazione,
