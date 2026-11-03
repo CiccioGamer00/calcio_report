@@ -8,6 +8,9 @@
   dopo riabilitazione: un ok del vecchio endpoint non prova esistenza account.
 - Nessuna modifica Worker/DB, nessun utente reale alterato per i test.
 - Test admin access e rettifiche passati; GET live senza chiave rifiutato 403.
+- HTTPS pubblico admin.html verificato: contenuto identico al candidato testato.
+- CORS live OPTIONS /admin/disable: 204, POST e x-admin-key consentiti.
+- Login reale richiede la chiave del proprietario; non richiesto né eseguito qui.
 - Nuovo controllo visivo mobile non disponibile in questo ambiente.
 - Marcatore/ammonito: discussione progettuale, non ancora implementati.
 
