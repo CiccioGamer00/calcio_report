@@ -1,3 +1,22 @@
+## Esiti ammoniti e confronto previsioni — 4 novembre 2026
+
+- booking-labels.mjs incrocia timeline, eventi, totali gialli squadra e giocatore.
+  Null, secondo giallo non riconciliato e tempi ambigui non diventano zeri.
+  Eventi anonimi non assegnati; discordanza totale squadra blocca la scheda.
+- Campione reale: 17/20 schede, 270 esiti giocatore-partita, 18 positivi.
+  Escluse Atalanta 1550137 (totale gialli discordante), Milan 1550166 e
+  Torino 1550146 (timeline incompleta). È ricostruzione esiti, non accuratezza.
+- evaluate.mjs confronta modello e baseline sugli stessi esiti noti (Brier,
+  log loss); rifiuta duplicati, probabilità invalide, forecast >= kickoff e
+  input osservati dopo forecast. Esiti ignoti esclusi, mai trattati come negativi.
+  Log loss con clip dichiarato 1e-15. Provenienza snapshot e separazione
+  temporale train/tuning/test rimangono responsabilità della pipeline dati.
+- 53 test sintetici/regressione passati. Nessuna accuracy reale calcolata:
+  non esiste ancora un campione di previsioni valide da confrontare.
+- Moduli di ricerca salvati su PR18, app pubblica e main invariati.
+- Prossimo: pipeline di feature pre-partita e baseline sperimentale, congelare
+  previsioni/candidati con timestamp, quindi valutazione su esiti futuri.
+
 ## Esiti marcatori e campione arbitri — 4 novembre 2026
 
 - participation.mjs distingue ID assenti della sola panchina da XI invalidi:
