@@ -1,3 +1,29 @@
+## Incrocio reale completato — 4 novembre 2026
+
+- Credenziali recuperate dal documento privato indicato dal proprietario.
+  Login API riuscito; nessuna credenziale/token salvata nel repository.
+  Il precedente blocco accesso è SUPERATO. Nessuna modifica account o Apple.
+- 12 nuove risposte (XI + eventi) sulle sei anomalie: tutte hanno 11 titolari
+  ufficiali; le presenze fuori XI sono spiegate dalle 4–5 sostituzioni.
+  Verifica ripetibile in lineup-crosscheck.mjs; il vecchio flag non è affidabile.
+- Raccolte altre 6 risposte statistiche per le stesse partite: gialli e falli
+  presenti su entrambe le squadre. Sei arbitri diversi, una partita ciascuno:
+  NON campione sufficiente per stimare propensione individuale dell'arbitro.
+- Parma–Udinese 1550173: eventi Parma mostrano 2 gialli, totale squadra 1.
+  Un evento ha ID giocatore null e nominativo fuori distinta; non attribuirlo
+  a un calciatore e non confondere totale eventi con esito individuale.
+- Nuovo snapshot Inter–Como 1550191: 20 richieste, 5 gare per squadra,
+  160 presenze con minuti positivi. Flag XI incoerente in altre 4/10 schede;
+  rilevata anche una riga giocatore duplicata/invalida nel feed Como.
+- Totale lavoro di questa ripresa: 38 richieste sportive aggiuntive; dati grezzi
+  conservati privatamente in Calcio_Report_Campione_Dati_2026-11-04.zip,
+  senza credenziali. 20 test passati; main e pronostici pubblici invariati.
+- Esiti: titolarità recuperabile tramite XI/eventi, minuti e campi null ancora
+  da riconciliare; timing gialli, espulsioni, eventi allo stesso minuto e
+  copertura feed restano da validare. Nessuna probabilità o accuracy dichiarata.
+- Prossimo: integrare raccolta storica XI/eventi con budget/cache, riconciliare
+  intervalli di presenza e cartellini, ampliare campione per arbitro, poi benchmark.
+
 ## Controllo dati reali — 4 novembre 2026
 
 - Analizzato snapshot Venezia–Udinese raccolto il 3 novembre con sessione PRO.
