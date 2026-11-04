@@ -1,3 +1,51 @@
+## Incrocio reale completato — 4 novembre 2026
+
+- Credenziali recuperate dal documento privato indicato dal proprietario.
+  Login API riuscito; nessuna credenziale/token salvata nel repository.
+  Il precedente blocco accesso è SUPERATO. Nessuna modifica account o Apple.
+- 12 nuove risposte (XI + eventi) sulle sei anomalie: tutte hanno 11 titolari
+  ufficiali; le presenze fuori XI sono spiegate dalle 4–5 sostituzioni.
+  Verifica ripetibile in lineup-crosscheck.mjs; il vecchio flag non è affidabile.
+- Raccolte altre 6 risposte statistiche per le stesse partite: gialli e falli
+  presenti su entrambe le squadre. Sei arbitri diversi, una partita ciascuno:
+  NON campione sufficiente per stimare propensione individuale dell'arbitro.
+- Parma–Udinese 1550173: eventi Parma mostrano 2 gialli, totale squadra 1.
+  Un evento ha ID giocatore null e nominativo fuori distinta; non attribuirlo
+  a un calciatore e non confondere totale eventi con esito individuale.
+- Nuovo snapshot Inter–Como 1550191: 20 richieste, 5 gare per squadra,
+  160 presenze con minuti positivi. Flag XI incoerente in altre 4/10 schede;
+  rilevata anche una riga giocatore duplicata/invalida nel feed Como.
+- Totale lavoro di questa ripresa: 38 richieste sportive aggiuntive; dati grezzi
+  conservati privatamente in Calcio_Report_Campione_Dati_2026-11-04.zip,
+  senza credenziali. 20 test passati; main e pronostici pubblici invariati.
+- Esiti: titolarità recuperabile tramite XI/eventi, minuti e campi null ancora
+  da riconciliare; timing gialli, espulsioni, eventi allo stesso minuto e
+  copertura feed restano da validare. Nessuna probabilità o accuracy dichiarata.
+- Prossimo: integrare raccolta storica XI/eventi con budget/cache, riconciliare
+  intervalli di presenza e cartellini, ampliare campione per arbitro, poi benchmark.
+
+## Controllo dati reali — 4 novembre 2026
+
+- Analizzato snapshot Venezia–Udinese raccolto il 3 novembre con sessione PRO.
+- 6/10 schede storiche squadra-partita hanno flag titolarità incoerenti.
+- Campi tiri/gol/falli mancanti anche fra 158 presenze con minuti positivi.
+- Aggiunto recent-quality.mjs nella ricerca: controllo distinto da previsioni.
+- 16 test passati. Esiti e denominatori in research/player-predictions/REAL_DATA_FINDINGS.md.
+- Nessun modello pubblicato; necessario incrocio XI storici/eventi prima di stimare.
+- Sessione browser PRO non persistita alla ripresa; nessuna raccolta nuova oggi.
+
+## Ricerca marcatore/ammonito avviata — 3 novembre 2026
+
+- Branch research/player-prediction-feasibility, base main e3e7dce.
+- Richiesta: prima verificare titolarità, minuti, arbitro e utilità predittiva.
+- Implementati collector Worker-only e audit copertura in research/player-predictions.
+- 13 test sintetici PASS: null/zero, API errors, XI, contesto statistico,
+  leakage temporale, paginazione, arbitro, budget, autenticazione e rate limit.
+- Nessun modello/ranking/probabilità pubblicato. Nessuna modifica app/backend/DB.
+- Trovato rischio nel vecchio refereePanel: errori eventi -> zero; non riusato.
+- Dati live e backtest NON eseguiti: serve sessione PRO autorizzata per raccolta.
+- README definisce esiti, campionamento, benchmark temporali e criteri di rilascio.
+
 ## Admin web mobile — 3 novembre 2026
 
 - Richiesta proprietario: amministrare/bloccare/riabilitare utenti dal telefono.

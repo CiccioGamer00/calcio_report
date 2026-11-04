@@ -1,2 +1,5 @@
 # Prediction Lab code, private datasets and reports live on the experiment branch.
 prediction-lab/
+
+# Prospective player research snapshots (local, never commit credentials/data)
+research/player-predictions/data/
