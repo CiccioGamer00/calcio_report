@@ -1,3 +1,33 @@
+## Primo modello sperimentale e registrazione prove — 4 novembre 2026
+
+- experimental-model.mjs implementa starter-hazard-v1-experimental per almeno
+  un gol/ammonizione: probabilità 1-exp(-rate*minuti/90), stima Bernoulli con
+  esposizione, prior campione e shrinkage personale equivalente a 10 partenze.
+  Distribuzione minuti ultimi 5 avvii stesso club combinata con campione.
+  Parametri fissati come esperimento, NON calibrati né ottimizzati sui risultati.
+- Baseline accoppiata: rischio ed esposizione comuni del campione; candidati
+  esclusivamente i 22 titolari ufficiali, controllo freshness 1 ora.
+  Effetto arbitro neutro=1 dichiarato non validato; niente effetti ruolo,
+  avversario o rigorista inventati. Nessun ranking nell'app pubblica.
+- build-training.mjs: 518 righe esito/esposizione utilizzabili fra i due mercati,
+  di cui 176 partenze scorer e 187 booking, usate dal modello. 8 esclusioni.
+  Minuti nominali accettati solo con statistica individuale entro 1 minuto;
+  non equivalgono ai minuti effettivi inclusivi di recupero.
+- freeze-experiment.mjs: CLI senza credenziali, input sportivi e output nuovo;
+  timestamp attuale, SHA256 dei 3 input, banca dati e parametri inclusi,
+  scrittura esclusiva wx. Sovrascrittura rifiutata EEXIST verificata.
+- 62 test passati, comprese esposizione, piccolo campione, zero eventi,
+  assenza XI, dati futuri/duplicati, timestamp fonte e indisponibilità minuti.
+- Nuovo accesso autenticato riuscito; rilette fixture e XI Venezia–Udinese
+  1550196 (2 richieste sportive). Alle 13:06 UTC del 4 novembre XI assenti.
+  Record experiment-v1-current.json registra waiting_official_lineups per
+  entrambi i mercati e ZERO previsioni. Non è un pronostico congelato.
+- Blocco concreto della prima prova prospettica: ufficiali non ancora disponibili.
+  Quando presenti: aggiornare target/lineups tramite Worker, eseguire CLI con
+  nuovo nome output prima del calcio d'inizio, poi raccogliere esiti post-match.
+  Il modello e gli input sono pronti; accuracy/calibrazione restano non misurate.
+- Tutto sul ramo ricerca/PR18; nessuna modifica main, Worker o App Store.
+
 ## Esiti ammoniti e confronto previsioni — 4 novembre 2026
 
 - booking-labels.mjs incrocia timeline, eventi, totali gialli squadra e giocatore.
