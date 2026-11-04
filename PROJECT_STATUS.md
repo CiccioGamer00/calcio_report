@@ -1,3 +1,13 @@
+## Controllo dati reali — 4 novembre 2026
+
+- Analizzato snapshot Venezia–Udinese raccolto il 3 novembre con sessione PRO.
+- 6/10 schede storiche squadra-partita hanno flag titolarità incoerenti.
+- Campi tiri/gol/falli mancanti anche fra 158 presenze con minuti positivi.
+- Aggiunto recent-quality.mjs nella ricerca: controllo distinto da previsioni.
+- 16 test passati. Esiti e denominatori in research/player-predictions/REAL_DATA_FINDINGS.md.
+- Nessun modello pubblicato; necessario incrocio XI storici/eventi prima di stimare.
+- Sessione browser PRO non persistita alla ripresa; nessuna raccolta nuova oggi.
+
 ## Ricerca marcatori/ammoniti — avviata 3 novembre 2026
 
 - PR #18 draft: research/player-prediction-feasibility, commit fc109186.
