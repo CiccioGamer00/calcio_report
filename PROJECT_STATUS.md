@@ -1,3 +1,30 @@
+## Esiti marcatori e campione arbitri — 4 novembre 2026
+
+- participation.mjs distingue ID assenti della sola panchina da XI invalidi:
+  conserva le presenze identificabili, avvisa unidentified_bench_members;
+  cambi con ID assente restano rifiutati. Recuperate Como/Cagliari senza dedurre ID.
+- Nuovo esito campione: 18/20 schede, 286 presenze ricostruibili; 13 differenze
+  nei minuti nominali/reportati. Restano cambi uscente null Milan 1550166 e
+  Torino 1550146, non corretti per deduzione. Conteggi precedenti superati.
+- scorer-labels.mjs ricostruisce esiti post-partita solo con score/eventi e
+  presenze coerenti: rigori segnati inclusi, autogol/rigori sbagliati esclusi;
+  identità condivise fra squadre e confini temporali ambigui bloccano gli esiti.
+  8/10 gare del campione utilizzabili per questi esiti; NON backtest predittivo.
+- referee-quality.mjs: aggregazione descrittiva per identità esatta, contesto,
+  cutoff temporale e statistiche di entrambe le squadre. Confronto con altri
+  arbitri, riduzione delle differenze quando campione piccolo. Prior 10 gare
+  solo parametro sperimentale NON calibrato, nessun peso applicato ai pronostici.
+- Raccolte ultime 30 gare Serie A: 25 richieste nuove, riuso delle statistiche
+  disponibili. 30 osservazioni valide, media campione 2.8667 gialli/gara;
+  27 stringhe arbitro distinte, 1–2 gare per stringa. Formati nome e nome+Italy
+  non unificati automaticamente. Campione insufficiente per effetti individuali.
+- 44 test passati. Dati/esiti salvati nell'archivio privato aggiornato;
+  credenziali/sessioni escluse. Codice solo sul ramo ricerca/PR18, main invariato.
+- Prossimo blocco: identità arbitri verificate e campione temporale più ampio,
+  riconciliazione esiti ammonito, costruzione feature solo da gare precedenti,
+  benchmark separato per partita e confronto con baseline. Non presentare
+  frequenze storiche o parametri sperimentali come probabilità calibrate.
+
 ## Ricostruzione presenze e cartellini — 4 novembre 2026
 
 - Aggiunti participation.mjs, analyze-participation.mjs e collect-history.mjs.
