@@ -1,0 +1,11 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {experimentalForecast,fitHazard} from '../research/player-predictions/experimental-model.mjs';
+const fixture={fixture:{id:100,date:'2026-11-06T20:00:00Z',status:{short:'NS'}},league:{id:135,season:2026},teams:{home:{id:1},away:{id:2}}};
+const training=Array.from({length:22},(_,i)=>({market:'scorer',leagueId:135,season:2026,starter:true,fixtureId:1,playerId:i+1,teamId:i<11?1:2,kickoff:'2026-11-01T20:00:00Z',observedAt:'2026-11-02T20:00:00Z',minutes:90,outcome:i===0?1:0}));
+const lineups={kind:'success',observedAt:'2026-11-04T11:30:00Z',data:{response:[1,2].map(t=>({team:{id:t},startXI:Array.from({length:11},(_,i)=>({player:{id:(t-1)*11+i+1}}))}))}};
+const input=()=>({fixture,lineups,training,forecastAt:'2026-11-04T12:00:00Z',market:'scorer'});
+test('official gate refuses guessed starters',()=>{assert.equal(experimentalForecast({...input(),lineups:{kind:'empty',data:{response:[]}}}).status,'waiting_official_lineups');});
+test('generates paired forecasts only for 22 official starters',()=>{const r=experimentalForecast(input());assert.equal(r.predictions.length,22);assert.ok(r.predictions.every(p=>p.probability>0&&p.probability<1));assert.ok(r.predictions[0].probability>r.predictions[1].probability);});
+test('rejects future source observations and duplicate training',()=>{const s=input();assert.throws(()=>experimentalForecast({...s,training:[...training,training[0]]}));assert.throws(()=>experimentalForecast({...s,training:training.map(r=>({...r,observedAt:'2026-11-07T00:00:00Z'}))}));});
+test('hazard accounts for exposure and preserves unknown minutes',()=>{assert.ok(fitHazard([{outcome:1,minutes:30}])>fitHazard([{outcome:1,minutes:90}]));assert.throws(()=>fitHazard([{outcome:0,minutes:null}]));});
+test('zero-event sample remains finite; absent player uses baseline',()=>{const r=experimentalForecast({...input(),training:training.map(r=>({...r,playerId:r.playerId+100,outcome:0}))});assert.ok(r.predictions.every(p=>p.historyStarts===0&&p.probability===p.baselineProbability&&p.probability>0));});
+test('old official lineup must be refreshed before freezing',()=>{const s=input();assert.equal(experimentalForecast({...s,lineups:{...lineups,observedAt:'2026-11-04T08:00:00Z'}}).status,'refresh_official_lineups');});
