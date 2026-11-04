@@ -1,0 +1,10 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {scorerLabels} from '../research/player-predictions/scorer-labels.mjs';
+const entry=response=>({kind:response.length?'success':'empty',data:{response}});
+function sample(){return {fixture:{fixture:{id:1,status:{short:'FT'}},teams:{home:{id:1},away:{id:2}},goals:{home:1,away:0}},lineups:entry([1,2].map(team=>({team:{id:team},startXI:Array.from({length:11},(_,i)=>({player:{id:team*100+i}})),substitutes:[]}))),events:entry([{team:{id:1},type:'Goal',detail:'Penalty',player:{id:100},time:{elapsed:50,extra:null}}])};}
+test('regulation penalty produces one binary scorer outcome',()=>{const r=scorerLabels(sample());assert.equal(r.usable,true);assert.equal(r.labels.filter(x=>x.scored).length,1);assert.equal(r.labels.length,22);});
+test('missing goal events cannot fabricate negative labels',()=>{const s=sample();s.events=entry([]);assert.equal(scorerLabels(s).labels,null);});
+test('own goal does not create scorer success',()=>{const s=sample();s.events.data.response[0].detail='Own Goal';s.events.data.response[0].player.id=200;assert.equal(scorerLabels(s).labels.some(x=>x.scored),false);});
+test('unknown goal identity and boundary cannot be labelled',()=>{const s=sample();s.events.data.response[0].player.id=null;assert.equal(scorerLabels(s).usable,false);});
+test('missed penalty does not count towards goals',()=>{const s=sample();s.fixture.goals.home=0;s.events.data.response[0].detail='Missed Penalty';assert.equal(scorerLabels(s).usable,true);});
+test('goal in substitution minute remains unknown',()=>{const s=sample();s.lineups.data.response[0].substitutes=[{player:{id:150}}];s.events.data.response.push({team:{id:1},type:'subst',player:{id:100},assist:{id:150},time:{elapsed:50,extra:null}});assert.equal(scorerLabels(s).usable,false);});
+test('cross-team duplicate identity is not accepted',()=>{const s=sample();s.lineups.data.response[1].startXI[0].player.id=100;assert.ok(scorerLabels(s).reasons.includes('player_id_shared_by_teams'));});

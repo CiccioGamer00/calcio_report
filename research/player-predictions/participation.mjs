@@ -10,8 +10,11 @@ export function participation({teamId,lineups,events}){
  if(team.length!==1 || !['success','empty'].includes(events?.kind))return {usable:false,reasons:['feeds_unavailable']};
  const xi=(team[0].startXI||[]).map(p=>p.player?.id);
  const bench=(team[0].substitutes||[]).map(p=>p.player?.id);
- const roster=[...xi,...bench];
- if(xi.length!==11||new Set(roster).size!==roster.length||roster.some(id=>!Number.isInteger(id)||id<=0))return {usable:false,reasons:['invalid_roster']};
+ const validId=id=>Number.isInteger(id)&&id>0;
+ const identifiedBench=bench.filter(validId);
+ const roster=[...xi,...identifiedBench];
+ const warnings=bench.length===identifiedBench.length?[]:['unidentified_bench_members'];
+ if(xi.length!==11||xi.some(id=>!validId(id))||new Set(roster).size!==roster.length)return {usable:false,reasons:['invalid_roster']};
  const known=new Set(roster),active=new Map(xi.map(id=>[id,{in:0,out:null,inMinute:0,outMinute:null}]));
  const intervals=new Map(active),reasons=[],cards=[];
  const relevant=rows(events).filter(e=>e.team?.id===teamId && ['subst','Card'].includes(e.type));
@@ -40,7 +43,7 @@ export function participation({teamId,lineups,events}){
   const yellow=['Yellow Card','Second Yellow card','Second Yellow Card'].includes(e.detail);
   cards.push({playerId:id??null,detail:e.detail,time:e.time,location,yellow});
  }
- return {usable:reasons.length===0,reasons:[...new Set(reasons)],
+ return {usable:reasons.length===0,reasons:[...new Set(reasons)],warnings,
   intervals:[...intervals].map(([playerId,s])=>({playerId,...s,nominalMinutes:(s.outMinute??90)-s.inMinute})),cards,
   onPitchBookedIds:[...new Set(cards.filter(c=>c.yellow&&c.location==='on_pitch').map(c=>c.playerId))],
   uncertainCards:cards.filter(c=>['boundary_unknown','timeline_unknown'].includes(c.location)).length,

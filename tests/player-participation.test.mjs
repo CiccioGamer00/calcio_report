@@ -32,3 +32,9 @@ test('invalid roster and failed event feed block reconstruction',()=>{
  assert.equal(participation({teamId:1,lineups,events:entry([])}).usable,false);
  assert.equal(participation({teamId:1,lineups,events:{kind:'api_error'}}).usable,false);
 });
+test('anonymous unused bench preserves known players but never invents identities',()=>{
+ const lineups=entry([{team:{id:1},startXI:Array.from({length:11},(_,i)=>({player:{id:i+1}})),substitutes:[{player:{id:null}},{player:{id:null}}]}]);
+ const r=participation({teamId:1,lineups,events:entry([event(1,30),event(null,50)])});
+ assert.equal(r.usable,true);assert.deepEqual(r.warnings,['unidentified_bench_members']);assert.equal(r.cards[1].location,'unattributed');
+ const bad=participation({teamId:1,lineups,events:entry([sub(1,null,60)])});assert.equal(bad.usable,false);
+});
