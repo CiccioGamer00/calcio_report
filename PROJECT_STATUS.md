@@ -1,3 +1,29 @@
+## Ricostruzione presenze e cartellini — 4 novembre 2026
+
+- Aggiunti participation.mjs, analyze-participation.mjs e collect-history.mjs.
+- Raccolta storica separata/on-demand, solo Worker, max 30 chiamate e 10 gare,
+  deduplica/riuso delle risposte sportive, stop auth/rate limit, nessun segreto
+  nei risultati. Dati post-partita marcati non utilizzabili come snapshot pre-gara.
+- Completate le 10 gare del primo snapshot con 12 nuove richieste; 18 risposte
+  riutilizzate. Campione completo salvato nell'archivio privato già esistente.
+- Analizzate entrambe le squadre: 16/20 schede strutturalmente ricostruibili,
+  254 presenze nelle schede valide. Scartate Como 1550180 e Cagliari 1550186
+  per distinta non valida; Milan 1550166 e Torino 1550146 per cambi incoerenti.
+- Tra le schede valide, 13 differenze fra minuti nominali da eventi e statistiche.
+  Minuti nominali escludono recupero: differenza non equivale automaticamente
+  a errore del provider. Non riscrivere i minuti senza chiarirne la convenzione.
+- Cartellini analizzati: 16 in campo, 1 al confine temporale incerto, 1 non
+  attribuibile alla distinta, 2 su timeline incoerente. Nessuna etichetta di
+  allenamento generata; feed vuoto non prova assenza di cartellini.
+- Espulsione chiude intervallo; rosso diretto non è giallo, secondo giallo non
+  duplica l'evento "almeno un'ammonizione". Stesso minuto entrata/uscita/cartellino
+  resta incerto; tempi 45+ e 90+ ordinati senza confonderli con secondo tempo.
+- 31 test sintetici/regressione passati, oltre all'esecuzione sul campione reale.
+  Moduli solo ricerca, non integrati nel frontend pubblico, main invariato.
+- Restano: convenzioni minuti/intervallo, completezza eventi/esiti, aggregazione
+  arbitro con più partite per arbitro e confronto temporale con baseline.
+  Nessun modello marcatore/ammonito validato né probabilità pubblicata.
+
 ## Incrocio reale completato — 4 novembre 2026
 
 - Credenziali recuperate dal documento privato indicato dal proprietario.
