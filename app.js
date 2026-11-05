@@ -85,6 +85,7 @@ async function refreshTopAuthUI() {
   const btn = document.getElementById("btnOpenAuth");
   if (!btn) return;
   const up = document.getElementById("btnUpgrade");
+  if (up) up.textContent = "⚡ Passa a PRO";
 
   // sessione scaduta localmente
   if (getToken() && isSessionExpired()) {
@@ -119,7 +120,10 @@ async function refreshTopAuthUI() {
     btn.classList.remove("trial-active", "expired");
     setBadge("pro", `PRO • ${daysLeft(paidUntil, now)}g rim.`);
     __IS_PRO__ = true;
-    if (up) up.classList.add("hidden");
+    if (up) {
+      up.textContent = "⚡ Estendi PRO · 30 giorni";
+      up.classList.remove("hidden");
+    }
     return;
   }
 
@@ -317,6 +321,7 @@ function openAuthModal(message = "") {
 }
 
 function closeAuthModal() {
+  document.getElementById("authPass")?.dispatchEvent(new Event("cr:hide-password"));
   document.getElementById("authModal")?.classList.add("hidden");
 }
 
@@ -345,6 +350,38 @@ function setupUpgradeButton() {
 
   });
 }
+function setupPasswordVisibility() {
+  const input = document.getElementById("authPass");
+  if (!input || document.getElementById("toggleAuthPassword")) return;
+  const wrapper = document.createElement("div");
+  wrapper.className = "auth-password-field";
+  input.before(wrapper);
+  wrapper.append(input);
+  const button = document.createElement("button");
+  button.id = "toggleAuthPassword";
+  button.type = "button";
+  button.setAttribute("aria-controls", input.id);
+  const hide = () => {
+    input.type = "password";
+    button.textContent = "Mostra";
+    button.setAttribute("aria-label", "Mostra password");
+    button.setAttribute("aria-pressed", "false");
+  };
+  hide();
+  button.addEventListener("click", () => {
+    if (input.type === "text") hide();
+    else {
+      input.type = "text";
+      button.textContent = "Nascondi";
+      button.setAttribute("aria-label", "Nascondi password");
+      button.setAttribute("aria-pressed", "true");
+    }
+  });
+  wrapper.append(button);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) hide(); });
+  input.addEventListener("cr:hide-password", hide);
+}
+
 function setupAuthActions() {
   const loginBtn = document.getElementById("btnLogin");
   const registerBtn = document.getElementById("btnRegister");
@@ -549,14 +586,52 @@ function setupProLockCTA() {
 function setupTelegramHeader() {
   const a = document.getElementById("btnTelegramHeader");
   if (!a) return;
-  a.addEventListener("click", (e) => {
+  const url = window.API_CONFIG?.telegramUrl || "";
+  a.textContent = url ? "📣 Community Telegram" : "📣 Community Telegram · In arrivo";
+  let pending = false;
+  a.addEventListener("click", async (e) => {
     e.preventDefault();
-    const url = window.API_CONFIG?.telegramUrl || "";
-    if (!url) {
-      alert("Link Telegram non configurato in config.js");
+    if (pending) return;
+    if (url) {
+      window.open(url, "_blank", "noopener");
       return;
     }
-    window.open(url, "_blank", "noopener");
+    const token = getToken();
+    const intro = "Stiamo preparando la community di Calcio Report, dove potrai condividere analisi, fare domande e proporre miglioramenti.";
+    if (!token) {
+      showToast({title:"Community Telegram · In arrivo", text:intro + "\n\nAccedi per segnalarci il tuo interesse.",
+        allowDisable:false, ctaLabel:"Accedi", ctaAction:() => openAuthModal()});
+      return;
+    }
+    pending = true;
+    a.setAttribute("aria-busy", "true");
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+      const response = await fetch((window.API_CONFIG?.baseUrl || "") + "/community/interest", {
+        method:"POST", headers:{Authorization:"Bearer " + token}, signal:controller.signal
+      });
+      const data = await response.json().catch(() => null);
+      if (getToken() !== token) return;
+      if (!response.ok || data?.ok !== true || typeof data.recorded !== "boolean") {
+        showToast({title:"Community Telegram · In arrivo",
+          text:intro + (response.status === 401 ? "\n\nAccedi nuovamente per segnalare il tuo interesse." :
+            "\n\nNon siamo riusciti a confermare la registrazione del tuo interesse. Puoi riprovare."),
+          allowDisable:false});
+        return;
+      }
+      showToast({title:"Community Telegram · In arrivo",
+        text:intro + (data.recorded ? "\n\nIl tuo interesse è registrato. Grazie!" : ""),
+        allowDisable:false});
+    } catch {
+      if (getToken() === token) showToast({title:"Community Telegram · In arrivo",
+        text:intro + "\n\nNon siamo riusciti a confermare la registrazione del tuo interesse. Puoi riprovare.",
+        allowDisable:false});
+    } finally {
+      clearTimeout(timeout);
+      pending = false;
+      a.removeAttribute("aria-busy");
+    }
   });
 }
 function setupTabsStage() {
@@ -1061,6 +1136,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Se l'utente ha già usato la ricerca, non mostrare più la welcome
   if (isWelcomeDone()) hideWelcomeCard();
   setupTopButton();
+  setupPasswordVisibility();
   setupAuthActions();
   setupPasswordRecovery();
   setupAccountDeletion();

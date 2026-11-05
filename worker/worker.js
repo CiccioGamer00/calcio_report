@@ -515,6 +515,13 @@ async function handleRedeem(request, env) {
     );
   }
 
+  if (env.PRO_PAYMENTS) {
+    try {
+      const outcome = await env.PRO_PAYMENTS.redeem(u, payload, Date.now());
+      return json({ ok: true, ...outcome, now: Date.now() }, 200, corsHeaders());
+    } catch (error) { return paymentDeliveryError(error); }
+  }
+
   // Attiva 30 giorni da adesso (o estendi se già attivo)
   const now = Date.now();
   const currentPaid = Number(u?.paid_until || 0);
@@ -548,7 +555,13 @@ async function handleAdminMint(request, env) {
     );
 
   const exp = Date.now() + 7 * 24 * 60 * 60 * 1000; // il codice vale 7 giorni (tempo per inserirlo)
-  const code = await makeLicenseCode(env, { email, exp });
+  let payload = { email, exp };
+  if (env.PRO_PAYMENTS) {
+    const account = await env.DB.prepare("SELECT id, created_at, COALESCE(disabled,0) AS disabled FROM users WHERE email = ?").bind(email).first();
+    if (!account || Number(account.disabled) !== 0) return json({error:"NOT_FOUND"},404,corsHeaders());
+    payload = { ...payload, v: 2, id: crypto.randomUUID(), accountId: account.id, issuedAt: Date.now() };
+  }
+  const code = await makeLicenseCode(env, payload);
 
   return json({ ok: true, email, exp, code }, 200, corsHeaders());
 }
@@ -635,9 +648,18 @@ async function handleAdminGrant(request, env) {
       corsHeaders(),
     );
 
-  const u = await env.DB.prepare("SELECT paid_until FROM users WHERE email = ?")
+  const u = await env.DB.prepare("SELECT id, created_at, paid_until, COALESCE(disabled,0) AS disabled FROM users WHERE email = ?")
     .bind(email)
     .first();
+
+  if (env.PRO_PAYMENTS) {
+    if (!u) return json({error:"NOT_FOUND"},404,corsHeaders());
+    try {
+      const operationId = request.headers.get('Idempotency-Key') || body.requestId || crypto.randomUUID();
+      const outcome = await env.PRO_PAYMENTS.admin(u, 30, operationId, Date.now());
+      return json({ok:true,email,...outcome},200,corsHeaders());
+    } catch (error) { return paymentDeliveryError(error); }
+  }
 
   const now = Date.now();
   const currentPaid = Number(u?.paid_until || 0);
@@ -677,7 +699,7 @@ async function handleAdminAdjust(request, env) {
   }
 
   const row = await env.DB.prepare(
-    "SELECT paid_until FROM users WHERE email = ?",
+    "SELECT id, created_at, paid_until, COALESCE(disabled,0) AS disabled FROM users WHERE email = ?",
   )
     .bind(email)
     .first();
@@ -688,6 +710,16 @@ async function handleAdminAdjust(request, env) {
       404,
       corsHeaders(),
     );
+  }
+
+  if (env.PRO_PAYMENTS) {
+    try {
+      const exactDays = Number(body.deltaDays);
+      if (!Number.isSafeInteger(exactDays) || String(body.deltaDays).trim() === '') return json({error:"BAD_INPUT"},400,corsHeaders());
+      const operationId = request.headers.get('Idempotency-Key') || body.requestId || crypto.randomUUID();
+      const outcome = await env.PRO_PAYMENTS.admin(row, exactDays, operationId, Date.now());
+      return json({ok:true,email,...outcome},200,corsHeaders());
+    } catch (error) { return paymentDeliveryError(error); }
   }
 
   const now = Date.now();
@@ -2443,6 +2475,13 @@ async function handleStripeWebhook(request, env) {
     return new Response("Account unavailable for this checkout", { status: 200 });
   }
 
+  if (env.PRO_PAYMENTS) {
+    try {
+      const outcome = await env.PRO_PAYMENTS.stripe(row, session, Date.now());
+      return new Response(outcome.ignored ? "Ignored unpaid checkout" : "OK", {status:200});
+    } catch (error) { return paymentDeliveryError(error); }
+  }
+
   const now = Date.now();
   const currentPaid = Number(row?.paid_until || 0);
   const base = Math.max(now, currentPaid);
@@ -2493,3 +2532,11 @@ async function hmacSha256Hex(secret, message) {
   return hex;
 }
   
+
+function paymentDeliveryError(error) {
+  if (error.message === 'PRO_REDEEM_REISSUE_REQUIRED') {
+    return json({error:'CODE_REISSUE_REQUIRED',message:'Richiedi un nuovo codice di attivazione.'},409,corsHeaders());
+  }
+  if (error.message === 'PRO_ADMIN_OPERATION_INVALID') return json({error:'BAD_INPUT'},400,corsHeaders());
+  return json({error:'PAYMENT_DELIVERY_UNAVAILABLE'},503,corsHeaders());
+}

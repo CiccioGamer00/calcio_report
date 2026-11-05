@@ -1,0 +1,9 @@
+{
+  "APPLE_DEPLOYMENT": "production",
+  "APPLE_ENVIRONMENT": "Production",
+  "APPLE_PRODUCTION_ENABLED": "0",
+  "PRO_LEDGER_ENABLED": "0",
+  "PRO_WRITES_PAUSED": "1",
+  "STRIPE_PRO_PAYMENT_LINK_ID": "plink_1T6a4ZLCMe9gtpTW2ticsWmF",
+  "APPLE_VERIFIER_URL": "https://apple.calcioreport.com"
+}

@@ -7,8 +7,5 @@ relay.calcioreport.com {
         -Server
     }
 
-    log {
-        output file /var/log/caddy/calcio-report-relay.log
-        format json
-    }
+    # Access logs intentionally disabled to minimize stored request data.
 }

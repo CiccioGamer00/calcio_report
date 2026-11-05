@@ -1,0 +1,12 @@
+{
+  "workerName": "calcio-report-proxy",
+  "apiOrigin": "https://api.calcioreport.com",
+  "liveDatabaseId": "45681187-3565-4d36-8627-131c18ff1885",
+  "reviewDatabaseId": "5b5458eb-4a69-454d-a5ac-76ffc93b8af7",
+  "testDatabaseId": "2aa786a8-6a61-495e-9c41-507496c39325",
+  "productionVerifierOrigin": "https://apple.calcioreport.com",
+  "sandboxVerifierOrigin": "https://apple-test.calcioreport.com",
+  "appAppleId": "6821570508",
+  "stripePaymentLinkId": "plink_1T6a4ZLCMe9gtpTW2ticsWmF",
+  "appleProductionEnabled": "0"
+}

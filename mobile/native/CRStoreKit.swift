@@ -1,7 +1,28 @@
 import StoreKit
+import UIKit
 
 @objc(CRBridgeViewController)
 class CRBridgeViewController: CAPBridgeViewController {
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        // Capacitor uses WKWebView as its root view. A separate native root
+        // clips scrolling content to the safe area instead of just padding it.
+        guard let webView = webView else { return }
+        let container = UIView()
+        container.backgroundColor = UIColor(red: 0.055, green: 0.090, blue: 0.133, alpha: 1)
+        view = container
+        webView.translatesAutoresizingMaskIntoConstraints = false
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
+        container.addSubview(webView)
+        let safeArea = container.safeAreaLayoutGuide
+        NSLayoutConstraint.activate([
+            webView.topAnchor.constraint(equalTo: safeArea.topAnchor),
+            webView.bottomAnchor.constraint(equalTo: safeArea.bottomAnchor),
+            webView.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor),
+            webView.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor)
+        ])
+    }
+
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(CRStoreKitPlugin())
     }
