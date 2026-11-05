@@ -1,0 +1,80 @@
+/* Only packaged in the isolated iOS prototype. */
+body {
+  min-height: 100dvh;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+.modal {
+  top: var(--native-viewport-top, 0px);
+  bottom: auto;
+  height: var(--native-viewport-height, 100dvh);
+  box-sizing: border-box;
+  padding: max(12px, env(safe-area-inset-top, 0px))
+    max(12px, env(safe-area-inset-right, 0px))
+    max(12px, env(safe-area-inset-bottom, 0px))
+    max(12px, env(safe-area-inset-left, 0px));
+}
+.modal-content,
+#deleteAccountForm {
+  box-sizing: border-box;
+  max-width: 100%;
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+html.native-modal-open { overflow: hidden; }
+body.native-modal-open {
+  position: fixed;
+  top: var(--native-page-top, 0px);
+  left: 0;
+  right: 0;
+  overflow: hidden;
+}
+/* Preserve content height when the keyboard reduces the visible viewport.
+   Flex shrinking would otherwise collapse authMsg underneath the form. */
+.modal-content > * { flex-shrink: 0; }
+#authStandardBox:not(.hidden),
+#authResetBox:not(.hidden) {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+#authStandardBox > *, #authResetBox > * { flex-shrink: 0; }
+.native-recovery {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.modal-content input { box-sizing: border-box; width: 100%; min-width: 0; }
+.modal-content .auth-buttons { flex-wrap: wrap; }
+input, select, textarea { font-size: 16px; }
+
+/* Avoid unstyled white UIKit controls on the packaged dark interface. */
+#btnOpenAuth, #nativeRestorePurchases, #btnOpenDeleteAccount,
+.native-recovery button {
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 14px;
+  background: #1b2633;
+  color: #eef4f7;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+#nativeRestorePurchases {
+  border-color: #458e7c;
+  background: #183b38;
+}
+#btnOpenDeleteAccount { color: #ffb8b8; }
+.footer { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+#btnOpenAuth:focus-visible, .footer button:focus-visible, .native-recovery button:focus-visible {
+  outline: 2px solid #70dbbe;
+  outline-offset: 3px;
+}
+#nativeRestorePurchases:disabled { opacity: .55; cursor: wait; }
