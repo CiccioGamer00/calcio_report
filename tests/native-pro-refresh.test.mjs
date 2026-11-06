@@ -24,15 +24,19 @@ test('native entitlement refresh removes stale PRO overlays without logging in a
     } },
     getToken: () => 'existing-session', isSessionExpired: () => false,
     fetchMe: async () => ({ json }), setBadge: () => {}, daysLeft: () => 30,
-    __IS_PRO__: false,
+    hasAnalysisAccess: false,
   });
   vm.runInContext(app.slice(app.indexOf('function applyProLocks('), app.indexOf('async function authPost(')), context);
   await context.refreshTopAuthUI();
-  assert.equal(context.__IS_PRO__, true);
+  assert.equal(context.hasAnalysisAccess, true);
   assert.ok(blocks.every(b => !b.classList.contains('pro-locked')));
   json = { ok: true, now: 1000, paidUntil: 0, trialEndsAt: 1500 };
   await context.refreshTopAuthUI();
-  assert.equal(context.__IS_PRO__, false);
+  assert.equal(context.hasAnalysisAccess, true);
+  assert.ok(blocks.every(b => !b.classList.contains('pro-locked')));
+  json = { ok: true, now: 1500, paidUntil: 0, trialEndsAt: 1500 };
+  await context.refreshTopAuthUI();
+  assert.equal(context.hasAnalysisAccess, false);
   assert.ok(blocks.every(b => b.classList.contains('pro-locked')));
   json = { ok: false };
   await context.refreshTopAuthUI();

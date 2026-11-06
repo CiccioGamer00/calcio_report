@@ -1,3 +1,9 @@
+## Trial completo — candidato per collaudo, 6 novembre 2026
+
+- Branch feature/trial-completo dalla release 348b82b. Trial attivo di 7 giorni con Indicatori e Predizione. Ricerca e Giornata verificano la partita prima di mostrare il report. Cinque ID partita distinti per account e giorno Europe/Rome. Accesso PRO pagante escluso dal conteggio.
+- Nuova POST /analysis/open autenticata. /predict condivide la quota anche se chiamata direttamente. Utilizzate le tabelle già presenti nello schema di riferimento; nessuna migrazione. Le singole chiamate sportive generiche conservano il normale controllo di accesso, non sono conteggiate come report.
+- Verificati con SQLite e Worker locale limite, riapertura, richieste concorrenti, cambio giorno, accesso scaduto e disabilitato. Verificati overlay, pacchetto mobile e compilazione Worker. Serve collaudo browser/iPhone con il Worker di test aggiornato prima di pubblicare. Per il deploy partire dal bundle effettivamente in servizio e confrontarne le personalizzazioni, conservando il percorso review. Nessuna riattivazione retroattiva.
+
 ## Primo modello sperimentale e registrazione prove — 4 novembre 2026
 
 - experimental-model.mjs implementa starter-hazard-v1-experimental per almeno

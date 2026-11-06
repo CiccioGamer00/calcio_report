@@ -62,10 +62,27 @@ if (url.pathname === "/stripe/webhook" && request.method === "POST") {
     if (url.pathname === "/telemetry/ping" && request.method === "POST")
       return handleTelemetryPing(request, env);
 
-    // ✅ ROUTE: /predict (Il cuore del tuo algoritmo)
-    if (url.pathname === "/predict") {
-      const gate = await requireActiveUser(request, env); // Aggiungi questo
+    if (url.pathname === "/analysis/open" || url.pathname === "/predict") {
+      const gate = await requireActiveUser(request, env);
       if (!gate.ok) return gate.res;
+      const opening = url.pathname === "/analysis/open";
+      if (request.method !== (opening ? "POST" : "GET"))
+        return json({ error: "METHOD_NOT_ALLOWED" }, 405, corsHeaders());
+      const fixture = opening
+        ? (await request.json().catch(() => null))?.fixture
+        : url.searchParams.get("fixture");
+      const fixtureId = Number(fixture);
+      if (!/^[1-9][0-9]*$/.test(String(fixture)) || !Number.isSafeInteger(fixtureId))
+        return json({ error: "INVALID_FIXTURE" }, 400, corsHeaders());
+      if (!gate.paid) {
+        try {
+          if (!await admitTrialFixture(env.DB, gate.email, fixtureId, Date.now()))
+            return json({ error: "TRIAL_DAILY_LIMIT", message: "Hai già aperto 5 partite oggi. Puoi rivederle o aprirne altre da domani." }, 429, { ...corsHeaders(), "Cache-Control": "no-store" });
+        } catch {
+          return json({ error: "TRIAL_CHECK_UNAVAILABLE", message: "Verifica della prova temporaneamente non disponibile. Riprova." }, 503, corsHeaders());
+        }
+      }
+      if (opening) return json({ ok: true }, 200, { ...corsHeaders(), "Cache-Control": "no-store" });
       return handlePredict(request, env);
     }
 
@@ -1163,6 +1180,26 @@ function dynamicSignalAssessment(coverage, rawSignalScore) {
 /* =========================
    /predict handler (TUO, INVARIATO)
    ========================= */
+
+const trialDayFormat = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Rome" });
+
+async function admitTrialFixture(db, email, fixtureId, now) {
+  const prefix = "full-trial:" + trialDayFormat.format(now) + ":";
+  const key = prefix + fixtureId;
+  // D1 serializes this batch. A repeated or concurrent open uses the same primary key.
+  const [, , lookup] = await db.batch([
+    db.prepare("DELETE FROM trial_search_log WHERE email = ? AND search_id GLOB 'full-trial:*' AND search_id < ?")
+      .bind(email, prefix),
+    db.prepare(`INSERT INTO trial_search_log (email, search_id, created_at)
+      SELECT ?, ?, ? WHERE
+        (SELECT COUNT(*) FROM trial_search_log WHERE email = ? AND search_id GLOB ?) < 5
+      ON CONFLICT(email, search_id) DO NOTHING`)
+      .bind(email, key, now, email, prefix + "*"),
+    db.prepare("SELECT 1 AS admitted FROM trial_search_log WHERE email = ? AND search_id = ?")
+      .bind(email, key),
+  ]);
+  return lookup.results.length === 1;
+}
 
 async function handlePredict(request, env) {
   const url = new URL(request.url);
@@ -2411,7 +2448,7 @@ async function requireActiveUser(request, env) {
   const trialEnds = Number(u.trial_ends_at || 0);
   const paidUntil = Number(u.paid_until || 0);
 
-  if (now > trialEnds && now > paidUntil) {
+  if (now >= trialEnds && now >= paidUntil) {
     return {
       ok: false,
       res: json(
@@ -2427,7 +2464,7 @@ async function requireActiveUser(request, env) {
     };
   }
 
-  return { ok: true, email: sess.email };
+  return { ok: true, email: sess.email, paid: now < paidUntil };
 }
 /* =========================
    STRIPE WEBHOOK: attiva PRO automatico

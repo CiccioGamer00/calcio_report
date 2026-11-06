@@ -24,7 +24,9 @@ function harness() {
       if (beforeDelete) beforeDelete();
       db.exec('BEGIN');
       try {
-        const results = statements.map(statement => ({ success:true,
+        const results = statements.map(statement => statement.sql.startsWith("SELECT")
+          ? { results: db.prepare(statement.sql).all(...statement.args) }
+          : ({ success:true,
           meta:{changes:db.prepare(statement.sql).run(...statement.args).changes} }));
         db.exec('COMMIT');
         return results;
@@ -214,4 +216,29 @@ test('re-registration receives seven days with no counters or searches from the 
   assert.ok(next.trialEndsAt<=Date.now()+7*86400000);
   assert.equal(next.paidUntil,0);
   assert.deepEqual(trialRows(h),{usage:[],searches:[]});
+});
+
+test('trial admits five distinct fixtures atomically, shares prediction quota, and resets at midnight Rome', async () => {
+  const h = harness();
+  const { token } = await h.register();
+  const open = id => h.call('/analysis/open', {fixture:id}, token);
+  assert.equal((await h.call('/analysis/open', {fixture:1})).status, 401);
+  assert.equal((await open(0)).status, 400);
+  for (const id of [1, 1, 2, 3, 4]) assert.equal((await open(id)).status, 200);
+  const parallel = await Promise.all([open(5), open(6)]);
+  assert.deepEqual(parallel.map(r => r.status).sort(), [200, 429]);
+  assert.equal((await open(1)).status, 200);
+  assert.equal((await h.call('/predict?fixture=7', null, token, 'GET')).status, 429);
+  assert.equal(h.db.prepare('SELECT COUNT(*) AS n FROM trial_search_log').get().n, 5);
+  const admit = (id, time) => h.context.admitTrialFixture(h.env.DB, 'other@example.org', id, Date.parse(time));
+  for (const id of [1,2,3,4,5]) assert.equal(await admit(id, '2026-07-12T21:59:59Z'), true);
+  assert.equal(await admit(6, '2026-07-12T21:59:59Z'), false);
+  assert.equal(await admit(6, '2026-07-12T22:00:00Z'), true);
+  h.db.exec('UPDATE users SET trial_ends_at=1');
+  assert.equal((await open(1)).status, 402);
+  h.db.prepare('UPDATE users SET paid_until=?').run(Date.now()+60000);
+  assert.equal((await open(7)).status, 200);
+  assert.equal(h.db.prepare('SELECT COUNT(*) AS n FROM trial_search_log WHERE email=?').get(h.email).n, 5);
+  h.db.exec('UPDATE users SET disabled=1');
+  assert.notEqual((await open(7)).status, 200);
 });

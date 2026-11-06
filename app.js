@@ -72,11 +72,11 @@ function setBadge(type, text) {
 function applyProLocks(meJson) {
   const now = Number(meJson?.now || Date.now());
   const paidUntil = Number(meJson?.paidUntil || 0);
-  const isPro = now < paidUntil;
+  const hasAccess = now < paidUntil || now < Number(meJson?.trialEndsAt || 0);
 
   const proBlocks = document.querySelectorAll("[data-pro-only='1']");
   proBlocks.forEach((el) => {
-    if (isPro) el.classList.remove("pro-locked");
+    if (hasAccess) el.classList.remove("pro-locked");
     else el.classList.add("pro-locked");
   });
 }
@@ -94,6 +94,8 @@ async function refreshTopAuthUI() {
   }
 
   const { json } = await fetchMe();
+  hasAnalysisAccess = false;
+  applyProLocks(json?.ok ? json : null);
   document.getElementById("btnOpenDeleteAccount")?.classList.toggle("hidden",
     !json?.ok || !json?.accountDeletionAvailable);
 
@@ -102,7 +104,6 @@ async function refreshTopAuthUI() {
     btn.textContent = "Login";
     btn.classList.remove("pro-active", "trial-active", "expired");
     setBadge(null, "");
-    __IS_PRO__ = false;
     if (up) up.classList.remove("hidden");
     return;
   }
@@ -119,7 +120,7 @@ async function refreshTopAuthUI() {
     btn.classList.add("pro-active");
     btn.classList.remove("trial-active", "expired");
     setBadge("pro", `PRO • ${daysLeft(paidUntil, now)}g rim.`);
-    __IS_PRO__ = true;
+    hasAnalysisAccess = true;
     if (up) {
       up.textContent = "⚡ Estendi PRO · 30 giorni";
       up.classList.remove("hidden");
@@ -129,10 +130,10 @@ async function refreshTopAuthUI() {
 
   // TRIAL
   if (now < trialEndsAt) {
+    hasAnalysisAccess = true;
     btn.classList.add("trial-active");
     btn.classList.remove("pro-active", "expired");
-    setBadge("trial", `TRIAL • ${daysLeft(trialEndsAt, now)}g rim.`);
-    __IS_PRO__ = false;
+    setBadge("trial", `PRO in prova • ${daysLeft(trialEndsAt, now)}g rim.`);
     if (up) up.classList.remove("hidden");
     return;
   }
@@ -432,9 +433,8 @@ function setupAuthActions() {
       setAuthMsg(
         `✅ Registrazione completata!\n` +
           `TRIAL attivo: ${d} giorni rimanenti.\n\n` +
-          `In TRIAL vedi: Match, Arbitro, Squadre, Corner, Tiri, Falli, Indisponibili.\n` +
-          `🔒 SOLO ABBONAMENTO: Predizione Poisson e percentuali avanzate negli Indicatori.\n\n` +
-          `Quando vuoi, inserisci un codice attivazione (30 giorni) per sbloccare tutto.`,
+          `Tutti i campionati, Indicatori e Predizione inclusi. Puoi analizzare 5 partite diverse al giorno e riaprirle quando vuoi nella stessa giornata.\n\n` +
+          `Alla scadenza puoi scegliere se continuare con PRO.`,
       );
 
       await refreshTopAuthUI();
@@ -657,11 +657,10 @@ function setupTabsStage() {
     const view = btn.getAttribute("data-view");
     const isProTab = btn.getAttribute("data-pro-tab") === "1";
 
-    // gate PRO (se già hai __IS_PRO__ / goToPayment, usa quelli)
+    // gate PRO (se già hai hasAnalysisAccess / goToPayment, usa quelli)
     if (
       isProTab &&
-      typeof window.__IS_PRO__ !== "undefined" &&
-      !window.__IS_PRO__
+      !hasAnalysisAccess
     ) {
       if (typeof goToPayment === "function") goToPayment();
       return;
@@ -704,7 +703,7 @@ function setupPayPalButton() {
 // UI: Tabs + Loader overlay
 // =========================
 let __LOADER_COUNT__ = 0;
-let __IS_PRO__ = false;
+let hasAnalysisAccess = false;
 // =========================
 // HELP / TOAST (panel hints)
 // =========================
@@ -979,7 +978,7 @@ function setupTabs() {
     const isProTab =
       viewId === "predictionPanel" || viewId === "indicatorsPanel";
 
-    if (isProTab && !__IS_PRO__) return;
+    if (isProTab && !hasAnalysisAccess) return;
 
     // Se non ho fixture selezionato, non carico
     if (!selectedFixture?.id) return;
@@ -1041,7 +1040,7 @@ function setupTabs() {
     const view = btn.getAttribute("data-view");
     const isProTab = btn.getAttribute("data-pro-tab") === "1";
 
- if (isProTab && !__IS_PRO__) {
+ if (isProTab && !hasAnalysisAccess) {
   const name = (view === "predictionPanel") ? "Predizione 🧠" : "Indicatori 📊";
   const pay = window.API_CONFIG?.paymentUrl || window.API_CONFIG?.paypalUrl || "";
   const tg = window.API_CONFIG?.telegramUrl || "";
