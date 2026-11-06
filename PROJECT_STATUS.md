@@ -4,7 +4,7 @@
 - Nuova POST /analysis/open autenticata. /predict condivide la quota anche se chiamata direttamente. Utilizzate le tabelle già presenti nello schema di riferimento; nessuna migrazione. Le singole chiamate sportive generiche conservano il normale controllo di accesso, non sono conteggiate come report.
 - Verificati con SQLite e Worker locale limite, riapertura, richieste concorrenti, cambio giorno, accesso scaduto e disabilitato. Verificati overlay, pacchetto mobile e compilazione Worker. Serve collaudo browser/iPhone con il Worker di test aggiornato prima di pubblicare. Per il deploy partire dal bundle effettivamente in servizio e confrontarne le personalizzazioni, conservando il percorso review. Nessuna riattivazione retroattiva.
 
-- Admin: aggiunta manuale di 1–365 giorni PRO per utente, con 30 preimpostati e suggerimento 7. Usa la rettifica esistente.
+- Admin: aggiunta manuale di 1–365 giorni PRO per utente, con 30 preimpostati e suggerimento 7. Usa la rettifica esistente. Elenco admin compatto con dettagli apribili per account, accredito in primo piano e operazioni secondarie raccolte. Da verificare visivamente su PC e iPhone.
 
 ## Primo modello sperimentale e registrazione prove — 4 novembre 2026
 
