@@ -151,6 +151,7 @@
     <span id="miniStatus" class="muted"></span>
 
     <div id="dashboard" style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; align-items:stretch;"></div>
+    <datalist id="proDaysOptions"><option value="7"></option><option value="30"></option></datalist>
     <div id="output" style="margin-top: 12px"></div>
 
     <script>
@@ -319,7 +320,10 @@
               </td>
               <td>
                 <div class="rowbtn">
-                  <button data-act="adjust" data-delta="30" data-email="${escapeHtml(u.email)}">+30gg</button>
+                  <label>Giorni PRO da aggiungere
+                    <input data-pro-days type="number" inputmode="numeric" min="1" max="365" step="1" required value="30" list="proDaysOptions">
+                  </label>
+                  <button data-act="addDays" data-email="${escapeHtml(u.email)}">Aggiungi giorni PRO</button>
                   <button data-act="adjust" data-delta="-30" data-email="${escapeHtml(u.email)}">-30gg</button>
                   <button data-act="resolveAdjust" data-email="${escapeHtml(u.email)}">Sblocca rettifica verificata</button>
                   <button data-act="mint" data-email="${escapeHtml(u.email)}">Genera codice</button>
@@ -348,6 +352,12 @@
                   if (act === "resolveAdjust") resolveAdjustment(email);
                   if (act === "mint") await mintCode(email);
                   if (act === "saveNote") await saveNote(email);
+
+                  if (act === "addDays") {
+                    const input = btn.closest(".rowbtn").querySelector("[data-pro-days]");
+                    if (!input.reportValidity()) return;
+                    await adjustDays(email, input.valueAsNumber);
+                  }
 
                   if (act === "adjust") {
                     const delta = parseInt(btn.getAttribute("data-delta"), 10);
