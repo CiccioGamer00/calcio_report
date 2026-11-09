@@ -1,3 +1,8 @@
+## Trial completo online — 9 novembre 2026
+
+- PR #20 pubblicata su main 88d8d1c. Worker pubblico a42fb59c-3f4c-4cd0-8fb1-657a104bef3a. Proprietario conferma test pubblico riuscito.
+- Nuova ricerca da barra, Invio o suggerimento riporta subito a Match e mostra il caricamento. Giornata conserva il passaggio a Match dopo apertura riuscita.
+
 ## Admin web mobile — 3 novembre 2026
 
 - Richiesta proprietario: amministrare/bloccare/riabilitare utenti dal telefono.

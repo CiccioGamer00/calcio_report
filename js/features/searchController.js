@@ -746,6 +746,7 @@
     hideLineups();
     resetLegacyPanels();
     setMatch(`<p class="muted"><em>Caricamento match...</em></p>`);
+    document.querySelector('#panelTabs .tab[data-view="match"]')?.click();
 
     if (typeof window.markWelcomeDone === "function") window.markWelcomeDone();
 
