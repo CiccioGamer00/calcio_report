@@ -695,6 +695,29 @@
       : { result: { ...result, kind: "empty" } };
   }
 
+  async function openAnalysis(searchId, team, fixture, signal) {
+    let message;
+    try {
+      const response = await fetch(window.API_CONFIG.baseUrl + "/analysis/open", {
+        method: "POST",
+        headers: { Authorization: "Bearer " + getToken(), "Content-Type": "application/json" },
+        body: JSON.stringify({ fixture: fixture.id }),
+        signal,
+      });
+      const data = await response.json();
+      if (!window.crIsSearchActive(searchId)) return false;
+      if (response.ok && data.ok) return window.crCommitSelection(searchId, team, fixture);
+      message = data.message || (response.status === 401 ? "Accedi per aprire la partita." : "Impossibile aprire la partita. Riprova.");
+    } catch {
+      if (!window.crIsSearchActive(searchId) || signal.aborted) return false;
+      message = "Impossibile verificare l’accesso. Controlla la connessione e riprova.";
+    }
+    window.crSetSearchFailure(searchId, "error", { message });
+    setMatch(`<p class="bad"><em>${safe(message)}</em></p>`);
+    if (typeof showToast === "function") showToast({ title: "Analisi partita", text: safe(message), allowDisable: false });
+    return false;
+  }
+
   async function startTeamSearch(forcedTeam = null) {
     const query = String(forcedTeam?.name || currentQuery()).trim();
     if (query.length < 2) return;
@@ -834,7 +857,7 @@
         return;
       }
 
-      if (!window.crCommitSelection(searchId, team, fixture)) return;
+      if (!await openAnalysis(searchId, team, fixture, signal)) return;
 
       window.CR_STATE.matchExtras.nextTeam = nextTeamFixture;
       renderMainFixture(rawFixture, nextTeamFixture, team);
@@ -940,7 +963,7 @@
     if (input) input.value = team.name;
     if (typeof window.markWelcomeDone === "function") window.markWelcomeDone();
 
-    if (!window.crCommitSelection(searchId, team, fixture)) return false;
+    if (!await openAnalysis(searchId, team, fixture, signal)) return false;
 
     window.CR_STATE.matchExtras.nextTeam = null;
     window.CR_STATE.matchExtras.nextOpponent = null;

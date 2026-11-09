@@ -7,150 +7,79 @@
     <meta name="referrer" content="no-referrer" />
     <title>Admin Calcio Report</title>
     <style>
-      body {
-        font-family: Arial;
-        background: #111;
-        color: #fff;
-        padding: 20px;
-      }
-      input,
-      button,
-      textarea {
-        padding: 8px;
-        margin: 5px 0;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 20px;
-      }
-      th,
-      td {
-        border: 1px solid #333;
-        padding: 8px;
-        text-align: left;
-        vertical-align: top;
-      }
-      button {
-        cursor: pointer;
-      }
-      .pro {
-        color: #00ff88;
-        font-weight: 700;
-      }
-      .trial {
-        color: #ffaa00;
-        font-weight: 700;
-      }
-      .expired {
-        color: #ff4444;
-        font-weight: 700;
-      }
-      textarea {
-        width: 100%;
-        min-height: 44px;
-        resize: vertical;
-        background: #1a1a1a;
-        color: #fff;
-        border: 1px solid #333;
-        border-radius: 6px;
-      }
-      .muted {
-        opacity: 0.85;
-      }
-      .rowbtn {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-      pre {
-        white-space: pre-wrap;
-      }
-    
-      .dashcard{
-        background:#1a1a1a;
-        border:1px solid #333;
-        border-radius:10px;
-        padding:10px 12px;
-        min-width: 180px;
-        flex: 0 0 auto;
-      }
-      .dashcard .k{ font-size:12px; opacity:.8; }
-      .dashcard .v{ font-size:20px; font-weight:700; margin-top:4px; }
-      .danger{ color:#ff6b6b; font-weight:700; }
-      .ok{ color:#00ff88; font-weight:700; }
-
-      * { box-sizing: border-box; }
-      body { max-width: 1500px; margin: auto; padding: 16px; }
-      input, select, button, textarea { font: inherit; font-size: 16px; }
-      input, select, button { min-height: 48px; max-width: 100%; }
-      input { width: min(100%, 540px); }
-      button { border-radius: 8px; padding: 10px 14px; }
-      button:disabled { opacity: .55; cursor: wait; }
-      td { overflow-wrap: anywhere; }
-      .access-box { padding: 16px; border: 1px solid #444; border-radius: 12px; margin: 16px 0; }
-      @media (max-width: 760px) {
-        table, tbody, tr, td { display: block; width: 100%; }
-        tr:first-child { display: none; }
-        tr { border: 1px solid #555; border-radius: 12px; padding: 8px; margin-bottom: 16px; }
-        td { border: 0; padding: 7px; }
-        td::before { content: attr(data-label); display: block; color: #aaa; font-size: 13px; margin-bottom: 3px; }
-        .rowbtn button { flex: 1 1 130px; }
-        .dashcard { flex: 1 1 140px; min-width: 0; }
-        #searchEmail { min-width: 0 !important; }
+      :root { color-scheme: dark; --bg:#0b121e; --panel:#142032; --border:#36475b; --muted:#acbbca; --green:#69e5ac; }
+      * { box-sizing:border-box; }
+      body { margin:auto; max-width:1120px; padding:clamp(16px,4vw,48px); font:16px/1.45 system-ui,sans-serif; color:#edf3fa; background:var(--bg); }
+      h1 { font-size:clamp(26px,4vw,38px); margin:0 0 18px; letter-spacing:-.035em; }
+      h2 { font-size:22px; margin:24px 0 10px; }
+      button,input,select,textarea { font:inherit; color:inherit; border:1px solid var(--border); border-radius:8px; padding:9px 12px; max-width:100%; }
+      input,select,textarea { background:#0c1725; min-width:0; }
+      button { background:#22334a; cursor:pointer; min-height:44px; }
+      button:hover { background:#304560; }
+      button:disabled { opacity:.55; }
+      :focus-visible { outline:2px solid var(--green); outline-offset:2px; }
+      .primary { background:var(--green); color:#10221d; border-color:transparent; font-weight:650; }
+      .primary:hover { background:#92efc4; }
+      .muted,.k,.meta { color:var(--muted); font-size:.88rem; }
+      .toolbar,.rowbtn { display:flex; gap:8px; flex-wrap:wrap; align-items:end; }
+      .toolbar label,.rowbtn label { display:grid; gap:4px; }
+      #adminKey,#searchEmail,#reenableEmail { width: min(100%,22rem); }
+      summary { cursor:pointer; }
+      .recovery { margin:12px 0; }
+      .recovery summary,.secondary summary { padding:10px 0; color:var(--muted); }
+      #dashboard { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(145px,100%),1fr)); gap:8px; margin:18px 0; }
+      .dashcard,.account { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:12px 16px; min-width:0; overflow-wrap:anywhere; }
+      .v { font-size:1.35rem; font-weight:650; }
+      #output { margin-top:12px; }
+      .account { margin-bottom:8px; }
+      .account > summary { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(10rem,auto) auto; gap:14px; align-items:center; min-height:44px; list-style:none; }
+      .account > summary::-webkit-details-marker { display:none; }
+      .manage { color:var(--green); }
+      .manage::after { content:" ▾"; }
+      .account[open] .manage::after { content:" ▴"; }
+      .badge { border-radius:5px; padding:3px 8px; font-size:.8rem; font-weight:700; }
+      .pro { background:#194335; color:#91ebbb; }
+      .trial { background:#42351f; color:#ffda8e; }
+      .expired { background:#3a2934; color:#ffc1ce; }
+      .detail { border-top:1px solid var(--border); margin-top:10px; padding-top:16px; }
+      [data-pro-days] { width:7rem; }
+      .secondary { margin-top:8px; }
+      textarea { display:block; width:min(100%,34rem); margin:4px 0 8px; resize:vertical; }
+      .danger,[data-act=disable] { color:#ffb1b1; }
+      pre { white-space:pre-wrap; overflow-wrap:anywhere; }
+      @media (max-width:650px) {
+        .account > summary { grid-template-columns:minmax(0,1fr) auto; gap:6px 12px; }
+        .manage { justify-self:end; }
+        .toolbar label { width:100%; }
       }
     </style>
   </head>
 
   <body>
-    <h1>Admin Utenti</h1>
-
-    <p>Gestisci accessi e giorni PRO dal computer o dal telefono.</p>
-    <input id="workerUrl" type="hidden" value="https://api.calcioreport.com" />
-    <label for="adminKey">Chiave amministratore:</label><br />
-    <input
-      id="adminKey"
-      size="60"
-      type="password"
-      placeholder="Inserisci la tua chiave amministratore" autocomplete="off" autocapitalize="none" spellcheck="false"
-    /><br />
-
-    <button id="btnLoad">Carica utenti</button>
-    <button id="btnLock">Esci e cancella la chiave</button>
-    <p class="muted">La chiave non viene salvata dalla pagina. Inseriscila solo qui; non condividerla in chat.</p>
-    <section class="access-box">
-      <h2>Riabilita un utente</h2>
-      <p>Gli utenti bloccati non compaiono nell’elenco. Inserisci l’email esatta per riabilitare un account esistente.</p>
-      <label for="reenableEmail">Email utente</label><br />
-      <input id="reenableEmail" type="email" autocomplete="off" autocapitalize="none" spellcheck="false" />
-      <button id="btnReenable">Riabilita accesso</button>
-      <p class="muted">Non aggiunge giorni PRO e non ricrea account cancellati.</p>
-    </section>
-    <div
-      style="
-        margin-top: 10px;
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        align-items: center;
-      "
-    >
-      <input
-        id="searchEmail"
-        placeholder="Cerca email..."
-        style="min-width: 260px"
-      />
-      <select id="filterStatus">
-        <option value="">Tutti</option>
-        <option value="PRO">Solo PRO</option>
-        <option value="TRIAL">Solo TRIAL</option>
-        <option value="SCADUTO">Solo SCADUTI</option>
-      </select>
-      <button id="btnApplyFilters">Applica filtri</button>
+    <h1>Gestione utenti</h1>
+    <input id="workerUrl" type="hidden" value="https://api.calcioreport.com">
+    <div class="toolbar">
+      <label>Chiave amministratore<input id="adminKey" type="password" autocomplete="off" autocapitalize="none" spellcheck="false"></label>
+      <button id="btnLoad" class="primary">Carica utenti</button>
+      <button id="btnLock">Esci e cancella chiave</button>
     </div>
-    <span id="miniStatus" class="muted"></span>
-
-    <div id="dashboard" style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; align-items:stretch;"></div>
+    <details class="recovery">
+      <summary>Riabilita un utente bloccato</summary>
+      <div class="toolbar">
+        <label>Email dell’account<input id="reenableEmail" type="email" autocomplete="off" autocapitalize="none" spellcheck="false"></label>
+        <button id="btnReenable">Riabilita accesso</button>
+      </div>
+    </details>
+    <div id="dashboard"></div>
+    <h2>Elenco utenti</h2>
+    <div class="toolbar">
+      <input id="searchEmail" placeholder="Cerca per email" aria-label="Cerca per email">
+      <select id="filterStatus" aria-label="Filtra per stato">
+        <option value="">Tutti gli stati</option><option>PRO</option><option>TRIAL</option><option>SCADUTO</option>
+      </select>
+      <span id="miniStatus" class="muted"></span>
+    </div>
+    <datalist id="proDaysOptions"><option value="7"></option><option value="30"></option></datalist>
     <div id="output" style="margin-top: 12px"></div>
 
     <script>
@@ -254,7 +183,7 @@
           <div class="dashcard"><div class="k">Attivi (7d)</div><div class="v">${fmtN(s.active7d)}</div></div>
           <div class="dashcard"><div class="k">Nuovi PRO (24h)</div><div class="v">${fmtN(s.newPro24h)}</div></div>
           <div class="dashcard"><div class="k">Community · interessati</div><div class="v">${Number.isSafeInteger(s.communityInterested) && s.communityInterested >= 0 ? fmtN(s.communityInterested) : "Non disponibile"}</div><div class="k">Account unici, esclusi disabilitati e cancellati</div></div>
-          <div class="dashcard" style="display:flex; align-items:center; gap:10px;">
+          <div class="dashcard" style="display:grid; align-content:center; gap:6px;">
             <button id="btnRefreshDash">Aggiorna dashboard</button>
             <span class="muted">${new Date(s.now).toLocaleString()}</span>
           </div>
@@ -288,54 +217,44 @@
                 return;
               }
 
-              let html =
-                "<table><tr>" +
-                "<th>Email</th><th>Status</th>" +
-                "<th>Trial gg</th><th>Trial fine</th>" +
-                "<th>Pro gg</th><th>Pro fine</th>" +
-                "<th>Ultima attività</th><th>Creato</th>" +
-                "<th>Note</th>" +
-                "<th>Azioni</th>" +
-                "</tr>";
-
-              for (const u of users) {
-                const trialDays = daysLeft(u.trialEndsAt);
-                const proDays = daysLeft(u.paidUntil);
-                const cls = statusClass(u.status);
-
-                html += `
-            <tr>
-              <td>${escapeHtml(u.email)}</td>
-              <td class="${cls}">${escapeHtml(u.status || "SCADUTO")}</td>
-              <td>${trialDays}</td>
-              <td>${fmtDate(u.trialEndsAt)}</td>
-              <td>${proDays}</td>
-              <td>${fmtDate(u.paidUntil)}</td>
-              <td>${fmtDate(u.lastSeenAt)}</td>
-              <td>${fmtDate(u.createdAt)}</td>
-              <td>
-                <textarea data-note-email="${escapeHtml(u.email)}">${escapeHtml(u.note)}</textarea>
-                <button data-act="saveNote" data-email="${escapeHtml(u.email)}">Salva nota</button>
-              </td>
-              <td>
-                <div class="rowbtn">
-                  <button data-act="adjust" data-delta="30" data-email="${escapeHtml(u.email)}">+30gg</button>
-                  <button data-act="adjust" data-delta="-30" data-email="${escapeHtml(u.email)}">-30gg</button>
-                  <button data-act="resolveAdjust" data-email="${escapeHtml(u.email)}">Sblocca rettifica verificata</button>
-                  <button data-act="mint" data-email="${escapeHtml(u.email)}">Genera codice</button>
-                  <button data-act="disable" data-email="${escapeHtml(u.email)}">Disabilita</button>
-                </div>
-              </td>
-            </tr>
-          `;
-              }
-
-              html += "</table>";
-              out.innerHTML = html;
-              const labels = ["Email", "Stato", "Giorni trial", "Fine trial", "Giorni PRO", "Fine PRO", "Ultima attività", "Registrato", "Note", "Azioni"];
-              out.querySelectorAll("tr").forEach((row) => {
-                row.querySelectorAll("td").forEach((cell, index) => cell.setAttribute("data-label", labels[index]));
-              });
+              out.innerHTML = users.map((u) => {
+                const email = escapeHtml(u.email);
+                const expiry = u.status === "PRO" ? u.paidUntil : u.status === "TRIAL" ? u.trialEndsAt : Math.max(u.trialEndsAt || 0, u.paidUntil || 0);
+                return `
+                  <details class="account">
+                    <summary>
+                      <strong>${email}</strong>
+                      <span class="badge ${statusClass(u.status)}">${escapeHtml(u.status || "SCADUTO")}</span>
+                      <span class="meta">Scadenza · ${fmtDate(expiry)}</span>
+                      <span class="manage">Gestisci</span>
+                    </summary>
+                    <div class="detail">
+                      <div class="rowbtn">
+                        <label>Giorni PRO da aggiungere
+                          <input data-pro-days type="number" inputmode="numeric" min="1" max="365" step="1" required value="30" list="proDaysOptions">
+                        </label>
+                        <button class="primary" data-act="addDays" data-email="${email}">Aggiungi giorni PRO</button>
+                      </div>
+                      <details class="secondary">
+                        <summary>Dettagli e note</summary>
+                        <p>Trial · ${daysLeft(u.trialEndsAt)} giorni · Fine ${fmtDate(u.trialEndsAt)}<br>
+                           PRO · ${daysLeft(u.paidUntil)} giorni · Fine ${fmtDate(u.paidUntil)}<br>
+                           Registrato · ${fmtDate(u.createdAt)}<br>Ultima attività · ${fmtDate(u.lastSeenAt)}</p>
+                        <label>Nota interna<textarea data-note-email="${email}">${escapeHtml(u.note)}</textarea></label>
+                        <button data-act="saveNote" data-email="${email}">Salva nota</button>
+                      </details>
+                      <details class="secondary">
+                        <summary>Altre operazioni</summary>
+                        <div class="rowbtn">
+                          <button data-act="mint" data-email="${email}">Genera codice</button>
+                          <button data-act="adjust" data-delta="-30" data-email="${email}">Sottrai 30 giorni PRO</button>
+                          <button data-act="resolveAdjust" data-email="${email}">Sblocca rettifica verificata</button>
+                          <button data-act="disable" data-email="${email}">Disabilita accesso</button>
+                        </div>
+                      </details>
+                    </div>
+                  </details>`;
+              }).join("");
 
               out.querySelectorAll("button[data-act]").forEach((btn) => {
                 btn.addEventListener("click", async () => {
@@ -348,6 +267,12 @@
                   if (act === "resolveAdjust") resolveAdjustment(email);
                   if (act === "mint") await mintCode(email);
                   if (act === "saveNote") await saveNote(email);
+
+                  if (act === "addDays") {
+                    const input = btn.closest(".rowbtn").querySelector("[data-pro-days]");
+                    if (!input.reportValidity()) return;
+                    await adjustDays(email, input.valueAsNumber);
+                  }
 
                   if (act === "adjust") {
                     const delta = parseInt(btn.getAttribute("data-delta"), 10);
@@ -518,9 +443,7 @@
               finally { btn.disabled = false; }
             });
             document.getElementById("btnLoad").addEventListener("click", loadUsers);
-            document
-              .getElementById("btnApplyFilters")
-              .addEventListener("click", () => renderUsers(__USERS__));
+
             document
               .getElementById("searchEmail")
               .addEventListener("input", () => renderUsers(__USERS__));
