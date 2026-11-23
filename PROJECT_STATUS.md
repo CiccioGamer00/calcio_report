@@ -1,3 +1,21 @@
+## Giornata: stato partite e controllo ricerca — 23 novembre 2026
+
+- Richiesta proprietario: distinguere le partite concluse prima di aprirle.
+- Frontend: badge testuale Conclusa per FT/AET/PEN; In corso, Da giocare,
+  Rinviata, Annullata, Interrotta e Stato non disponibile negli altri casi.
+- Composizione round conserva la cache esistente. Gli stati sono riletti tramite
+  `/fixtures?ids=...` (massimo 20 per richiesta, cache Worker 3 minuti), endpoint
+  verificato dal Worker pubblico con sessione autorizzata. Nessun deploy Worker.
+- Test comportamento: stati, aggiornamento dopo cache composizione, fallimento
+  rete senza falsi Conclusa. Test integrazione Giornata e sintassi superati.
+- Recuperati oggi gli esiti Venezia–Udinese 2–1 e Inter–Como 2–0, tramite Worker.
+  Marcatori: 62 presenze riconciliate, 4 giocatori marcatori. Ammoniti in campo:
+  61 esiti verificabili, 2 positivi; 1 escluso per tempo del cartellino ambiguo
+  rispetto alla partecipazione. Questi conteggi non rappresentano pronostici.
+- I registri sperimentali del 4 novembre erano waiting_official_lineups senza
+  previsioni. Nessuna accuratezza prospettica calcolabile; nessun dato retrodatato.
+- Pubblicazione della modifica: verificare merge/deploy prima di dichiararla online.
+
 ## Trial completo online — 9 novembre 2026
 
 - PR #20 pubblicata su main 88d8d1c. Worker pubblico a42fb59c-3f4c-4cd0-8fb1-657a104bef3a. Proprietario conferma test pubblico riuscito.
