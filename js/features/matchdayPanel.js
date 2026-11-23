@@ -82,6 +82,33 @@
     };
   }
 
+  // Round membership is cached long-term; mutable statuses use a separate
+  // batched endpoint (3 minute edge TTL), never the 30 day round response.
+  async function loadStatuses(fixtures) {
+    const ids = fixtures.map(f => f.id);
+    const results = [];
+    for (let start = 0; start < ids.length; start += 20) {
+      const result = await window.apiGetV2(
+        `/fixtures?ids=${ids.slice(start, start + 20).join("-")}&timezone=Europe/Rome`,
+        { retries: 0, cache: true },
+      );
+      if (result.kind !== "success") return fixtures;
+      results.push(...(result.arr || []));
+    }
+    const statuses = new Map(results.map(f => [f.fixture?.id, f.fixture?.status?.short]));
+    return fixtures.map(f => ({ ...f, status: statuses.get(f.id) }));
+  }
+
+  function statusLabel(status) {
+    if (["FT", "AET", "PEN"].includes(status)) return "Conclusa";
+    if (["1H", "HT", "2H", "ET", "BT", "P", "LIVE"].includes(status)) return "In corso";
+    if (status === "PST") return "Rinviata";
+    if (status === "CANC") return "Annullata";
+    if (["SUSP", "INT", "ABD"].includes(status)) return "Interrotta";
+    if (["NS", "TBD"].includes(status)) return "Da giocare";
+    return "Stato non disponibile";
+  }
+
   function renderLeagueOptions() {
     const select = document.getElementById("matchdayLeague");
     if (!select || select.options.length) return;
@@ -114,6 +141,7 @@
               <strong>${safe(fixture.away.name)}</strong>
               ${fixture.away.logo ? `<img class="matchdayLogo" src="${safe(fixture.away.logo)}" alt="" />` : ""}
             </span>
+            <span class="matchdayStatus">${statusLabel(fixture.status)}</span>
           </button>`,
       )
       .join("");
@@ -219,11 +247,14 @@
       return;
     }
 
+    const updatedFixtures = await loadStatuses(fixtures);
+    if (seq !== loadSeq) return;
+
     renderMatchday({
       league,
       season,
       round: resolved,
-      fixtures,
+      fixtures: updatedFixtures,
     });
   }
 
