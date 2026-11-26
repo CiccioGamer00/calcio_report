@@ -77,5 +77,7 @@ Aggiornato 26/11/2026. PR #22, feature/onboarding-conversion. Nessun merge/deplo
 - **Rifiniture facoltative.** La nota su carta e rinnovo è piccola, soprattutto su mobile. Nell’invito aperto da tastiera il contorno rettangolare del focus attira l’occhio sul titolo: si può armonizzarlo con la card mantenendolo riconoscibile. Il verdetto riguarda la chiarezza dell’offerta; il tasso di iscrizione richiede dati reali.
 
 ## ONB-07 — Gate release
+- Review statica Worker guest completata; errori non cacheati, scope e budget confermati sul codice. Test aggiuntivi account/pagamenti: commit 7003801, run 45854361253, 28/28 PASS, zero skip. CI guest 45854361061 SUCCESS. Nessuna modifica applicativa dopo PASS UX.
+- Procedura e prossimo incarico ONB-07A (sola lettura dashboard Cloudflare/API-Football e confronto candidato/live) in docs/onboarding-release-gate.md. Budget e retention proposti, da confermare. Nessun deploy senza approvazione.
 - Verifica privacy/retention, budget e migrazione D1 isolata, compatibilità Apple esistente, rollback e ordine Worker/frontend. Conferma esplicita prima di qualsiasi deploy o merge. GUEST_ENABLED e guestEnabled default off.
 - ONB-08 analytics resta milestone indipendente; niente telemetria nuova in questo rilascio.
