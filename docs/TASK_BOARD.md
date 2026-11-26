@@ -9,7 +9,8 @@ Aggiornato 26/11/2026. PR #22, feature/onboarding-conversion. Nessun merge/deplo
 | ONB-03 Test automatici | ChatGPT / GitHub Actions | Completato: 6 guest + 5 regressioni + 3 scenari browser PASS |
 | ONB-04 Correzioni backend | Codex | CI verde; solo difetti review riproducibili |
 | ONB-05 Correzioni frontend | Codex | Solo dopo esito CI / review |
-| ONB-06A Collaudo visivo | Work | Pronto: sola review screenshot su ambiente sintetico |
+| ONB-06A Collaudo visivo | Work | PASS con osservazioni |
+| ONB-06B Restyling conversione | ChatGPT / Work | Proposta, attesa approvazione implementazione |
 | ONB-07 Rilascio | ChatGPT + proprietario | In attesa di approvazione |
 | ONB-08 Analytics admin | Separato | Non iniziare ora |
 
@@ -53,6 +54,14 @@ Aggiornato 26/11/2026. PR #22, feature/onboarding-conversion. Nessun merge/deplo
 - **Facoltativo · anteprima PRO** (`js/features/teamFlow.js`, `style.css`): il match resta visibile e l’invito a sbloccare Predizione compare in basso. Su desktop il pulsante è piccolo e lontano dal testo; su mobile la scheda successiva appare tagliata al bordo della barra. Avvicinare il pulsante alla spiegazione e rendere più evidente lo scorrimento delle schede.
 - **Facoltativo · prima partita mobile** (`app.js`, `style.css`): prima di premere «Chiudi», il suggerimento «Scheda Match» copre i nomi delle squadre. Un suggerimento più compatto lascerebbe subito visibile il risultato della ricerca.
 
+
+## ONB-06B — Proposta restyling conversione PRO (da approvare prima del codice)
+- Feedback del proprietario: inviti visivamente anonimi. Direzione apprezzata: premium sportivo, oro riservato alla promozione PRO, verde/blu identità corrente; niente banner aggressivi.
+- Obiettivo prodotto: capire perché la seconda partita è bloccata, cosa si ottiene con la prova, quale azione fare. Card distinta, headline, benefici, CTA principale dorata, accesso e ritorno come azioni secondarie. Condizioni esatte: 7 giorni, 5 partite distinte/giorno, nessuna carta, nessun rinnovo automatico.
+- Anteprima PRO guest: mostrare struttura/benefici di Indicatori e Predizione con lucchetto e segnaposti senza numeri inventati o chiamate premium. CTA vicino alla spiegazione. Non alterare gate server, sessione o pagamenti. Correggere suggerimento mobile che copre le squadre in un piccolo task separato se necessario.
+- File previsti: index.html, style.css, app.js, js/features/teamFlow.js e soli test/asset pertinenti. Implementazione a blocchi: prima invito, poi anteprima premium. Screenshot prima/dopo desktop/mobile e verifica CTA esplicite, accessibilità, niente overflow e match preservato. CI automatica per regressioni toccate.
+- Nessuna modifica applicativa ancora effettuata; non pubblicare. Gate sicurezza/retention/budget/iPhone rimangono aperti.
+- Nuovo criterio permanente: review prodotto e conversione in AGENTS.md; PASS tecnico non equivale a PASS commerciale.
 
 ## ONB-07 — Gate release
 - Verifica privacy/retention, budget e migrazione D1 isolata, compatibilità Apple esistente, rollback e ordine Worker/frontend. Conferma esplicita prima di qualsiasi deploy o merge. GUEST_ENABLED e guestEnabled default off.
