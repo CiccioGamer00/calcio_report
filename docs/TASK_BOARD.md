@@ -19,11 +19,15 @@ Aggiornato 26/11/2026. PR #22, feature/onboarding-conversion. Nessun merge/deplo
 - Commit 9227b48 aggiunge 5 file di regressione mirati e il browser sintetico di Work (desktop, 390 e 375 px); run 45808206165: tutti e tre i job SUCCESS; 6 guest / 0 fail, 5 regressioni / 0 fail (20 script analizzati, asset 20261126r2), 3 scenari browser PASS (1366×850 pulsante, 390×844 Invio, 375×812 suggerimento; refresh, anteprima premium, annulla, registrazione e ripresa). Non confondere Chromium emulato con iPhone reale.
 - Niente API live, nessun accesso a D1 remoto.
 
-## ONB-04A — Compatibilità runtime Cloudflare (prossimo incarico Codex)
+## ONB-04A — Compatibilità runtime Cloudflare (PASS)
 - Base verificata: b128b09, PR #22. Run 45808206165 verde: non ripetere i 14 controlli già superati se non conseguenza di una modifica.
 - Obiettivo unico: eseguire il Worker guest con runtime Wrangler/Miniflare e D1 locale effettivo, applicando schema account sintetico e migrazione guest-v1.sql; relay mock, nessuna chiamata reale. Verificare avvio, flag off, sessione, apertura una fixture valida, seconda distinta rifiutata, persistenza/riapertura e blocco premium. Non cambiare la policy 180 giorni/500 MISS giornalieri: decisioni di release separate.
 - File ammessi: worker/worker.js (solo difetto runtime guest riprodotto), worker/migrations/guest-v1.sql, test/config locale dedicato e documentazione di consegna. Non modificare frontend, OVH, Apple, main o servizi remoti. Relay versionato verificato staticamente: roots teams, fixtures, standings, injuries ammessi.
 - Stop al primo risultato completo: PASS con comando riproducibile e log sintetico oppure BLOCKED con errore preciso; eventuale fix circoscritto e commit. Aggiornare questa sezione e checkpoint iniziale di PROJECT_STATUS.md. Non passare a ONB-05/06/07.
+
+- Esito del 26 novembre: PASS sul Worker del commit 5d24a47, test 59cb2de. Node 24.22.3, Miniflare 4.20260730.0, workerd 1.20260730.1, compatibility date 2026-07-01. Schema account sintetico e migrazione guest applicati a D1 locale temporaneo. Nessuna correzione al backend.
+- Comando riproducibile dalla radice: `npm install --prefix tests/onb-04a --no-save --package-lock=false --no-audit --no-fund miniflare@4.20260730.0 && node tests/onb-04a/runtime.cjs`
+- Log: `PASS ONB-04A: flag off 404, session 200, open 101, second 409, restart/reopen 101, premium 403/403, mock calls 2`. Il test intercetta tutte le richieste in uscita. I 14 controlli precedenti non sono stati rilanciati.
 
 ## ONB-04 — Solo backend (se necessario)
 - File ammessi: worker/worker.js (solo guest e trasporto pertinente), worker/migrations/guest-v1.sql, tests/guest-analysis.test.mjs, tests/helpers/guest-sandbox.mjs.

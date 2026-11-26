@@ -6,7 +6,8 @@
 - Copy home/ricerca completato da ChatGPT, 8 verifiche statiche. Claim “Oltre il risultato. Dentro la partita.”, CTA “Analizza la partita”.
 - Work ha consegnato candidato Worker/D1 e frontend guest (b12ab55), migrazione guest-v1.sql, test e asset 20261126r2. Flag Worker GUEST_ENABLED e frontend guestEnabled default off. Non dichiarare guest online.
 - ChatGPT ha attivato CI su ramo dedicato. Run 45808206165 (9227b48) SUCCESS: 6 test guest/0 fail, 5 regressioni/0 fail (20 script, asset, Giornata, predizione, admin), 3 scenari Chromium PASS (1366x850, 390x844, 375x812; click/Invio/suggerimento, refresh, premium preview, annulla, registrazione e ripresa). Relay simulato e SQLite locale; nessun dato o API reale. Non ripetere senza modifiche rilevanti.
-- Prossimo: review mirata e decisioni su durata quota/retention (candidato 180 giorni), cap API guest (default 500 MISS/giorno, verificare budget reale) e scope dati; collaudo isolato D1/Worker reale e iPhone, non ancora provati. Chromium emulato non è iPhone. Nessun test visuale con screenshot effettuato in questa sessione.
+- ONB-04A PASS (test 59cb2de, base 5d24a47): Worker avviato con Miniflare/workerd e D1 locale, prima partita recuperata dopo riavvio, seconda distinta e premium bloccati. Due chiamate al relay simulato. Nessun fix backend. Comando e log in docs/TASK_BOARD.md. Incarico chiuso.
+- Prossimo: review mirata e decisioni su durata quota/retention (candidato 180 giorni), cap API guest (default 500 MISS/giorno, verificare budget reale) e scope dati; collaudo iPhone ancora da eseguire. Chromium emulato non è iPhone. Nessun test visuale con screenshot effettuato in questa sessione.
 - ONB-04/05 solo bug riproducibili; ONB-06 Work solo collaudo mirato dopo review. ONB-07 rilascio con approvazione esplicita; analytics separato ONB-08. Non modificare OVH, Apple, pagamenti o DB produzione.
 
 ### Storico (consultare soltanto se pertinente)
