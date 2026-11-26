@@ -408,6 +408,7 @@ function setupAuthActions() {
       if (me?.json?.ok) applyProLocks(me.json);
 
       closeAuthModal();
+      window.crGuest?.authComplete();
     } else {
       setAuthMsg(authErrorMessage(res, "Errore login."));
     }
@@ -441,6 +442,7 @@ function setupAuthActions() {
       if (json?.ok) applyProLocks(json);
 
       closeAuthModal();
+      window.crGuest?.authComplete();
     } else {
       setAuthMsg(authErrorMessage(res, "Errore registrazione."));
     }
@@ -1040,6 +1042,13 @@ function setupTabs() {
     const view = btn.getAttribute("data-view");
     const isProTab = btn.getAttribute("data-pro-tab") === "1";
 
+ if (window.crGuest?.enabled() && (isProTab || view==="matchdayPanel")) {
+    const title = view==="predictionPanel" ? "Predizione" : view==="indicatorsPanel" ? "Indicatori" : "Giornata";
+    showToast({title,text: view==="matchdayPanel" ? "Consulta il programma del campionato con la prova gratuita." :
+      title==="Indicatori" ? "Confronta gli indicatori avanzati delle due squadre." : "Scopri le probabilità dei diversi esiti del match.",
+      allowDisable:false,ctaLabel:"Sblocca con la prova gratuita",ctaAction:()=>openAuthModal("Iscriviti gratis per iniziare la prova PRO.")});
+    return;
+  }
  if (isProTab && !hasAnalysisAccess) {
   const name = (view === "predictionPanel") ? "Predizione 🧠" : "Indicatori 📊";
   const pay = window.API_CONFIG?.paymentUrl || window.API_CONFIG?.paypalUrl || "";

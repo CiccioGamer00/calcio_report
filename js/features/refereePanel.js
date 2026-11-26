@@ -205,10 +205,11 @@ async function loadRefereeHistory() {
     const ref = normalizeRefName(refereeName).raw;
     const q = encodeURIComponent(ref);
 
-    const all1 = await apiGet(
+    const guest = window.crGuest?.enabled();
+    const all1 = await apiGet(guest ? "/referee-history" :
       `/fixtures?referee=${q}&season=${season}&from=${from}&to=${to}&status=FT&timezone=Europe/Rome`,
     );
-    const all2 = await apiGet(
+    const all2 = guest ? {arr:[]} : await apiGet(
       `/fixtures?referee=${q}&season=${season - 1}&from=${from}&to=${to}&status=FT&timezone=Europe/Rome`,
     );
 
@@ -219,7 +220,7 @@ async function loadRefereeHistory() {
     if (all2.ok && !all2.errors) pool = pool.concat(all2.arr);
     if (pool.length > 0) usedGlobal = true;
 
-    if (pool.length === 0) {
+    if (!guest && pool.length === 0) {
       if (!selectedFixture?.leagueId) {
         refDiv.innerHTML = `<p class="bad"><em>Non ho leagueId: impossibile fallback.</em></p>`;
         return;

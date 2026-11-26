@@ -2686,3 +2686,7 @@ body {
   font-weight: 700;
   color: var(--muted);
 }
+
+#guestStatus:empty { display: none; }
+#guestInvite { margin-block: 1rem; }
+#guestInvite .btn { min-height: 44px; margin-bottom: .35rem; }

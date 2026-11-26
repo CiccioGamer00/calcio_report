@@ -718,10 +718,85 @@
     return false;
   }
 
+  let pendingGuestQuery = "";
+
+  function renderGuestFixture(rawFixture, chosenTeam = rawFixture.teams.home) {
+    const fixture = normalizeFixture(rawFixture);
+    if (!validFixture(fixture)) return;
+    const searchId = window.crNextSearchId(chosenTeam.name);
+    resetLegacyPanels();
+    hideLineups();
+    window.crCommitSelection(searchId,chosenTeam,fixture);
+    window.crGuest.remember(rawFixture);
+    input.value = chosenTeam.name;
+    document.querySelector('#panelTabs .tab[data-view="match"]')?.click();
+    renderMainFixture(rawFixture,null,chosenTeam);
+    window.markWelcomeDone?.();
+    window.__CR_MAIN_STANDINGS_PROMISE__ = loadMainStandingsMini({rawFixture,team:chosenTeam,searchId});
+    window.loadLineupsPitch?.({searchId});
+    window.crGuest.message("La tua prima partita resta disponibile su questo browser.");
+  }
+  window.crRenderGuestFixture = renderGuestFixture;
+
+  async function searchGuest(query, forcedTeam) {
+    const guest = window.crGuest;
+    const key = forcedTeam ? "id:"+forcedTeam.id : norm(query);
+    if (window.crGuestSearching && key===pendingGuestQuery) return;
+    pendingGuestQuery=key;
+    const pending = pendingSuggestion?.key===norm(query) ? pendingSuggestion.promise : null;
+    activeSearchAbort?.abort();
+    activeSearchAbort = new AbortController();
+    const signal = activeSearchAbort.signal;
+    window.crGuestSearching=true;
+    clearTimeout(suggestTimer);
+    ++suggestSeq;
+    const cached = forcedTeam || bestKnownSuggestion(query);
+    hideSuggestions(true);
+    guest.dismiss();
+    guest.message("Ricerca della partita…");
+    try {
+      const data = await guest.ready();
+      if (signal.aborted) return;
+      const found = await resolveTeam(query,forcedTeam,cached,pending,window.CR_STATE.search.activeId,signal);
+      if (signal.aborted) return;
+      if (!found.team) {
+        guest.message(found.result?.kind === "empty" ? "Nessuna squadra trovata." : errorMessage(found.result,"team"));
+        return;
+      }
+      const post = async path => {
+        const res = await fetch(window.API_CONFIG.baseUrl+"/guest/"+path,{
+          method:"POST",headers:{Authorization:"Guest "+data.token},signal
+        });
+        const body = await res.json();
+        if (body.error==="GUEST_SECOND_FIXTURE" && res.status===409) {
+          if (!signal.aborted) {
+            if (!window.CR_STATE.selection.fixture && body.first) renderGuestFixture(body.first);
+            guest.message("");
+            guest.invite(found.team);
+          }
+          return null;
+        }
+        if (!res.ok) throw new Error(res.status===429 ? "Troppe richieste. Riprova tra poco." : "Impossibile aprire la partita. Riprova.");
+        return body;
+      };
+      const result = await post("resolve?team="+encodeURIComponent(found.team.id));
+      if (signal.aborted || !result) return;
+      const opened = result.ticket ? await post("open?ticket="+encodeURIComponent(result.ticket)) : result;
+      if (signal.aborted || !opened) return;
+      if (!opened.fixture) { guest.message("Nessun prossimo match disponibile."); return; }
+      renderGuestFixture(opened.fixture,found.team);
+    } catch (error) {
+      if (!signal.aborted) guest.message(error.message || "Connessione non disponibile.");
+    } finally {
+      if (!signal.aborted) window.crGuestSearching=false;
+    }
+  }
+
   async function startTeamSearch(forcedTeam = null) {
     const query = String(forcedTeam?.name || currentQuery()).trim();
     if (query.length < 2) return;
 
+    if (window.crGuest?.enabled()) return searchGuest(query,forcedTeam);
     const queryKey = norm(query);
     const preResolvedTeam = forcedTeam || bestKnownSuggestion(query);
     const pendingTeamPromise =

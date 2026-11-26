@@ -682,6 +682,7 @@ async function loadLineupsPitch(options = {}) {
   if (!box || !content) return;
 
   const estimateOnDemand = options?.estimateOnDemand === true;
+  if (estimateOnDemand && window.crGuest?.enabled()) return;
   const signal = options?.signal || null;
   const searchId = Number.isFinite(options?.searchId)
     ? options.searchId
@@ -728,6 +729,10 @@ async function loadLineupsPitch(options = {}) {
         r?.kind === "empty" ||
         (r?.ok && !r?.errors && Array.isArray(r?.arr) && r.arr.length === 0);
 
+      if (isEmpty && window.crGuest?.enabled()) {
+        content.innerHTML = renderPitchPlaceholder("Formazioni non disponibili.");
+        return;
+      }
       if (isEmpty) {
         content.innerHTML = `
           ${renderPitchPlaceholder("Formazioni non disponibili.")}
@@ -851,7 +856,7 @@ async function loadLineupsPitch(options = {}) {
   // Alcuni lineups non includono la foto per tutti i giocatori.
   // Facciamo un join leggero con /players/squads per ottenere le facce.
   async function fetchSquadPhotoMap(teamId) {
-    if (!teamId) return new Map();
+    if (!teamId || window.crGuest?.enabled()) return new Map();
     try {
       const rr = await apiGet(`/players/squads?team=${teamId}`, {
         retries: 2,
@@ -1831,6 +1836,11 @@ function wirePitchClicks() {
 }
 
 async function openPlayerModal(playerId, playerName, prefetchedRow = null) {
+  if (window.crGuest?.enabled()) {
+    showToast({title:"Scheda giocatore",text:"Scopri le statistiche personali con la prova PRO.",
+      allowDisable:false,ctaLabel:"Sblocca con la prova gratuita",ctaAction:()=>openAuthModal()});
+    return;
+  }
   const auth = document.getElementById("authModal");
   if (auth && !auth.classList.contains("hidden")) return;
   const modal = document.getElementById("playerModal");
