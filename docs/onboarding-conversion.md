@@ -36,4 +36,4 @@ Feedback reale: non si capisce a cosa serve l'app né cosa offre rispetto alle a
 - Nessun deploy, modifica D1 remoto, merge main o cambio Apple durante sviluppo. Test mirati e suite esistente; documentare risultati effettivi, limiti, rollback; aggiornare PROJECT_STATUS.md a ogni milestone. Non ripetere infrastruttura già verificata.
 
 ## Stato consegna
-- 26/11: direzione approvata, branch dedicato; fase 1 in preparazione. Le altre fasi non sono implementate.
+- 26/11: copy consegnato; Work ha implementato candidato guest Worker/D1 e frontend fino a b12ab55. Flag default off. GitHub Actions, run 45808206165: 6 test guest, 5 regressioni e 3 scenari Chromium PASS; relay e DB simulati. Non sono test live Cloudflare/iOS. Review e gate rilascio ancora aperti. Analytics non implementato. Consultare docs/TASK_BOARD.md per il prossimo incarico; nessun merge/deploy.
