@@ -1,3 +1,12 @@
+## Onboarding & Conversione — 26 novembre 2026 (NON PUBBLICATO)
+
+- Feedback proprietario: valore dell'app poco chiaro, registrazione immediata percepita come ostacolo, home troppo istruttiva. Direzione approvata: prima dimostrare il valore, poi invitare all'iscrizione.
+- Nuovo ramo `feature/onboarding-conversion` da main stabile; core-v2 storico. Documento operativo: [docs/onboarding-conversion.md](docs/onboarding-conversion.md).
+- Fase 1: copy home, ricerca e aiuto aggiornati in index.html/app.js; claim “Oltre il risultato. Dentro la partita.”, benefici concreti e CTA “Analizza la partita”; prova PRO 7 giorni. Community header, ID, script e gate auth conservati. Asset app.js 20261126r1.
+- Verifiche statiche dopo commit: ID invariati, CTA/claim, nessuna promessa guest prematura, asset aggiornato, limite trial 5 partite, listener auth invariato, link community preservato: 8/8. CSS responsive esistente ispezionato, non è un test visuale. Suite automatica e browser non ancora eseguiti.
+- Fase 2 pendente: contratto guest Worker/D1, una fixture valida senza login, gate server-side, invito esplicito dalla seconda, mantenimento prima partita, test sintetici e regressioni. Non usare solo IP/localStorage come autorizzazione; non allargare il proxy anonimo.
+- Nessuna modifica Worker/D1/OVH/Apple, nessun merge o deploy. Non dichiarare la ricerca anonima attiva. Work/Codex consigliato per implementazione e test integrati, partendo da questo ramo senza ripetere fase 1.
+
 ## Giornata: stato partite e controllo ricerca — 23 novembre 2026
 
 - Richiesta proprietario: distinguere le partite concluse prima di aprirle.
