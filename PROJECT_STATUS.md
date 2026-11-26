@@ -12,6 +12,7 @@
 - ONB-06C PASS UX (base 0bfcb4d): sette screenshot su server sintetico, invito oro e anteprime Indicatori/Predizione su desktop e mobile emulato, prima partita mobile senza overlay. Nessun bloccante osservato. CTA e ritorno chiari; note di leggibilità in docs/TASK_BOARD.md. Suite già verdi non rilanciate.
 - ONB-07: review statica guest e collaudo aggiuntivo account/pagamenti (7003801, run 45854361253, 28/28 PASS, zero skip). CI guest 45854361061 SUCCESS. Procedura rilascio/rollback in docs/onboarding-release-gate.md. Perimetro ONB-07A: piano/consumo API attuale, versione/binding Worker live e confronto sorgente, parametri 180 giorni/500 MISS da confermare, iPhone ancora da collaudare. Nessun deploy.
 - ONB-07A BLOCKED (base 13c538a): sessione API-Football scaduta e Cloudflare al login. Piano e consumo, configurazione live, compatibilità del candidato e staging remoto aperti. Verbale in docs/onboarding-release-gate.md.
+- ONB-07A integrazione screenshot proprietario: API PRO attivo 7.500/giorno, 300/min, reset UTC, 0% utilizzato alla cattura; picco grafico circa 565/giorno (stima, non serie esatta). Proposta iniziale 500 MISS/giorno, non attivata. Prossimo: dashboard Cloudflare live/versione/binding e confronto sorgente. Nessun deploy.
 - ONB-04/05 solo bug riproducibili; ONB-06 Work solo collaudo mirato dopo review. ONB-07 rilascio con approvazione esplicita; analytics separato ONB-08. Non modificare OVH, Apple, pagamenti o DB produzione.
 
 ### Storico (consultare soltanto se pertinente)

@@ -79,5 +79,6 @@ Aggiornato 26/11/2026. PR #22, feature/onboarding-conversion. Nessun merge/deplo
 ## ONB-07 — Gate release
 - Review statica Worker guest completata; errori non cacheati, scope e budget confermati sul codice. Test aggiuntivi account/pagamenti: commit 7003801, run 45854361253, 28/28 PASS, zero skip. CI guest 45854361061 SUCCESS. Nessuna modifica applicativa dopo PASS UX.
 - Procedura ed esito BLOCKED di ONB-07A (sola lettura dashboard Cloudflare/API-Football e confronto candidato/live) in docs/onboarding-release-gate.md. Budget e retention proposti, da confermare. Nessun deploy senza approvazione.
+- Integrazione 26/11: screenshot proprietario confermano piano API PRO 7.500/giorno, 300/min, reset UTC, 0% al momento e picco grafico circa 565/giorno (stima). Budget iniziale proposto 500 MISS/giorno sostenibile rispetto al traffico osservato; nessuna attivazione. Prossimo: Cloudflare live in sola lettura.
 - Verifica privacy/retention, budget e migrazione D1 isolata, compatibilità Apple esistente, rollback e ordine Worker/frontend. Conferma esplicita prima di qualsiasi deploy o merge. GUEST_ENABLED e guestEnabled default off.
 - ONB-08 analytics resta milestone indipendente; niente telemetria nuova in questo rilascio.

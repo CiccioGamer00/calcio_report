@@ -31,6 +31,11 @@ Branch e PR #22 verificati a `13c538a`. Verifica in sola lettura sulle dashboard
 
 Per chiudere il gate serve una verifica autenticata in sola lettura dei dati aggregati API-Football e dell’inventario Cloudflare, con confronto protetto del sorgente attivo. Il rilascio resta in sospeso.
 
+### Integrazione evidenze del proprietario — 26 novembre 2026
+- Screenshot autenticati API-Football: PRO attivo, 7.500 richieste/giorno, 7.500 residue e 0% utilizzato al momento della cattura; rate limit PRO pubblicato di 300/minuto, reset 00:00 UTC e nessun rinnovo automatico.
+- Grafico Monthly Requests aggiornato al 25/11/2026 ore 22:50:05: picco visibile circa 560–570 richieste/giorno, stima visiva, non esportazione puntuale degli ultimi sette giorni. Ampio margine osservato per partire con 500 MISS guest/giorno (6,7% della quota); proposta iniziale da impostare solo in fase di rilascio autorizzato. Monitorare picchi e consumo totale. Non necessario upgrade sulla base di questi dati.
+- Preflight API: evidenza sufficiente per proposta budget iniziale; quota al secondo e valori esatti giornalieri non mostrati. Restano aperti configurazione/versione Worker live, confronto sorgente, staging separato, decisione retention e iPhone. Nessun deploy.
+
 ## Ordine rilascio (soltanto dopo approvazione esplicita)
 1. Congelare commit e acquisire riferimento versione Worker precedente, SHA main/Pages e backup/ripristino D1 verificato senza esportare dati personali in Git/chat. Verificare migrazione additiva guest-v1.sql (quattro tabelle nuove) e configurazione in ambiente separato; smoke test iPhone/Safari su preview protetta con mock/dati sintetici, nessun nuovo acquisto Apple.
 2. Applicare migrazione additiva a D1 produzione solo con autorizzazione. Verificare presenza tabelle/indici e integrità senza toccare tabelle account. Non cancellare dati.
