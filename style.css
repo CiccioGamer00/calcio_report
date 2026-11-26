@@ -2688,5 +2688,91 @@ body {
 }
 
 #guestStatus:empty { display: none; }
-#guestInvite { margin-block: 1rem; }
-#guestInvite .btn { min-height: 44px; margin-bottom: .35rem; }
+/* Guest conversion: scoped premium palette, not applied to match cards. */
+.proOffer, .crToast.tPremium {
+  --pro-gold: #f3cc78;
+  --pro-ink: #21190d;
+  --pro-muted: #e1d7c5;
+  background: linear-gradient(145deg, #383021 0%, #20252d 62%, #171e2a 100%);
+  border: 1px solid #c79e52;
+  border-radius: 18px;
+  color: #fff5df;
+  box-shadow: 0 12px 36px rgba(0,0,0,.34);
+}
+#guestInvite {
+  max-width: 620px;
+  margin: 16px auto;
+  padding: clamp(16px, 3vw, 24px);
+}
+#guestInvite[hidden] { display: none; }
+.proOfferBadge {
+  display: inline-block;
+  background: #f3cc78;
+  color: #21190d;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: .025em;
+}
+.proOfferContext { margin: 13px 0 6px; color: var(--pro-muted); font-size: 14px; }
+#guestTitle { margin: 0; font-size: clamp(23px, 4vw, 30px); line-height: 1.15; }
+.proOfferLead { margin: 10px 0; color: var(--pro-muted); }
+.proOfferBenefits {
+  list-style: none;
+  padding: 0;
+  margin: 15px 0 18px;
+  display: grid;
+  gap: 9px;
+}
+.proOfferBenefits li { display: flex; gap: 9px; align-items: baseline; font-weight: 650; }
+.proOfferBenefits li::before { content: "✓"; color: var(--pro-gold); font-weight: 900; }
+#guestInvite .btn, .crToast.tPremium button { min-height: 44px; }
+#guestInvite .proOfferCTA, .crToast.tPremium [data-tcta] {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  background: linear-gradient(110deg, #ffe2a0, #edbc5d);
+  color: var(--pro-ink);
+  border: 1px solid #ffe2a0;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 850;
+  white-space: normal;
+}
+#guestInvite .proOfferCTA:hover, .crToast.tPremium [data-tcta]:hover { filter: brightness(1.06); }
+.proOfferFine { margin: 10px 0 4px; color: var(--pro-muted); font-size: 12px; text-align: center; line-height: 1.5; }
+.proOfferSecondary { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
+#guestInvite .proOfferSecondary .btn {
+  background: transparent; border-color: transparent; color: #fff5df; font-size: 13px;
+  text-decoration: underline; text-underline-offset: 3px;
+}
+#guestInvite :focus-visible, .crToast.tPremium :focus-visible { outline: 2px solid #ffe2a0; outline-offset: 3px; }
+#panelTabs.guestTabs [data-pro-tab="1"] { border-color: #b48b46; color: #f3cc78; }
+#panelTabs.guestTabs [data-pro-tab="1"]::after { content: " · PRO"; font-size: 10px; font-weight: 900; }
+.crToast.tPremium {
+  width: min(480px, calc(100% - 28px));
+  left: auto; right: 14px;
+  padding: 17px;
+  bottom: max(14px, env(safe-area-inset-bottom));
+  max-height: calc(100dvh - 28px);
+  overflow-y: auto;
+}
+.crToast.tPremium .tTitle { font-size: 21px; margin-top: 8px; }
+.crToast.tPremium .tText { color: var(--pro-muted); opacity: 1; font-size: 14px; }
+.crToast.tPremium .tActions { margin-top: 12px; }
+.tPreviewItems {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px; margin: 14px 0 0; padding: 0; list-style: none;
+}
+.tPreviewItems li {
+  min-width: 0; padding: 10px 5px; display: grid; justify-items: center;
+  align-content: center; gap: 8px; text-align: center; overflow-wrap: anywhere;
+  background: #272f3c; border: 1px solid #676052; border-radius: 10px;
+  font-size: 12px; color: #fff5df; min-height: 67px;
+}
+.tPreviewLock { font-size: 16px; line-height: 1; }
+@media (max-width: 480px) {
+  .proOfferSecondary { flex-direction: column; gap: 0; }
+  .crToast.tPremium { padding: 13px; }
+}

@@ -9,6 +9,7 @@ on:
       - 'js/**'
       - 'app.js'
       - 'index.html'
+      - 'style.css'
       - 'config.js'
 permissions:
   contents: read

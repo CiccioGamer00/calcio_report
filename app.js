@@ -761,6 +761,7 @@ function showToast({
   ctaLabel = "",
   ctaUrl = "",
   ctaAction = null,
+  premiumPreview = "",
 } = {}) {
   const el = document.getElementById("crToast");
   if (!el) return;
@@ -771,18 +772,25 @@ function showToast({
     if (off[key]) return;
   }
 
+  // Only fixed, local labels; no model results or premium requests for guests.
+  const preview = premiumPreview === "prediction" ? ["Vittoria casa", "Pareggio", "Vittoria ospite"] :
+    premiumPreview === "indicators" ? ["Trend gol", "Frequenze", "Confronto squadre"] : null;
+  el.classList.toggle("tPremium", !!preview);
   el.innerHTML = `
     <div class="tTop">
       <div>
+        ${preview ? '<span class="proOfferBadge">PRO · 7 giorni gratis</span>' : ''}
         <div class="tTitle">${title}</div>
         <div class="tText">${text}</div>
       </div>
       <button type="button" class="tClose" data-tclose="1">Chiudi</button>
     </div>
+    ${preview ? `<ul class="tPreviewItems" aria-label="Anteprima contenuti riservati">${preview.map(label => `<li>${label}<span class="tPreviewLock" aria-hidden="true">🔒</span></li>`).join("")}</ul>` : ""}
        <div class="tActions">
       ${ctaLabel && (ctaUrl || ctaAction) ? `<button type="button" class="tClose" data-tcta="1">${ctaLabel}</button>` : ``}
       ${allowDisable && key ? `<button type="button" class="tLink" data-tdisable="1" data-key="${key}">Non mostrare più</button>` : ``}
     </div>
+    ${preview ? '<p class="proOfferFine">Nessuna carta richiesta · Nessun rinnovo automatico</p>' : ''}
   `;
 
   el.classList.remove("hidden");
@@ -920,6 +928,7 @@ function markActiveTab(btn) {
 function setupTabs() {
   const nav = document.getElementById("panelTabs");
   if (!nav) return;
+  nav.classList.toggle("guestTabs", !!window.crGuest?.enabled());
 
   // cache: evitiamo di ricaricare sempre
   window.__PANEL_LOADED__ = window.__PANEL_LOADED__ || {
@@ -1044,8 +1053,10 @@ function setupTabs() {
 
  if (window.crGuest?.enabled() && (isProTab || view==="matchdayPanel")) {
     const title = view==="predictionPanel" ? "Predizione" : view==="indicatorsPanel" ? "Indicatori" : "Giornata";
-    showToast({title,text: view==="matchdayPanel" ? "Consulta il programma del campionato con la prova gratuita." :
-      title==="Indicatori" ? "Confronta gli indicatori avanzati delle due squadre." : "Scopri le probabilità dei diversi esiti del match.",
+    showToast({title: view==="predictionPanel" ? "Predizione statistica" : title,
+      text: view==="matchdayPanel" ? "Consulta il programma del campionato con la prova gratuita." :
+      title==="Indicatori" ? "Confronta gli indicatori avanzati delle due squadre." : "Scopri le probabilità stimate dei diversi esiti del match.",
+      premiumPreview: view==="predictionPanel" ? "prediction" : view==="indicatorsPanel" ? "indicators" : "",
       allowDisable:false,ctaLabel:"Sblocca con la prova gratuita",ctaAction:()=>openAuthModal("Iscriviti gratis per iniziare la prova PRO.")});
     return;
   }
@@ -1088,7 +1099,8 @@ function setupTabs() {
     showView(viewId);
 
     const h = PANEL_HINTS[viewId];
-    if (h) showToast(h);
+    // Guests should see the first match immediately, not an overlay tutorial.
+    if (h && !(viewId === "matchView" && window.crGuest?.enabled())) showToast(h);
 
     await autoLoadFor(viewId);
   });

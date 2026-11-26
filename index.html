@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Calcio Report</title>
-    <link rel="stylesheet" href="style.css?v=20261126r2" />
+    <link rel="stylesheet" href="style.css?v=20261126r3" />
     <link rel="icon" href="data:," />
   </head>
 
@@ -83,12 +83,22 @@
         <h2 class="card-title">Quale partita vuoi analizzare?</h2>
 
         <p id="guestStatus" role="status"></p>
-        <section id="guestInvite" hidden aria-labelledby="guestTitle">
-          <h3 id="guestTitle" tabindex="-1">Il bello deve ancora venire</h3>
-          <p>Con la prova PRO hai 7 giorni di Indicatori e Predizione e 5 partite diverse al giorno. Nessuna carta richiesta e nessun rinnovo automatico.</p>
-          <button type="button" class="btn primary" id="guestRegister">Iscriviti gratis</button>
-          <button type="button" class="btn" id="guestLogin">Accedi</button>
-          <button type="button" class="btn" id="guestBack">Torna alla partita</button>
+        <section id="guestInvite" class="proOffer" hidden aria-labelledby="guestTitle">
+          <span class="proOfferBadge">PRO · 7 giorni gratis</span>
+          <p class="proOfferContext">Hai usato la tua prima analisi gratuita.</p>
+          <h3 id="guestTitle" tabindex="-1">Il bello deve ancora venire.</h3>
+          <p class="proOfferLead">Conosci meglio il match con la prova PRO gratuita.</p>
+          <ul class="proOfferBenefits">
+            <li>Indicatori avanzati</li>
+            <li>Predizione statistica</li>
+            <li>5 partite diverse al giorno</li>
+          </ul>
+          <button type="button" class="btn proOfferCTA" id="guestRegister">Inizia la prova gratuita</button>
+          <p class="proOfferFine">Nessuna carta richiesta · Nessun rinnovo automatico</p>
+          <div class="proOfferSecondary">
+            <button type="button" class="btn" id="guestLogin">Hai già un account? Accedi</button>
+            <button type="button" class="btn" id="guestBack">Torna alla partita</button>
+          </div>
         </section>
         <form class="form" onsubmit="return false;">
           <div class="searchRow">
@@ -375,29 +385,29 @@
 
     <div id="crToast" class="crToast hidden" role="status" aria-live="polite"></div>
 
-    <script src="config.js?v=20261126r2"></script>
+    <script src="config.js?v=20261126r3"></script>
 
-    <script src="js/state.js?v=20261126r2"></script>
-    <script src="js/utils.js?v=20261126r2"></script>
-    <script src="js/guest.js?v=20261126r2"></script>
-    <script src="js/api.js?v=20261126r2"></script>
+    <script src="js/state.js?v=20261126r3"></script>
+    <script src="js/utils.js?v=20261126r3"></script>
+    <script src="js/guest.js?v=20261126r3"></script>
+    <script src="js/api.js?v=20261126r3"></script>
 
-    <script src="js/features/panelsShared.js?v=20261126r2"></script>
-    <script src="js/features/indicatorsPanel.js?v=20261126r2"></script>
-    <script src="js/features/foulsPanel.js?v=20261126r2"></script>
-    <script src="js/features/refereePanel.js?v=20261126r2"></script>
-    <script src="js/features/teamsPanel.js?v=20261126r2"></script>
-    <script src="js/features/cornersPanel.js?v=20261126r2"></script>
-    <script src="js/features/shotsPanel.js?v=20261126r2"></script>
-    <script src="js/features/injuriesPanel.js?v=20261126r2"></script>
-    <script src="js/features/predictionPanel.js?v=20261126r2"></script>
-    <script src="js/features/standingsPanel.js?v=20261126r2"></script>
-    <script src="js/features/matchdayPanel.js?v=20261126r2"></script>
+    <script src="js/features/panelsShared.js?v=20261126r3"></script>
+    <script src="js/features/indicatorsPanel.js?v=20261126r3"></script>
+    <script src="js/features/foulsPanel.js?v=20261126r3"></script>
+    <script src="js/features/refereePanel.js?v=20261126r3"></script>
+    <script src="js/features/teamsPanel.js?v=20261126r3"></script>
+    <script src="js/features/cornersPanel.js?v=20261126r3"></script>
+    <script src="js/features/shotsPanel.js?v=20261126r3"></script>
+    <script src="js/features/injuriesPanel.js?v=20261126r3"></script>
+    <script src="js/features/predictionPanel.js?v=20261126r3"></script>
+    <script src="js/features/standingsPanel.js?v=20261126r3"></script>
+    <script src="js/features/matchdayPanel.js?v=20261126r3"></script>
 
-    <script src="js/features/searchController.js?v=20261126r2"></script>
-    <script src="js/features/teamFlow.js?v=20261126r2"></script>
-    <script src="js/features/accountDeletion.js?v=20261126r2"></script>
-    <script src="app.js?v=20261126r2"></script>
+    <script src="js/features/searchController.js?v=20261126r3"></script>
+    <script src="js/features/teamFlow.js?v=20261126r3"></script>
+    <script src="js/features/accountDeletion.js?v=20261126r3"></script>
+    <script src="app.js?v=20261126r3"></script>
   </body>
 </html>
 

@@ -76,11 +76,23 @@ def scenario(tab, width, height, entry):
     for view in ["predictionPanel","indicatorsPanel"]:
         tab.click('[data-view="'+view+'"]')
         tab.wait("document.querySelector('#crToast').innerText.includes('Sblocca con la prova gratuita')")
+        assert tab.js("document.querySelector('#crToast').classList.contains('tPremium')")
+        assert tab.js("document.querySelectorAll('#crToast .tPreviewItems li').length===3")
+        assert tab.js("document.querySelector('#authModal').classList.contains('hidden')")
+        assert tab.js("document.querySelector('.tab.is-active').dataset.view==='match'")
+        assert tab.js("document.querySelector('#crToast [data-tcta]').getBoundingClientRect().height>=44")
         tab.click("[data-tclose]")
+    tab.click('[data-view="predictionPanel"]')
+    tab.click("[data-tcta]")
+    tab.wait("!document.querySelector('#authModal').classList.contains('hidden')")
+    tab.click("#btnCloseAuth")
+    tab.wait("document.querySelector('#authModal').classList.contains('hidden')")
     tab.click('[data-view="standingsPanel"]')
     tab.search("Juventus", "enter")
     tab.wait("!document.querySelector('#guestInvite').hidden")
     assert tab.js("document.querySelector('#authModal').classList.contains('hidden')")
+    assert tab.js("document.querySelector('#guestInvite').innerText.includes('Hai usato la tua prima analisi gratuita')")
+    assert tab.js("document.querySelector('#guestRegister').classList.contains('proOfferCTA')")
     assert tab.js("document.querySelector('.tab.is-active').dataset.view") == "standingsPanel"
     assert tab.js("document.documentElement.scrollWidth <= innerWidth")
     assert tab.js("""Array.from(document.querySelectorAll('#guestInvite button')).every(button=>{
