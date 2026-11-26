@@ -6,17 +6,17 @@ Aggiornato 26/11/2026. PR #22, feature/onboarding-conversion. Nessun merge/deplo
 |---|---|---|
 | ONB-01 Copy | ChatGPT | Fatto (8 verifiche statiche) |
 | ONB-02 Implementazione guest | Work | Codice consegnato b12ab55; non ancora approvato |
-| ONB-03 Test automatici | ChatGPT / GitHub Actions | Guest 6/6 PASS; browser e regressioni avviati |
-| ONB-04 Correzioni backend | Codex | Solo dopo esito CI / review |
+| ONB-03 Test automatici | ChatGPT / GitHub Actions | Completato: 6 guest + 5 regressioni + 3 scenari browser PASS |
+| ONB-04 Correzioni backend | Codex | CI verde; solo difetti review riproducibili |
 | ONB-05 Correzioni frontend | Codex | Solo dopo esito CI / review |
-| ONB-06 Collaudo UI | Work | In attesa di ONB-04/05 |
+| ONB-06 Collaudo UI | Work | In attesa del gate review e rilascio isolato |
 | ONB-07 Rilascio | ChatGPT + proprietario | In attesa di approvazione |
 | ONB-08 Analytics admin | Separato | Non iniziare ora |
 
 ## ONB-03 — Collaudo automatico
 - CI: .github/workflows/guest-tests.yml, push sul solo ramo di lavoro, read-only, nessun deploy. Guest: node --test tests/guest-analysis.test.mjs.
 - Run 45808094657, commit b2d6647: **6 pass / 0 fail**, SQLite in memoria, relay finto. Verificati concorrenza, quota, errori/empty/abort, limiti e separazione account, cache, ticket. Non ripetere questi test a mano senza cambiamenti.
-- Commit 9227b48 aggiunge 5 file di regressione mirati e il browser sintetico di Work (desktop, 390 e 375 px); esiti da registrare. Non confondere Chromium emulato con iPhone reale.
+- Commit 9227b48 aggiunge 5 file di regressione mirati e il browser sintetico di Work (desktop, 390 e 375 px); run 45808206165: tutti e tre i job SUCCESS; 6 guest / 0 fail, 5 regressioni / 0 fail (20 script analizzati, asset 20261126r2), 3 scenari browser PASS (1366×850 pulsante, 390×844 Invio, 375×812 suggerimento; refresh, anteprima premium, annulla, registrazione e ripresa). Non confondere Chromium emulato con iPhone reale.
 - Niente API live, nessun accesso a D1 remoto.
 
 ## ONB-04 — Solo backend (se necessario)
