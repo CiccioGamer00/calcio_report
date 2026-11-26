@@ -3,7 +3,6 @@ import json
 import os
 from pathlib import Path
 import shutil
-import socket
 import subprocess
 import tempfile
 import time
@@ -117,41 +116,63 @@ def main():
     chrome = os.environ.get("CHROMIUM") or shutil.which("chromium") or shutil.which("google-chrome")
     if not chrome:
         raise RuntimeError("Set CHROMIUM to a Chromium executable")
-    with tempfile.TemporaryDirectory() as profile, socket.socket() as listener:
-        listener.bind(("127.0.0.1",0))
-        port = listener.getsockname()[1]
-        listener.close()
+    with tempfile.TemporaryDirectory() as profile:
         server = subprocess.Popen(["node",str(ROOT/"helpers/guest-server.mjs")],stdout=subprocess.PIPE,text=True)
-        origin = server.stdout.readline().strip()
-        browser = subprocess.Popen([chrome,"--headless","--disable-gpu","--no-sandbox","--disable-dev-shm-usage",
-                                    "--disable-background-networking",f"--user-data-dir={profile}",
-                                    f"--remote-debugging-port={port}",origin],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        browser = None
         try:
-            for _ in range(200):
+            origin = server.stdout.readline().strip()
+            if not origin.startswith("http://127.0.0.1:"):
+                raise RuntimeError(f"Local guest server did not start: {origin!r}, exit={server.poll()}")
+            # Chromium chooses a free port; avoid the race between releasing a
+            # Python socket and binding Chrome's DevTools listener.
+            port_file = Path(profile) / "DevToolsActivePort"
+            stderr_path = Path(profile) / "chromium.stderr.log"
+            with stderr_path.open("w") as stderr:
+                browser = subprocess.Popen([chrome,"--headless","--disable-gpu","--no-sandbox","--disable-dev-shm-usage",
+                                            "--disable-background-networking","--no-first-run","--no-default-browser-check",
+                                            f"--user-data-dir={profile}","--remote-debugging-port=0","about:blank"],
+                                           stdout=subprocess.DEVNULL,stderr=stderr)
                 try:
-                    with HTTP.open(f"http://127.0.0.1:{port}/json/list",timeout=1) as result:
-                        tabs = json.load(result)
-                    page = next((t for t in tabs if t["type"]=="page" and t["url"].startswith(origin)),None)
-                    if page:
-                        break
-                except OSError:
-                    pass
-                time.sleep(0.1)
-            else:
-                raise RuntimeError("Isolated browser did not start")
-            with connect(page["webSocketDebuggerUrl"]) as ws:
-                tab=ChromeTab(ws)
-                tab.command("Runtime.enable")
-                tab.command("Network.enable")
-                tab.command("Page.enable")
-                tab.wait("document.readyState==='complete'")
-                for args in [(1366,850,"button"),(390,844,"enter"),(375,812,"suggestion")]:
-                    scenario(tab,*args)
+                    page = None
+                    deadline = time.monotonic() + 45
+                    while time.monotonic() < deadline:
+                        if browser.poll() is not None:
+                            raise RuntimeError(f"Chromium exited: {browser.returncode}")
+                        try:
+                            port = int(port_file.read_text().splitlines()[0])
+                            with HTTP.open(f"http://127.0.0.1:{port}/json/list",timeout=1) as result:
+                                tabs = json.load(result)
+                            page = next((t for t in tabs if t["type"]=="page" and t.get("webSocketDebuggerUrl")),None)
+                            if page:
+                                break
+                        except (OSError, ValueError, IndexError):
+                            pass
+                        time.sleep(0.2)
+                    if not page:
+                        raise RuntimeError("Chromium DevTools did not become ready")
+                    with connect(page["webSocketDebuggerUrl"]) as ws:
+                        tab=ChromeTab(ws)
+                        tab.command("Runtime.enable")
+                        tab.command("Network.enable")
+                        tab.command("Page.enable")
+                        tab.command("Page.navigate", {"url": origin})
+                        tab.wait("location.origin===" + json.dumps(origin) + " && document.readyState==='complete' && !!document.querySelector('#guestStatus')")
+                        for args in [(1366,850,"button"),(390,844,"enter"),(375,812,"suggestion")]:
+                            scenario(tab,*args)
+                except Exception:
+                    print("Chromium stderr (tail):", stderr_path.read_text(errors="replace")[-5000:], flush=True)
+                    raise
         finally:
-            browser.terminate()
-            server.terminate()
-            browser.wait()
-            server.wait()
+            for process in (browser, server):
+                if process is None:
+                    continue
+                if process.poll() is None:
+                    process.terminate()
+                try:
+                    process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait()
 
 
 if __name__=="__main__":
