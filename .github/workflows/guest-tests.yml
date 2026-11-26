@@ -1,0 +1,27 @@
+name: Guest analysis checks
+on:
+  push:
+    branches: [feature/onboarding-conversion]
+    paths:
+      - 'worker/**'
+      - 'tests/**'
+      - '.github/workflows/guest-tests.yml'
+      - 'js/**'
+      - 'app.js'
+      - 'index.html'
+      - 'config.js'
+permissions:
+  contents: read
+jobs:
+  guest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Isolated guest tests (SQLite, fake relay)
+        run: node --test tests/guest-analysis.test.mjs
