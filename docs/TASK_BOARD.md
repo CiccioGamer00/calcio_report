@@ -39,12 +39,20 @@ Aggiornato 26/11/2026. PR #22, feature/onboarding-conversion. Nessun merge/deplo
 - Correggere solo casi riproducibili da CI/collaudo; primo match, secondo invito, conserva tab, ripresa dopo login/registrazione, cache/sessione. Flag guest disabilitato finché Worker non pronto.
 - Consegna: commit e test mirati. Stop.
 
-## ONB-06A — Collaudo visivo mirato (Work, prossimo incarico)
+## ONB-06A — Collaudo visivo mirato (PASS con osservazioni)
 - Base verificata: be6843e, PR #22. ONB-03 e ONB-04A PASS; nessuna modifica applicativa in ONB-04A. Non rilanciare le suite.
 - Obiettivo unico: giudicare l'esperienza visiva del nuovo visitatore. Usare il frontend candidato con server locale già esistente (tests/helpers/guest-server.mjs), dati sintetici e relay simulato. Nessun deploy, nessuna API live.
 - In browser desktop 1366x850 e mobile 390x844, acquisire screenshot di: home iniziale con ricerca e messaggio gratuito; prima partita; invito alla registrazione dalla seconda distinta; anteprima PRO bloccata. Controllare gerarchia dei testi, chiarezza CTA, leggibilità, sovrapposizioni, scroll orizzontale e facilità di ritorno al match. Non ripetere scenari funzionali completi già verdi.
 - Solo report, non modificare codice, CSS o backend in questo incarico. Classificare eventuali difetti bloccanti e miglioramenti facoltativi, indicare schermata e file coinvolto. Consegnare screenshot nel risultato Work, preferibilmente con riferimenti persistenti se disponibili; non inserire file voluminosi nel repo. Annotare esito sintetico qui e nel checkpoint PROJECT_STATUS.md, con commit. Stop.
 - Mobile emulato non equivale a iPhone reale. Review sicurezza, policy 180 giorni/budget API e attivazione produzione restano gate distinti di ONB-07.
+
+**Esito del 26 novembre.** Base `9d77053`, PR #22. Otto screenshot consegnati in Work: home, AC Milan–Inter, invito dopo la ricerca Juventus, blocco Predizione. Due sessioni Chromium distinte, desktop 1366×850 e mobile emulato 390×844, server guest locale e dati sintetici. Prima partita acquisita dopo aver chiuso il suggerimento «Scheda Match». Nessuna suite rilanciata.
+
+- **Bloccanti:** nessuno osservato. Messaggio gratuito accanto alla ricerca, squadre leggibili, condizioni della prova e tre azioni visibili nell’invito. «Torna alla partita» riporta alla prima selezione. Larghezza della pagina pari al viewport in tutte e otto le viste; su mobile la sola barra delle schede scorre lateralmente.
+- **Facoltativo · invito, entrambi i formati** (`index.html`): «Il bello deve ancora venire» descrive poco il limite raggiunto. Esplicitare «Hai usato la tua prima analisi gratuita» prima dei vantaggi della prova, mantenendo «Torna alla partita».
+- **Facoltativo · anteprima PRO** (`js/features/teamFlow.js`, `style.css`): il match resta visibile e l’invito a sbloccare Predizione compare in basso. Su desktop il pulsante è piccolo e lontano dal testo; su mobile la scheda successiva appare tagliata al bordo della barra. Avvicinare il pulsante alla spiegazione e rendere più evidente lo scorrimento delle schede.
+- **Facoltativo · prima partita mobile** (`app.js`, `style.css`): prima di premere «Chiudi», il suggerimento «Scheda Match» copre i nomi delle squadre. Un suggerimento più compatto lascerebbe subito visibile il risultato della ricerca.
+
 
 ## ONB-07 — Gate release
 - Verifica privacy/retention, budget e migrazione D1 isolata, compatibilità Apple esistente, rollback e ordine Worker/frontend. Conferma esplicita prima di qualsiasi deploy o merge. GUEST_ENABLED e guestEnabled default off.
