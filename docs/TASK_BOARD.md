@@ -19,6 +19,12 @@ Aggiornato 26/11/2026. PR #22, feature/onboarding-conversion. Nessun merge/deplo
 - Commit 9227b48 aggiunge 5 file di regressione mirati e il browser sintetico di Work (desktop, 390 e 375 px); run 45808206165: tutti e tre i job SUCCESS; 6 guest / 0 fail, 5 regressioni / 0 fail (20 script analizzati, asset 20261126r2), 3 scenari browser PASS (1366×850 pulsante, 390×844 Invio, 375×812 suggerimento; refresh, anteprima premium, annulla, registrazione e ripresa). Non confondere Chromium emulato con iPhone reale.
 - Niente API live, nessun accesso a D1 remoto.
 
+## ONB-04A — Compatibilità runtime Cloudflare (prossimo incarico Codex)
+- Base verificata: b128b09, PR #22. Run 45808206165 verde: non ripetere i 14 controlli già superati se non conseguenza di una modifica.
+- Obiettivo unico: eseguire il Worker guest con runtime Wrangler/Miniflare e D1 locale effettivo, applicando schema account sintetico e migrazione guest-v1.sql; relay mock, nessuna chiamata reale. Verificare avvio, flag off, sessione, apertura una fixture valida, seconda distinta rifiutata, persistenza/riapertura e blocco premium. Non cambiare la policy 180 giorni/500 MISS giornalieri: decisioni di release separate.
+- File ammessi: worker/worker.js (solo difetto runtime guest riprodotto), worker/migrations/guest-v1.sql, test/config locale dedicato e documentazione di consegna. Non modificare frontend, OVH, Apple, main o servizi remoti. Relay versionato verificato staticamente: roots teams, fixtures, standings, injuries ammessi.
+- Stop al primo risultato completo: PASS con comando riproducibile e log sintetico oppure BLOCKED con errore preciso; eventuale fix circoscritto e commit. Aggiornare questa sezione e checkpoint iniziale di PROJECT_STATUS.md. Non passare a ONB-05/06/07.
+
 ## ONB-04 — Solo backend (se necessario)
 - File ammessi: worker/worker.js (solo guest e trasporto pertinente), worker/migrations/guest-v1.sql, tests/guest-analysis.test.mjs, tests/helpers/guest-sandbox.mjs.
 - Verificare/risolvere esclusivamente errori CI o difetti specifici: rinnovo quota dopo 180 giorni e riapertura snapshot storico sono scelte da validare col proprietario; budget globale default 500 MISS/giorno da confermare con budget reale prima di attivare; verifica allowlist reale del relay e compatibilità D1 (SQLite simulato non equivale a runtime Cloudflare). Nessuna modifica alle policy TRIAL/PRO.
