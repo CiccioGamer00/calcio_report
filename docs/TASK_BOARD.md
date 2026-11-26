@@ -10,7 +10,7 @@ Aggiornato 26/11/2026. PR #22, feature/onboarding-conversion. Nessun merge/deplo
 | ONB-04 Correzioni backend | Codex | CI verde; solo difetti review riproducibili |
 | ONB-05 Correzioni frontend | Codex | Solo dopo esito CI / review |
 | ONB-06A Collaudo visivo | Work | PASS con osservazioni |
-| ONB-06B Restyling conversione | ChatGPT / Work | Implementato; CI browser da confermare |
+| ONB-06B Restyling conversione | ChatGPT | Implementato, CI PASS; visuale da approvare |
 | ONB-07 Rilascio | ChatGPT + proprietario | In attesa di approvazione |
 | ONB-08 Analytics admin | Separato | Non iniziare ora |
 
@@ -55,13 +55,19 @@ Aggiornato 26/11/2026. PR #22, feature/onboarding-conversion. Nessun merge/deplo
 - **Facoltativo · prima partita mobile** (`app.js`, `style.css`): prima di premere «Chiudi», il suggerimento «Scheda Match» copre i nomi delle squadre. Un suggerimento più compatto lascerebbe subito visibile il risultato della ricerca.
 
 
-## ONB-06B — Restyling conversione PRO (implementato, verifica pendente)
+## ONB-06B — Restyling conversione PRO (implementato, CI PASS)
 - Feedback del proprietario: inviti visivamente anonimi. Direzione apprezzata: premium sportivo, oro riservato alla promozione PRO, verde/blu identità corrente; niente banner aggressivi.
 - Obiettivo prodotto: capire perché la seconda partita è bloccata, cosa si ottiene con la prova, quale azione fare. Card distinta, headline, benefici, CTA principale dorata, accesso e ritorno come azioni secondarie. Condizioni esatte: 7 giorni, 5 partite distinte/giorno, nessuna carta, nessun rinnovo automatico.
 - Anteprima PRO guest: mostrare struttura/benefici di Indicatori e Predizione con lucchetto e segnaposti senza numeri inventati o chiamate premium. CTA vicino alla spiegazione. Non alterare gate server, sessione o pagamenti. Correggere suggerimento mobile che copre le squadre in un piccolo task separato se necessario.
 - File previsti: index.html, style.css, app.js, js/features/teamFlow.js e soli test/asset pertinenti. Implementazione a blocchi: prima invito, poi anteprima premium. Screenshot prima/dopo desktop/mobile e verifica CTA esplicite, accessibilità, niente overflow e match preservato. CI automatica per regressioni toccate.
-- Approvato dal proprietario. Commit d4277e4: invito premium dorato, CTA e condizioni, anteprima statica Indicatori/Predizione, tab PRO guest evidenziate, hint automatico Match guest rimosso; asset 20261126r3. Backend e pagamenti invariati. Run 45843401606: 6 guest e 5 regressioni PASS; browser non avviato, nessun esito applicativo. Commit 4aeab2c corregge solo avvio/diagnostica del test; run 45843931143 da verificare. Non pubblicare prima di CI e verifica visiva. Gate sicurezza/retention/budget/iPhone rimangono aperti.
+- Approvato dal proprietario. Commit d4277e4: invito premium dorato, CTA e condizioni, anteprima statica Indicatori/Predizione, tab PRO guest evidenziate, hint automatico Match guest rimosso; asset 20261126r3. Backend e pagamenti invariati. Run 45843401606: 6 guest e 5 regressioni PASS; browser non avviato, nessun esito applicativo. Commit 4aeab2c corregge solo avvio/diagnostica del test; run 45843931143 SUCCESS: guest, regressioni e browser 1366×850, 390×844, 375×812 tutti PASS. Non pubblicare prima di CI e verifica visiva. Gate sicurezza/retention/budget/iPhone rimangono aperti.
 - Nuovo criterio permanente: review prodotto e conversione in AGENTS.md; PASS tecnico non equivale a PASS commerciale.
+
+## ONB-06C — Approvazione visiva finale (Work)
+- Base: codice d4277e4 + fix test 4aeab2c; run 45843931143 verde. Non ripetere test funzionali.
+- Obiettivo unico: screenshot del nuovo invito dorato e delle anteprime PRO Indicatori/Predizione, su desktop 1366×850 e mobile 390×844. Usare tests/helpers/guest-server.mjs con dati sintetici. Verificare gerarchia visiva, leggibilità, contrasto, CTA, condizioni TRIAL, ritorno al match, nessun overlay sulla prima partita; includere screenshot della prima partita mobile se utile.
+- Consegnare screenshot effettivi e verdetto UX (bloccanti o PASS); non modificare codice, backend, infrastruttura o produzione. Non ripetere home precedente né suite. Annotare esito in TASK_BOARD.md e PROJECT_STATUS.md. Stop.
+- iPhone reale, review sicurezza e parametri di rilascio rimangono distinti.
 
 ## ONB-07 — Gate release
 - Verifica privacy/retention, budget e migrazione D1 isolata, compatibilità Apple esistente, rollback e ordine Worker/frontend. Conferma esplicita prima di qualsiasi deploy o merge. GUEST_ENABLED e guestEnabled default off.
