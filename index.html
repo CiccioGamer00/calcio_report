@@ -17,7 +17,7 @@
         <div>
           <h1 class="title">Calcio Report</h1>
           <p class="subtitle">
-            Report del prossimo match basato su dati storici reali.
+            Statistiche e analisi prima del fischio d'inizio.
           </p>
         </div>
 
@@ -41,14 +41,14 @@
       <section class="card welcomeCard" id="welcomeCard">
         <div class="welcomeTop">
           <div>
-            <h2 class="card-title">Benvenuto su Calcio Report 👋</h2>
+            <h2 class="card-title">Oltre il risultato. Dentro la partita.</h2>
             <p class="muted" style="margin:6px 0 0">
-              Qui trovi un report chiaro e veloce sul <b>prossimo match</b>, basato su dati storici reali.
+              Scopri come arrivano le due squadre al prossimo match, confronta i numeri e leggi la partita prima che inizi.
             </p>
           </div>
 
           <button id="btnWelcomeHow" type="button" class="btn">
-            Come funziona?
+            Cosa posso scoprire?
           </button>
         </div>
 
@@ -56,36 +56,36 @@
           <div class="welcomeItem">
             <div class="welcomeIcon">🔎</div>
             <div>
-              <div class="welcomeTitle">1) Cerca la squadra</div>
-              <div class="muted">Scrivi 2–3 lettere e scegli dai suggerimenti.</div>
+              <div class="welcomeTitle">Conosci le squadre</div>
+              <div class="muted">Forma recente, classifica e confronto tra le avversarie.</div>
             </div>
           </div>
 
           <div class="welcomeItem">
             <div class="welcomeIcon">⚽</div>
             <div>
-              <div class="welcomeTitle">2) Guarda il Match</div>
-              <div class="muted">Data, stadio, prossime gare e (quando disponibili) probabili formazioni.</div>
+              <div class="welcomeTitle">Preparati al match</div>
+              <div class="muted">Indisponibili, formazioni quando disponibili, arbitro, tiri e corner.</div>
             </div>
           </div>
 
           <div class="welcomeItem">
-            <div class="welcomeIcon">📣</div>
+            <div class="welcomeIcon">📊</div>
             <div>
-              <div class="welcomeTitle">Community Telegram</div>
-              <div class="muted">In preparazione: analisi, domande e idee per migliorare l’app.</div>
+              <div class="welcomeTitle">Vai oltre le statistiche</div>
+              <div class="muted">Indicatori e pronostico statistico con la prova PRO gratuita di 7 giorni.</div>
             </div>
           </div>
         </div>
       </section>
 
       <section class="card">
-        <h2 class="card-title">Cerca squadra</h2>
+        <h2 class="card-title">Quale partita vuoi analizzare?</h2>
 
         <form class="form" onsubmit="return false;">
           <div class="searchRow">
             <div class="searchGrow">
-              <label for="teamSearchInput">Nome squadra</label>
+              <label for="teamSearchInput">Squadra · prossimo match</label>
               <input
                 id="teamSearchInput"
                 type="text"
@@ -98,7 +98,7 @@
             </div>
 
             <button id="btnSearch" type="button" class="btn primary">
-              Cerca
+              Analizza la partita
             </button>
 
             <div class="gamesPick">
@@ -162,7 +162,7 @@
         <div id="matchView" class="content stageView">
           <div id="match" class="content">
             <p class="muted">
-              <em>Seleziona una squadra per vedere il prossimo match.</em>
+              <em>Cerca una squadra e scopri il suo prossimo match.</em>
             </p>
           </div>
 
@@ -388,7 +388,7 @@
     <script src="js/features/searchController.js?v=20261109r1"></script>
     <script src="js/features/teamFlow.js?v=20261106r1"></script>
     <script src="js/features/accountDeletion.js?v=20261106r1"></script>
-    <script src="app.js?v=20261106r1"></script>
+    <script src="app.js?v=20261126r1"></script>
   </body>
 </html>
 
