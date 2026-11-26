@@ -1,0 +1,28 @@
+name: Onboarding release - existing accounts
+on:
+  push:
+    branches: [feature/onboarding-conversion]
+    paths:
+      - '.github/workflows/onboarding-release-gates.yml'
+      - 'tests/payment-account-gate.test.mjs'
+      - 'tests/account-deletion*.test.mjs'
+      - 'tests/auth-*.test.mjs'
+      - 'tests/password-recovery.test.mjs'
+      - 'worker/**'
+      - 'app.js'
+      - 'index.html'
+permissions:
+  contents: read
+jobs:
+  account-compat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Existing account and payment regression (synthetic only)
+        run: node --test tests/account-deletion.test.mjs tests/account-deletion-ui.test.mjs tests/password-recovery.test.mjs tests/payment-account-gate.test.mjs tests/auth-security.test.mjs tests/auth-rate-limit-ui.test.mjs tests/auth-days-left.test.mjs tests/auth-modal-autofill.test.mjs
