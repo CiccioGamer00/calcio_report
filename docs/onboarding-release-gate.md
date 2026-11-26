@@ -18,6 +18,19 @@ Aggiornato 26 novembre 2026. PR #22, main e produzione invariati. Questo documen
 3. Confrontare sorgente Worker attivo col candidato in ambiente protetto senza copiare sorgente/config sensibile in chat; verificare soprattutto /analysis/open, /predict, auth, cancellazione, Stripe/Apple. Riportare differenze funzionali e SHA/versione, non dump. Se non verificabile, lasciare gate aperto.
 4. Stop: report sintetico, nessuna modifica Cloudflare, D1, OVH, GitHub main o deploy. Non ripetere test già verdi.
 
+### Verbale ONB-07A del 26 novembre 2026 — BLOCKED
+
+Branch e PR #22 verificati a `13c538a`. Verifica in sola lettura sulle dashboard. Nessuna chiamata ai servizi applicativi.
+
+| Verifica | Evidenza disponibile | Esito |
+|---|---|---|
+| API-Football | La dashboard mostra «Your session has expired». Il limite di 7.500 richieste/giorno è storico. | Piano, limite attuale e consumi giornalieri degli ultimi sette giorni non verificati. Margine per i 500 MISS/giorno da confermare. |
+| Worker pubblico | Cloudflare apre la pagina di login. Il frontend candidato indica `api.calcioreport.com`. L’ID `a42fb59c-3f4c-4cd0-8fb1-657a104bef3a` risale al 9 novembre. | Associazione effettiva dominio/Worker, versione attiva, binding D1, flag, stato workers.dev e URL di anteprima non verificati. |
+| Compatibilità | Candidato identificato: `worker/worker.js`, blob Git `4b6d4ad832c25ac8ad404152571a398695bd8a2c`. Sorgente della versione servita indisponibile. | Confronto aperto per /analysis/open, /predict, autenticazione, cancellazione account, Stripe e Apple. Nessuna conclusione sulle differenze live. |
+| Ambiente separato | Nel branch sono presenti il server sintetico locale e il test Miniflare con D1 locale, già collaudati. | Disponibilità di uno staging Cloudflare e collegamento a un D1 distinto dalla produzione non verificati. |
+
+Per chiudere il gate serve una verifica autenticata in sola lettura dei dati aggregati API-Football e dell’inventario Cloudflare, con confronto protetto del sorgente attivo. Il rilascio resta in sospeso.
+
 ## Ordine rilascio (soltanto dopo approvazione esplicita)
 1. Congelare commit e acquisire riferimento versione Worker precedente, SHA main/Pages e backup/ripristino D1 verificato senza esportare dati personali in Git/chat. Verificare migrazione additiva guest-v1.sql (quattro tabelle nuove) e configurazione in ambiente separato; smoke test iPhone/Safari su preview protetta con mock/dati sintetici, nessun nuovo acquisto Apple.
 2. Applicare migrazione additiva a D1 produzione solo con autorizzazione. Verificare presenza tabelle/indici e integrità senza toccare tabelle account. Non cancellare dati.
