@@ -9,7 +9,7 @@ Aggiornato 26/11/2026. PR #22, feature/onboarding-conversion. Nessun merge/deplo
 | ONB-03 Test automatici | ChatGPT / GitHub Actions | Completato: 6 guest + 5 regressioni + 3 scenari browser PASS |
 | ONB-04 Correzioni backend | Codex | CI verde; solo difetti review riproducibili |
 | ONB-05 Correzioni frontend | Codex | Solo dopo esito CI / review |
-| ONB-06 Collaudo UI | Work | In attesa del gate review e rilascio isolato |
+| ONB-06A Collaudo visivo | Work | Pronto: sola review screenshot su ambiente sintetico |
 | ONB-07 Rilascio | ChatGPT + proprietario | In attesa di approvazione |
 | ONB-08 Analytics admin | Separato | Non iniziare ora |
 
@@ -39,10 +39,12 @@ Aggiornato 26/11/2026. PR #22, feature/onboarding-conversion. Nessun merge/deplo
 - Correggere solo casi riproducibili da CI/collaudo; primo match, secondo invito, conserva tab, ripresa dopo login/registrazione, cache/sessione. Flag guest disabilitato finché Worker non pronto.
 - Consegna: commit e test mirati. Stop.
 
-## ONB-06 — Collaudo UI (Work)
-- Prerequisito: CI verde e ONB-04/05 completati o non necessari.
-- Solo collaudo su ambiente isolato: screenshot desktop/mobile, leggibilità CTA, layout e accessibilità, verifica prima analisi, seconda distinta, annulla, registrazione. Eventuali bug con screenshot e passi minimi; non riscrivere backend.
-- Non ripetere test automatici già verdi. iPhone reale eventualmente proprietario, in un unico blocco di verifiche. Stop dopo report.
+## ONB-06A — Collaudo visivo mirato (Work, prossimo incarico)
+- Base verificata: be6843e, PR #22. ONB-03 e ONB-04A PASS; nessuna modifica applicativa in ONB-04A. Non rilanciare le suite.
+- Obiettivo unico: giudicare l'esperienza visiva del nuovo visitatore. Usare il frontend candidato con server locale già esistente (tests/helpers/guest-server.mjs), dati sintetici e relay simulato. Nessun deploy, nessuna API live.
+- In browser desktop 1366x850 e mobile 390x844, acquisire screenshot di: home iniziale con ricerca e messaggio gratuito; prima partita; invito alla registrazione dalla seconda distinta; anteprima PRO bloccata. Controllare gerarchia dei testi, chiarezza CTA, leggibilità, sovrapposizioni, scroll orizzontale e facilità di ritorno al match. Non ripetere scenari funzionali completi già verdi.
+- Solo report, non modificare codice, CSS o backend in questo incarico. Classificare eventuali difetti bloccanti e miglioramenti facoltativi, indicare schermata e file coinvolto. Consegnare screenshot nel risultato Work, preferibilmente con riferimenti persistenti se disponibili; non inserire file voluminosi nel repo. Annotare esito sintetico qui e nel checkpoint PROJECT_STATUS.md, con commit. Stop.
+- Mobile emulato non equivale a iPhone reale. Review sicurezza, policy 180 giorni/budget API e attivazione produzione restano gate distinti di ONB-07.
 
 ## ONB-07 — Gate release
 - Verifica privacy/retention, budget e migrazione D1 isolata, compatibilità Apple esistente, rollback e ordine Worker/frontend. Conferma esplicita prima di qualsiasi deploy o merge. GUEST_ENABLED e guestEnabled default off.
