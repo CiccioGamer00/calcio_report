@@ -63,11 +63,18 @@ Aggiornato 26/11/2026. PR #22, feature/onboarding-conversion. Nessun merge/deplo
 - Approvato dal proprietario. Commit d4277e4: invito premium dorato, CTA e condizioni, anteprima statica Indicatori/Predizione, tab PRO guest evidenziate, hint automatico Match guest rimosso; asset 20261126r3. Backend e pagamenti invariati. Run 45843401606: 6 guest e 5 regressioni PASS; browser non avviato, nessun esito applicativo. Commit 4aeab2c corregge solo avvio/diagnostica del test; run 45843931143 SUCCESS: guest, regressioni e browser 1366×850, 390×844, 375×812 tutti PASS. Non pubblicare prima di CI e verifica visiva. Gate sicurezza/retention/budget/iPhone rimangono aperti.
 - Nuovo criterio permanente: review prodotto e conversione in AGENTS.md; PASS tecnico non equivale a PASS commerciale.
 
-## ONB-06C — Approvazione visiva finale (Work)
+## ONB-06C — Approvazione visiva finale (PASS UX)
 - Base: codice d4277e4 + fix test 4aeab2c; run 45843931143 verde. Non ripetere test funzionali.
 - Obiettivo unico: screenshot del nuovo invito dorato e delle anteprime PRO Indicatori/Predizione, su desktop 1366×850 e mobile 390×844. Usare tests/helpers/guest-server.mjs con dati sintetici. Verificare gerarchia visiva, leggibilità, contrasto, CTA, condizioni TRIAL, ritorno al match, nessun overlay sulla prima partita; includere screenshot della prima partita mobile se utile.
 - Consegnare screenshot effettivi e verdetto UX (bloccanti o PASS); non modificare codice, backend, infrastruttura o produzione. Non ripetere home precedente né suite. Annotare esito in TASK_BOARD.md e PROJECT_STATUS.md. Stop.
 - iPhone reale, review sicurezza e parametri di rilascio rimangono distinti.
+
+**Esito del 26 novembre · PASS UX.** PR #22, base `0bfcb4d`. Sette screenshot consegnati in Work: invito dopo la ricerca Juventus, Indicatori e Predizione a 1366×850 e 390×844, più AC Milan–Inter alla prima apertura mobile. Chromium, server guest locale, dati sintetici. Nessun bloccante visivo osservato.
+
+- **Invito.** Il messaggio «Hai usato la tua prima analisi gratuita» spiega perché la seconda partita richiede l’iscrizione. Badge e benefici esplicitano 7 giorni e 5 partite diverse al giorno. Il pulsante dorato «Inizia la prova gratuita» domina su sfondo scuro. Accesso e ritorno restano leggibili; «Torna alla partita» riporta ad AC Milan–Inter in entrambi i formati.
+- **Anteprime.** Tre riquadri con lucchetto distinguono trend gol, frequenze e confronto squadre dai tre esiti della Predizione. Si comprende cosa si sblocca senza percentuali dimostrative. La CTA è accanto ai contenuti e le condizioni sono subito sotto. Su entrambe le viste il pannello si può chiudere; a 390 px anche l’etichetta su due righe entra nel riquadro.
+- **Prima partita mobile.** Nomi delle squadre visibili al primo accesso, senza suggerimento sovrapposto. Nessuno scroll orizzontale dell’intera pagina nelle sette viste.
+- **Rifiniture facoltative.** La nota su carta e rinnovo è piccola, soprattutto su mobile. Nell’invito aperto da tastiera il contorno rettangolare del focus attira l’occhio sul titolo: si può armonizzarlo con la card mantenendolo riconoscibile. Il verdetto riguarda la chiarezza dell’offerta; il tasso di iscrizione richiede dati reali.
 
 ## ONB-07 — Gate release
 - Verifica privacy/retention, budget e migrazione D1 isolata, compatibilità Apple esistente, rollback e ordine Worker/frontend. Conferma esplicita prima di qualsiasi deploy o merge. GUEST_ENABLED e guestEnabled default off.
