@@ -14,3 +14,10 @@
 - Test con dati sintetici e DB isolato; non spendere API reali per regressioni. Non toccare Apple, relay, produzione o altre milestone salvo incarico esplicito.
 - Utente non programmatore: niente F12 se diagnosticabile in app; se indispensabile un intervento, fornire un unico comando o blocco coerente.
 - Non rileggere core-v2 per ogni microtask: la sua documentazione è storica. PROJECT_STATUS.md rimane la fonte operativa aggiornata in cima.
+
+## Qualità prodotto e conversione
+- ChatGPT coordina anche UX/UI, posizionamento e conversione, non soltanto sviluppo. Anticipare criticità e proporre soluzioni motivate prima che il proprietario debba individuarle. Separare proposta, implementazione e verifica.
+- Ogni funzionalità visibile deve avere un obiettivo utente e un criterio di accettazione commerciale: valore comprensibile, gerarchia visiva, azione principale riconoscibile, frizioni minime, motivo per tornare. PASS tecnico non equivale a PASS prodotto.
+- Per le schermate di acquisizione e PRO, verificare desktop/mobile con screenshot: messaggio chiaro, contrasto, un CTA principale, percorso di ritorno evidente; no modali automatiche, urgenze artificiali, probabilità inventate o promesse di vincita. Conservare identità Calcio Report; proporre variazioni grafiche al proprietario.
+- Misurare successivamente il percorso visita -> prima analisi -> iscrizione -> ritorno -> PRO con dati aggregati, minimizzati e informativa adeguata, senza confondere eventi con persone. Non attivare analytics o nuovi tracciamenti senza incarico e approvazione.
+- Prima di iniziative commerciali rilevanti: confronto mirato con prodotti concorrenti e feedback reali; distinguere ipotesi da evidenze, nessuna promessa di successo di mercato.
