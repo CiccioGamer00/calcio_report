@@ -432,7 +432,7 @@ function setupAuthActions() {
 
       setAuthMsg(
         `✅ Registrazione completata!\n` +
-          `TRIAL attivo: ${d} giorni rimanenti.\n\n` +
+          `La tua prova PRO gratuita: ${d} giorni rimanenti.\n\n` +
           `Tutti i campionati, Indicatori e Predizione inclusi. Puoi analizzare 5 partite diverse al giorno e riaprirle quando vuoi nella stessa giornata.\n\n` +
           `Alla scadenza puoi scegliere se continuare con PRO.`,
       );
@@ -1151,8 +1151,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("btnWelcomeHow")?.addEventListener("click", () => {
     showToast({
       key: "hint_welcome",
-      title: "Come funziona 🚀",
-      text: "1) Cerca una squadra → 2) Apri Match → 3) Esplora le schede.\n",
+      title: "Oltre il risultato. Dentro la partita.",
+      text: "Confronta forma, classifica, statistiche e indisponibili delle due squadre. Scopri il contesto del prossimo match. Con la prova PRO gratuita di 7 giorni hai anche Indicatori e Predizione.\n",
       allowDisable: true,
     });
   });
