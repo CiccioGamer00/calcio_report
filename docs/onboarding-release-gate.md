@@ -78,6 +78,9 @@ Per chiudere il gate serve una verifica autenticata in sola lettura dei dati agg
 ### ONB-07E — blocco preflight
 - ONB-07E BLOCKED (output proprietario): arresto nella verifica iniziale versione attiva/ultima caricata; nessun upload o deploy avviato in questo tentativo, frontend invariato, nessuna nuova scrittura D1. Il catch non distingue mismatch da errore Wrangler/JSON. Non rimuovere il gate: eseguire diagnostica sola lettura di deployments status e versions list, mostrando soltanto ID/versioni e date, senza segreti. Non ripetere ONB-07C/D.
 
+### ONB-07E v2 — lettura robusta stato versioni
+- ONB-07E diagnostica proprietario: versione attiva a42fb59c-3f4c-4cd0-8fb1-657a104bef3a al 100%; output misto PowerShell non mostra ID ultima versione caricata. Causa iniziale non ancora determinata. Consegnato calcio-report-deploy-worker-v2.ps1 SHA256 0b21125b46dddb66e8c3e27f2ab42b55e6388fbacf1716786dba03af03b662f6. Lettura con config minima già verificata ONB-07D e parser JSON Node, 8/8 casi sintetici PASS; stampa esplicita ID attivo/ultimo e motivi di stop non sensibili. Gate di ereditarietà segreti, controllo binding/runtime, guest OFF e rollback invariati. Nessun nuovo backup/migrazione/collaudo app. Script PowerShell non eseguito in chat; attendere risultato proprietario. Se ultima versione diversa, stop senza upload/deploy.
+
 ## Ordine rilascio (autorizzato dal proprietario; esecuzione progressiva)
 1. Congelare commit e acquisire riferimento versione Worker precedente, SHA main/Pages e backup/ripristino D1 verificato senza esportare dati personali in Git/chat. Verificare migrazione additiva guest-v1.sql (quattro tabelle nuove) e configurazione in ambiente separato; smoke test iPhone/Safari su preview protetta con mock/dati sintetici, nessun nuovo acquisto Apple.
 2. Applicare migrazione additiva a D1 produzione solo con autorizzazione. Verificare presenza tabelle/indici e integrità senza toccare tabelle account. Non cancellare dati.
