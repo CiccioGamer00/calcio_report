@@ -6,6 +6,7 @@ export default {
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: corsHeaders() });
     }
+    if (url.pathname.startsWith("/guest/")) return handleGuest(request, env, ctx);
     // ========== STRIPE WEBHOOK ==========
 if (url.pathname === "/stripe/webhook" && request.method === "POST") {
   return handleStripeWebhook(request, env);
@@ -48,10 +49,27 @@ if (url.pathname === "/stripe/webhook" && request.method === "POST") {
     if (url.pathname === "/telemetry/ping" && request.method === "POST")
       return handleTelemetryPing(request, env);
 
-    // ✅ ROUTE: /predict (Il cuore del tuo algoritmo)
-    if (url.pathname === "/predict") {
-      const gate = await requireActiveUser(request, env); // Aggiungi questo
+    if (url.pathname === "/analysis/open" || url.pathname === "/predict") {
+      const gate = await requireActiveUser(request, env);
       if (!gate.ok) return gate.res;
+      const opening = url.pathname === "/analysis/open";
+      if (request.method !== (opening ? "POST" : "GET"))
+        return json({ error: "METHOD_NOT_ALLOWED" }, 405, corsHeaders());
+      const fixture = opening
+        ? (await request.json().catch(() => null))?.fixture
+        : url.searchParams.get("fixture");
+      const fixtureId = Number(fixture);
+      if (!/^[1-9][0-9]*$/.test(String(fixture)) || !Number.isSafeInteger(fixtureId))
+        return json({ error: "INVALID_FIXTURE" }, 400, corsHeaders());
+      if (!gate.paid) {
+        try {
+          if (!await admitTrialFixture(env.DB, gate.email, fixtureId, Date.now()))
+            return json({ error: "TRIAL_DAILY_LIMIT", message: "Hai già aperto 5 partite oggi. Puoi rivederle o aprirne altre da domani." }, 429, { ...corsHeaders(), "Cache-Control": "no-store" });
+        } catch {
+          return json({ error: "TRIAL_CHECK_UNAVAILABLE", message: "Verifica della prova temporaneamente non disponibile. Riprova." }, 503, corsHeaders());
+        }
+      }
+      if (opening) return json({ ok: true }, 200, { ...corsHeaders(), "Cache-Control": "no-store" });
       return handlePredict(request, env);
     }
 
@@ -1118,6 +1136,26 @@ function dynamicSignalAssessment(coverage, rawSignalScore) {
    /predict handler (TUO, INVARIATO)
    ========================= */
 
+const trialDayFormat = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Rome" });
+
+async function admitTrialFixture(db, email, fixtureId, now) {
+  const prefix = "full-trial:" + trialDayFormat.format(now) + ":";
+  const key = prefix + fixtureId;
+  // D1 serializes this batch. A repeated or concurrent open uses the same primary key.
+  const [, , lookup] = await db.batch([
+    db.prepare("DELETE FROM trial_search_log WHERE email = ? AND search_id GLOB 'full-trial:*' AND search_id < ?")
+      .bind(email, prefix),
+    db.prepare(`INSERT INTO trial_search_log (email, search_id, created_at)
+      SELECT ?, ?, ? WHERE
+        (SELECT COUNT(*) FROM trial_search_log WHERE email = ? AND search_id GLOB ?) < 5
+      ON CONFLICT(email, search_id) DO NOTHING`)
+      .bind(email, key, now, email, prefix + "*"),
+    db.prepare("SELECT 1 AS admitted FROM trial_search_log WHERE email = ? AND search_id = ?")
+      .bind(email, key),
+  ]);
+  return lookup.results.length === 1;
+}
+
 async function handlePredict(request, env) {
   const url = new URL(request.url);
 
@@ -1820,7 +1858,7 @@ async function fetchRelay(pathWithQuery, env) {
   });
 }
 
-async function fetchApiFootballCached(requestUrl, env, ttlSeconds = 0, ctx) {
+async function fetchApiFootballCached(requestUrl, env, ttlSeconds = 0, ctx, beforeMiss) {
   const url = requestUrl instanceof URL ? requestUrl : new URL(requestUrl);
   const cache = caches.default;
   const cacheKey = makeCacheKey(url.toString());
@@ -1831,6 +1869,7 @@ async function fetchApiFootballCached(requestUrl, env, ttlSeconds = 0, ctx) {
   }
 
   const pathWithQuery = `${url.pathname}${url.search}`;
+  if (beforeMiss) await beforeMiss();
   const relayRes = await fetchRelay(pathWithQuery, env);
   const bodyText = await relayRes.text();
 
@@ -1840,7 +1879,8 @@ async function fetchApiFootballCached(requestUrl, env, ttlSeconds = 0, ctx) {
   } catch {}
 
   const semanticOk =
-    relayRes.ok && parsed !== null && !hasApiSportsErrors(parsed);
+    relayRes.ok && parsed !== null && !hasApiSportsErrors(parsed) &&
+    (!beforeMiss || Array.isArray(parsed.response));
   const responseHeaders = new Headers(relayRes.headers);
   responseHeaders.set(
     "x-cr-relay",
@@ -2365,7 +2405,7 @@ async function requireActiveUser(request, env) {
   const trialEnds = Number(u.trial_ends_at || 0);
   const paidUntil = Number(u.paid_until || 0);
 
-  if (now > trialEnds && now > paidUntil) {
+  if (now >= trialEnds && now >= paidUntil) {
     return {
       ok: false,
       res: json(
@@ -2381,7 +2421,7 @@ async function requireActiveUser(request, env) {
     };
   }
 
-  return { ok: true, email: sess.email };
+  return { ok: true, email: sess.email, paid: now < paidUntil };
 }
 /* =========================
    STRIPE WEBHOOK: attiva PRO automatico
@@ -2479,3 +2519,146 @@ async function hmacSha256Hex(secret, message) {
   return hex;
 }
   
+
+// Only /guest/* enters this handler. Account routes retain their own authentication.
+async function handleGuest(request, env, ctx) {
+  const reply = (body, status = 200) => json(body, status, {
+    ...corsHeaders(), "Cache-Control": "private, no-store",
+  });
+  const fail = (code, status) => reply({error: code}, status);
+  if (env.GUEST_ENABLED !== "1") return fail("GUEST_DISABLED", 404);
+  const db = env.DB;
+  const secret = env.GUEST_SECRET;
+  if (!db || !secret) return fail("GUEST_UNAVAILABLE", 503);
+  const url = new URL(request.url);
+  const route = url.pathname.slice("/guest/".length);
+  const now = Date.now();
+  const day = 86400000;
+  const query = (sql, ...values) => db.prepare(sql).bind(...values);
+  const mac = value => hmacSha256Hex(secret, value);
+  async function budget(scope, limit, duration) {
+    const bucket = Math.floor(now / duration);
+    const row = await query(`INSERT INTO guest_budget(scope,count,expires) VALUES (?,1,?)
+      ON CONFLICT(scope) DO UPDATE SET count=count+1 WHERE count < ? RETURNING count`,
+      scope + ":" + bucket, (bucket+1)*duration, limit).first();
+    if (!row) throw new Error("LIMIT");
+  }
+  async function upstream(path) {
+    const dailyBudget = Number(env.GUEST_API_DAILY_BUDGET || 500);
+    if (!Number.isSafeInteger(dailyBudget) || dailyBudget < 1) throw new Error("CONFIG");
+    const u = new URL(path, url.origin);
+    const {response} = await fetchApiFootballCached(
+      u, env, cacheTtlFor(u.pathname, u.searchParams) || 60, ctx,
+      () => budget("api", dailyBudget, day),
+    );
+    if (response.status === 429) throw new Error("LIMIT");
+    if (!response.ok) throw new Error("UPSTREAM");
+    const data = await response.json();
+    if (hasApiSportsErrors(data) || data.error || !Array.isArray(data.response)) {
+      throw new Error(/rate.?limit|requests per minute/i.test(JSON.stringify(data.errors)) ? "LIMIT" : "UPSTREAM");
+    }
+    return data.response;
+  }
+  try {
+    if (route === "session" && request.method === "POST" && !url.search) {
+      const seed = request.headers.get("Authorization") || "";
+      if (!/^GuestSeed [a-f0-9]{64}$/.test(seed)) return fail("GUEST_INVALID",403);
+      const ipKey = await mac("net:" + Math.floor(now/day) + ":" + (request.headers.get("CF-Connecting-IP") || "local"));
+      await budget("bootstrap:"+ipKey, 120, 600000);
+      await budget("bootstrap", 6000, day);
+      await query("DELETE FROM guest_budget WHERE expires <= ?",now).run();
+      await query("DELETE FROM guest_candidate WHERE expires <= ?",now).run();
+      await query("DELETE FROM guest_analysis WHERE expires <= ?",now).run();
+      const id = await mac("installation:"+seed);
+      const expiry = now + day;
+      const body = id+"."+expiry;
+      const saved = await query("SELECT snapshot FROM guest_analysis WHERE id=?",id).first();
+      return reply({token:body+"."+await mac("guest:"+body), fixture:JSON.parse(saved?.snapshot || "null")});
+    }
+    const auth = /^Guest ([a-f0-9]{64})\.(\d{13})\.([a-f0-9]{64})$/.exec(request.headers.get("Authorization") || "");
+    if (!auth || +auth[2]<=now || !timingSafeEq(auth[3],await mac("guest:"+auth[1]+"."+auth[2]))) return fail("GUEST_INVALID",403);
+    const id = auth[1];
+    await budget("requests:"+id, 200, 600000);
+    const p = url.searchParams;
+    const keys = (...allowed) => [...p].length === allowed.length && allowed.every(k=>p.getAll(k).length===1);
+    const numeric = value => /^[1-9]\d{0,9}$/.test(value);
+    const row = await query("SELECT * FROM guest_analysis WHERE id=? AND expires>?",id,now).first();
+    const saved = JSON.parse(row?.snapshot || "null");
+    if (route === "teams" && request.method === "GET" && keys("search")) {
+      const term = p.get("search").trim();
+      if (!/^[\p{L}\p{M}\d .'’-]{2,48}$/u.test(term)) return fail("BAD_INPUT",400);
+      await budget("suggest:"+id,40,600000);
+      const rows = await upstream("/teams?search="+encodeURIComponent(term));
+      return reply({response:rows.slice(0,40)});
+    }
+    if (route === "resolve" && request.method === "POST" && keys("team") && numeric(p.get("team"))) {
+      await budget("resolve:"+id,16,600000);
+      const team = Number(p.get("team"));
+      const rows = await upstream("/fixtures?team="+team+"&next=1&timezone=Europe/Rome");
+      if (!rows.length) return reply({response:[]});
+      const fx = rows[0];
+      if (![fx?.fixture?.id,fx?.league?.id,fx?.league?.season,fx?.teams?.home?.id,fx?.teams?.away?.id].every(v=>Number.isSafeInteger(v)&&v>0)
+        || !fx.teams.home.name || !fx.teams.away.name || !Number.isFinite(Date.parse(fx.fixture.date))
+        || ![fx.teams.home.id,fx.teams.away.id].includes(team)) throw new Error("UPSTREAM");
+      if (saved) return saved.fixture.id === fx.fixture.id ? reply({fixture:saved}) :
+        reply({error:"GUEST_SECOND_FIXTURE", first:saved},409);
+      const ticket = crypto.randomUUID();
+      if (request.signal.aborted) return fail("ABORTED",408);
+      await query("INSERT INTO guest_candidate(ticket,guest,fixture,snapshot,expires) VALUES (?,?,?,?,?)",
+        ticket,id,fx.fixture.id,JSON.stringify(fx),now+60000).run();
+      return reply({ticket});
+    }
+    if (route === "open" && request.method === "POST" && keys("ticket") && /^[\da-f-]{36}$/.test(p.get("ticket"))) {
+      if (request.signal.aborted) return fail("ABORTED",408);
+      await query("DELETE FROM guest_analysis WHERE id=? AND expires<=?",id,now).run();
+      const committed = await query(`INSERT INTO guest_analysis(id,fixture,snapshot,expires)
+        SELECT guest,fixture,snapshot,? FROM guest_candidate WHERE guest=? AND ticket=? AND expires>?
+        ON CONFLICT(id) DO UPDATE SET fixture=excluded.fixture WHERE guest_analysis.fixture=excluded.fixture
+        RETURNING snapshot`,now+180*day,id,p.get("ticket"),now).first();
+      if (committed) return reply({fixture:JSON.parse(committed.snapshot)});
+      const existing = await query("SELECT fixture,snapshot FROM guest_analysis WHERE id=?",id).first();
+      const candidate = await query("SELECT fixture FROM guest_candidate WHERE guest=? AND ticket=? AND expires>?",id,p.get("ticket"),now).first();
+      if (candidate && existing && candidate.fixture !== existing.fixture)
+        return reply({error:"GUEST_SECOND_FIXTURE", first:JSON.parse(existing.snapshot)},409);
+      return fail("GUEST_SEARCH_CHANGED",409);
+    }
+    if (!saved || request.method !== "GET") return fail("GUEST_FORBIDDEN",403);
+    const fx = String(saved.fixture.id);
+    const league = String(saved.league.id), season = String(saved.league.season);
+    const teamOK = [saved.teams.home.id,saved.teams.away.id].includes(Number(p.get("team")));
+    let path, source;
+    if (route==="fixtures" && keys("id","timezone") && p.get("id")===fx && p.get("timezone")==="Europe/Rome") return reply({response:[saved]});
+    if (route==="standings" && keys("league","season") && p.get("league")===league && p.get("season")===season)
+      path="/standings?league="+league+"&season="+season;
+    if (["fixtures/lineups","injuries"].includes(route) && keys("fixture") && p.get("fixture")===fx)
+      path="/"+route+"?fixture="+fx;
+    if (route==="fixtures" && keys("team","last","status","timezone") && teamOK && numeric(p.get("team"))
+      && numeric(p.get("last")) && Number(p.get("last"))<=30 && p.get("status")==="FT" && p.get("timezone")==="Europe/Rome") {
+      source="team:"+p.get("team");
+      path="/fixtures?team="+p.get("team")+"&last=30&status=FT&timezone=Europe/Rome";
+    }
+    if (route==="referee-history" && keys() && saved.fixture.referee) {
+      source="referee";
+      path="/fixtures?referee="+encodeURIComponent(saved.fixture.referee)+"&season="+season+"&status=FT&timezone=Europe/Rome";
+    }
+    if (["fixtures/statistics","fixtures/events"].includes(route) && keys("fixture") && numeric(p.get("fixture"))) {
+      const granted = await query(`SELECT 1 AS ok FROM guest_history,json_each(ids)
+        WHERE guest=? AND json_each.value=? LIMIT 1`,id,Number(p.get("fixture"))).first();
+      if (granted) path="/"+route+"?fixture="+p.get("fixture");
+    }
+    if (!path) return fail("GUEST_FORBIDDEN",403);
+    let rows = await upstream(path);
+    if (source) {
+      rows = rows.filter(f=>source==="referee" ? f.fixture?.referee===saved.fixture.referee :
+        [f.teams?.home?.id,f.teams?.away?.id].includes(Number(p.get("team"))))
+        .sort((a,b)=>Date.parse(b.fixture.date)-Date.parse(a.fixture.date)).slice(0,30);
+      await query("INSERT INTO guest_history VALUES(?,?,?) ON CONFLICT(guest,source) DO UPDATE SET ids=excluded.ids",
+        id,source,JSON.stringify(rows.map(f=>f.fixture.id))).run();
+      rows=rows.slice(0,Number(p.get("last")) || 15);
+    }
+    return reply({response:rows});
+  } catch (error) {
+    if (error.message==="LIMIT") return fail("GUEST_RATE_LIMIT",429);
+    return error.message==="UPSTREAM" ? fail("GUEST_UPSTREAM",502) : fail("GUEST_UNAVAILABLE",503);
+  }
+}

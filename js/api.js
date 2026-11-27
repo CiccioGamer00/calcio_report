@@ -119,7 +119,10 @@ async function apiGetV2(pathWithQuery, opts = {}) {
   const signal = opts.signal || null;
   const useFrontendCache = opts.cache !== false;
 
-  const url = `${baseUrl}${pathWithQuery}`;
+  const guest = window.crGuest?.enabled();
+  const url = baseUrl + (guest ? "/guest" : "") + pathWithQuery;
+  const token = localStorage.getItem("CR_TOKEN");
+  const cacheKey = (token || (guest ? "guest" : "public")) + "|" + url;
   const reqId = requestId();
 
   if (!baseUrl) {
@@ -140,14 +143,20 @@ async function apiGetV2(pathWithQuery, opts = {}) {
   }
 
   if (useFrontendCache) {
-    const cached = getFromLocalCache(url);
+    const cached = getFromLocalCache(cacheKey);
     if (cached) {
       return { ...cached, reqId, searchId, frontendCache: "HIT" };
     }
   }
 
   const headers = new Headers(baseHeaders);
-  const token = localStorage.getItem("CR_TOKEN");
+  if (guest) {
+    try { headers.set("Authorization","Guest "+(await window.crGuest.ready()).token); }
+    catch (error) {
+      return {kind:error.status===429 ? "rate_limit" : "server_error",ok:false,
+        status:error.status || 503,arr:[],errors:{guest:"unavailable"}};
+    }
+  }
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
   dispatchApiEvent("cr:loading", { on: true, url, reqId, searchId });
@@ -209,7 +218,7 @@ async function apiGetV2(pathWithQuery, opts = {}) {
         if (kind === "paywall") dispatchApiEvent("cr:paywall", out);
 
         if (!shouldRetryV2(out) || attempt >= retries) {
-          if (useFrontendCache) setInLocalCache(url, out);
+          if (useFrontendCache) setInLocalCache(cacheKey, out);
           return out;
         }
       } catch (err) {

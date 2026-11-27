@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Calcio Report</title>
-    <link rel="stylesheet" href="style.css?v=20261123r1" />
+    <link rel="stylesheet" href="style.css?v=20261127r1" />
     <link rel="icon" href="data:," />
   </head>
 
@@ -17,7 +17,7 @@
         <div>
           <h1 class="title">Calcio Report</h1>
           <p class="subtitle">
-            Report del prossimo match basato su dati storici reali.
+            Statistiche e analisi prima del fischio d'inizio.
           </p>
         </div>
 
@@ -41,14 +41,14 @@
       <section class="card welcomeCard" id="welcomeCard">
         <div class="welcomeTop">
           <div>
-            <h2 class="card-title">Benvenuto su Calcio Report 👋</h2>
+            <h2 class="card-title">Oltre il risultato. Dentro la partita.</h2>
             <p class="muted" style="margin:6px 0 0">
-              Qui trovi un report chiaro e veloce sul <b>prossimo match</b>, basato su dati storici reali.
+              Scopri come arrivano le due squadre al prossimo match, confronta i numeri e leggi la partita prima che inizi.
             </p>
           </div>
 
           <button id="btnWelcomeHow" type="button" class="btn">
-            Come funziona?
+            Cosa posso scoprire?
           </button>
         </div>
 
@@ -56,36 +56,54 @@
           <div class="welcomeItem">
             <div class="welcomeIcon">🔎</div>
             <div>
-              <div class="welcomeTitle">1) Cerca la squadra</div>
-              <div class="muted">Scrivi 2–3 lettere e scegli dai suggerimenti.</div>
+              <div class="welcomeTitle">Conosci le squadre</div>
+              <div class="muted">Forma recente, classifica e confronto tra le avversarie.</div>
             </div>
           </div>
 
           <div class="welcomeItem">
             <div class="welcomeIcon">⚽</div>
             <div>
-              <div class="welcomeTitle">2) Guarda il Match</div>
-              <div class="muted">Data, stadio, prossime gare e (quando disponibili) probabili formazioni.</div>
+              <div class="welcomeTitle">Preparati al match</div>
+              <div class="muted">Indisponibili, formazioni quando disponibili, arbitro, tiri e corner.</div>
             </div>
           </div>
 
           <div class="welcomeItem">
-            <div class="welcomeIcon">📣</div>
+            <div class="welcomeIcon">📊</div>
             <div>
-              <div class="welcomeTitle">Community Telegram</div>
-              <div class="muted">In preparazione: analisi, domande e idee per migliorare l’app.</div>
+              <div class="welcomeTitle">Vai oltre le statistiche</div>
+              <div class="muted">Indicatori e pronostico statistico con la prova PRO gratuita di 7 giorni.</div>
             </div>
           </div>
         </div>
       </section>
 
       <section class="card">
-        <h2 class="card-title">Cerca squadra</h2>
+        <h2 class="card-title">Quale partita vuoi analizzare?</h2>
 
+        <p id="guestStatus" role="status"></p>
+        <section id="guestInvite" class="proOffer" hidden aria-labelledby="guestTitle">
+          <span class="proOfferBadge">PRO · 7 giorni gratis</span>
+          <p class="proOfferContext">Hai usato la tua prima analisi gratuita.</p>
+          <h3 id="guestTitle" tabindex="-1">Il bello deve ancora venire.</h3>
+          <p class="proOfferLead">Conosci meglio il match con la prova PRO gratuita.</p>
+          <ul class="proOfferBenefits">
+            <li>Indicatori avanzati</li>
+            <li>Predizione statistica</li>
+            <li>5 partite diverse al giorno</li>
+          </ul>
+          <button type="button" class="btn proOfferCTA" id="guestRegister">Inizia la prova gratuita</button>
+          <p class="proOfferFine">Nessuna carta richiesta · Nessun rinnovo automatico</p>
+          <div class="proOfferSecondary">
+            <button type="button" class="btn" id="guestLogin">Hai già un account? Accedi</button>
+            <button type="button" class="btn" id="guestBack">Torna alla partita</button>
+          </div>
+        </section>
         <form class="form" onsubmit="return false;">
           <div class="searchRow">
             <div class="searchGrow">
-              <label for="teamSearchInput">Nome squadra</label>
+              <label for="teamSearchInput">Squadra · prossimo match</label>
               <input
                 id="teamSearchInput"
                 type="text"
@@ -98,7 +116,7 @@
             </div>
 
             <button id="btnSearch" type="button" class="btn primary">
-              Cerca
+              Analizza la partita
             </button>
 
             <div class="gamesPick">
@@ -162,7 +180,7 @@
         <div id="matchView" class="content stageView">
           <div id="match" class="content">
             <p class="muted">
-              <em>Seleziona una squadra per vedere il prossimo match.</em>
+              <em>Cerca una squadra e scopri il suo prossimo match.</em>
             </p>
           </div>
 
@@ -367,28 +385,29 @@
 
     <div id="crToast" class="crToast hidden" role="status" aria-live="polite"></div>
 
-    <script src="config.js?v=20261106r1"></script>
+    <script src="config.js?v=20261127r1"></script>
 
-    <script src="js/state.js?v=20261106r1"></script>
-    <script src="js/utils.js?v=20261106r1"></script>
-    <script src="js/api.js?v=20261106r1"></script>
+    <script src="js/state.js?v=20261127r1"></script>
+    <script src="js/utils.js?v=20261127r1"></script>
+    <script src="js/guest.js?v=20261127r1"></script>
+    <script src="js/api.js?v=20261127r1"></script>
 
-    <script src="js/features/panelsShared.js?v=20261106r1"></script>
-    <script src="js/features/indicatorsPanel.js?v=20261106r1"></script>
-    <script src="js/features/foulsPanel.js?v=20261106r1"></script>
-    <script src="js/features/refereePanel.js?v=20261106r1"></script>
-    <script src="js/features/teamsPanel.js?v=20261106r1"></script>
-    <script src="js/features/cornersPanel.js?v=20261106r1"></script>
-    <script src="js/features/shotsPanel.js?v=20261106r1"></script>
-    <script src="js/features/injuriesPanel.js?v=20261106r1"></script>
-    <script src="js/features/predictionPanel.js?v=20261106r1"></script>
-    <script src="js/features/standingsPanel.js?v=20261106r1"></script>
-    <script src="js/features/matchdayPanel.js?v=20261123r1"></script>
+    <script src="js/features/panelsShared.js?v=20261127r1"></script>
+    <script src="js/features/indicatorsPanel.js?v=20261127r1"></script>
+    <script src="js/features/foulsPanel.js?v=20261127r1"></script>
+    <script src="js/features/refereePanel.js?v=20261127r1"></script>
+    <script src="js/features/teamsPanel.js?v=20261127r1"></script>
+    <script src="js/features/cornersPanel.js?v=20261127r1"></script>
+    <script src="js/features/shotsPanel.js?v=20261127r1"></script>
+    <script src="js/features/injuriesPanel.js?v=20261127r1"></script>
+    <script src="js/features/predictionPanel.js?v=20261127r1"></script>
+    <script src="js/features/standingsPanel.js?v=20261127r1"></script>
+    <script src="js/features/matchdayPanel.js?v=20261127r1"></script>
 
-    <script src="js/features/searchController.js?v=20261109r1"></script>
-    <script src="js/features/teamFlow.js?v=20261106r1"></script>
-    <script src="js/features/accountDeletion.js?v=20261106r1"></script>
-    <script src="app.js?v=20261106r1"></script>
+    <script src="js/features/searchController.js?v=20261127r1"></script>
+    <script src="js/features/teamFlow.js?v=20261127r1"></script>
+    <script src="js/features/accountDeletion.js?v=20261127r1"></script>
+    <script src="app.js?v=20261127r1"></script>
   </body>
 </html>
 

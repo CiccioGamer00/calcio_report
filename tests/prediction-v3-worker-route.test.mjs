@@ -76,6 +76,7 @@ const env = {
   CR_RELAY_URL: "https://relay.test",
   CR_RELAY_SECRET: "test-relay-secret",
   DB: {
+    async batch() { return [{}, {}, {results:[{admitted:1}]}]; },
     prepare() {
       return {
         bind() {

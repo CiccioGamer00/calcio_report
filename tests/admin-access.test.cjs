@@ -18,6 +18,6 @@ vm.runInContext('loadUsers=async()=>{__USERS__=[{email:"user@example.com"}]}',ct
  mode='ok';await ctx.disableUser('unknown@example.com',false);assert.ok(alerts.at(-1).includes('non verificata'));
  mode='forbidden';await ctx.disableUser('user@example.com',false);assert.ok(alerts.at(-1).includes('FORBIDDEN'));
  node('btnLock').events.click();assert.equal(node('adminKey').value,'');assert.equal(node('output').textContent,'');
- assert.ok(html.includes('name="viewport"'));assert.ok(html.includes('td::before'));assert.ok(!/localStorage\.setItem\([^,]+,\s*(?:key|adminKey)\s*\)/.test(script));
+ assert.ok(html.includes('name="viewport"'));assert.match(html,/@media .*max-width:650px.*?\.account > summary.*?grid-template-columns:/s);assert.ok(!/localStorage\.setItem\([^,]+,\s*(?:key|adminKey)\s*\)/.test(script));
  console.log('PASS admin access: fixed API origin, authenticated block/unblock, missing key, cancel, duplicate click, unknown user, forbidden, logout. No real users modified.');
 })().catch(e=>{console.error(e);process.exitCode=1});

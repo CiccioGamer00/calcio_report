@@ -60,13 +60,19 @@ test('test environment with payment URLs disabled never offers a checkout', asyn
 
 test('toast action closes the old toast before invoking the authenticated payment path', () => {
   let hidden=false, actionCalled=false, handler;
-  const el={innerHTML:'',classList:{remove(){hidden=false;},add(){hidden=true;}},
+  const classes = new Set();
+  const el={innerHTML:'',classList:{remove(){hidden=false;},add(){hidden=true;},toggle(name,force){if(force) classes.add(name); else classes.delete(name);}},
     querySelector(selector){return selector.includes('tcta') ? {addEventListener(name,cb){handler=cb;}} : null;}};
   const context=vm.createContext({document:{getElementById:()=>el}, getHintsOff:()=>({}),
     window:{open(){throw Error('Direct URL must not override action');}}});
   vm.runInContext(app.slice(app.indexOf('function showToast('),app.indexOf('const PANEL_HINTS')),context);
+  context.showToast({title:'Predizione', premiumPreview:'prediction',ctaLabel:'Prova',ctaAction:()=>{}});
+  assert.equal(classes.has('tPremium'),true);
+  assert.match(el.innerHTML,/Vittoria casa/);
   context.showToast({ctaLabel:'Buy',ctaUrl:'https://payment.test',ctaAction:()=>{
     assert.equal(hidden,true); assert.equal(el.innerHTML,''); actionCalled=true;
   }});
+  assert.equal(classes.has('tPremium'),false);
+  assert.doesNotMatch(el.innerHTML,/Vittoria casa/);
   handler(); assert.equal(actionCalled,true);
 });
