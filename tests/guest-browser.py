@@ -112,6 +112,41 @@ def scenario(tab, width, height, entry):
     print(f"PASS {width}×{height}, {entry}, refresh, premium preview, cancel, register and resume", flush=True)
 
 
+def mobile_polish(tab):
+    for width, height, entry in [(390, 844, "enter"), (375, 812, "suggestion"), (414, 896, "button")]:
+        tab.command("Emulation.setDeviceMetricsOverride", dict(width=width,height=height,deviceScaleFactor=1,mobile=True))
+        tab.js("localStorage.clear(); sessionStorage.clear()")
+        tab.command("Page.reload")
+        tab.wait("document.querySelector('#guestStatus')?.textContent.includes('Nessuna registrazione')")
+        assert tab.js("parseFloat(getComputedStyle(document.querySelector('#teamSearchInput')).fontSize)>=16")
+        tab.js("document.querySelector('#teamSearchInput').focus()")
+        assert tab.js("getComputedStyle(document.querySelector('#teamSearchInput')).fontSize==='18px'")
+        assert tab.js("document.activeElement.id==='teamSearchInput'")
+        tab.search("Milan", entry)
+        tab.wait("document.querySelector('#match')?.textContent.includes('AC Milan')")
+        assert tab.js("document.activeElement.id!=='teamSearchInput'")
+        assert tab.js("getComputedStyle(document.querySelector('#teamSearchInput')).fontSize==='16px'")
+        assert tab.js("document.documentElement.scrollWidth <= innerWidth")
+        assert tab.js("Math.abs(visualViewport.scale-1)<0.01")
+        tab.click('[data-view="standingsPanel"]')
+        tab.wait("document.querySelector('#crToast').classList.contains('tPanelHint') && !document.querySelector('#crToast').classList.contains('hidden')")
+        assert tab.js("getComputedStyle(document.querySelector('#crToast')).position==='static'")
+        assert tab.js("document.querySelector('#crToast').getBoundingClientRect().bottom<=document.querySelector('#viewportCard').getBoundingClientRect().top")
+        tab.click("[data-tclose]")
+        assert tab.js("getComputedStyle(document.querySelector('#crToast')).display==='none'")
+        tab.click('[data-view="predictionPanel"]')
+        tab.wait("document.querySelector('#crToast').classList.contains('tPremium')")
+        assert tab.js("getComputedStyle(document.querySelector('#crToast')).position==='fixed'")
+        assert tab.js("!document.querySelector('#crToast').classList.contains('tPanelHint')")
+        tab.click("[data-tclose]")
+        assert not tab.errors, tab.errors
+        print(f"PASS mobile {width}x{height}: {entry}, focus/blur, inline tip, no empty toast, premium fixed", flush=True)
+    tab.command("Emulation.setDeviceMetricsOverride", dict(width=1366,height=850,deviceScaleFactor=1,mobile=False))
+    tab.js("showToast(PANEL_HINTS.standingsPanel)")
+    assert tab.js("getComputedStyle(document.querySelector('#crToast')).position==='fixed'")
+    print("PASS desktop panel hint unchanged", flush=True)
+
+
 def main():
     chrome = os.environ.get("CHROMIUM") or shutil.which("chromium") or shutil.which("google-chrome")
     if not chrome:
@@ -157,8 +192,11 @@ def main():
                         tab.command("Page.enable")
                         tab.command("Page.navigate", {"url": origin})
                         tab.wait("location.origin===" + json.dumps(origin) + " && document.readyState==='complete' && !!document.querySelector('#guestStatus')")
-                        for args in [(1366,850,"button"),(390,844,"enter"),(375,812,"suggestion")]:
-                            scenario(tab,*args)
+                        if os.environ.get("CR_MOBILE_POLISH") == "1":
+                            mobile_polish(tab)
+                        else:
+                            for args in [(1366,850,"button"),(390,844,"enter"),(375,812,"suggestion")]:
+                                scenario(tab,*args)
                 except Exception:
                     print("Chromium stderr (tail):", stderr_path.read_text(errors="replace")[-5000:], flush=True)
                     raise

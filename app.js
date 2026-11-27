@@ -776,6 +776,8 @@ function showToast({
   const preview = premiumPreview === "prediction" ? ["Vittoria casa", "Pareggio", "Vittoria ospite"] :
     premiumPreview === "indicators" ? ["Trend gol", "Frequenze", "Confronto squadre"] : null;
   el.classList.toggle("tPremium", !!preview);
+  // A passive panel tip can be inline on mobile; action/PRO prompts remain overlays.
+  el.classList.toggle("tPanelHint", !preview && !ctaLabel && Object.values(PANEL_HINTS).some(hint => hint.key === key));
   el.innerHTML = `
     <div class="tTop">
       <div>

@@ -1,0 +1,25 @@
+name: Mobile polish targeted checks
+on:
+  push:
+    branches: [fix/mobile-search-polish]
+permissions:
+  contents: read
+jobs:
+  mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install websockets==15.0.1
+      - run: node --test tests/frontend-syntax.test.mjs tests/release-assets.test.mjs tests/matchday-feature.test.mjs
+      - run: python tests/guest-browser.py
+        env:
+          CR_MOBILE_POLISH: '1'
