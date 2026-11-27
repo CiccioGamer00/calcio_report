@@ -2776,3 +2776,17 @@ body {
   .proOfferSecondary { flex-direction: column; gap: 0; }
   .crToast.tPremium { padding: 13px; }
 }
+
+/* Mobile UX: focus the field, not Safari's entire visual viewport. */
+@media (max-width: 720px), (pointer: coarse) {
+  #teamSearchInput { font-size: 16px; min-height: 48px; }
+  #teamSearchInput:focus {
+    font-size: 18px;
+    border-color: var(--accent);
+    background: #0d1c29;
+    box-shadow: 0 0 0 3px rgba(82,255,168,.18);
+  }
+  /* Passive panel hints should never cover match content or the browser toolbar. */
+  #crToast.tPanelHint { position: static; z-index: auto; margin: 10px 0; background: #101b2b; backdrop-filter: none; box-shadow: none; }
+}
+#crToast:empty { display: none; }

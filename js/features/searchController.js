@@ -796,6 +796,13 @@
     const query = String(forcedTeam?.name || currentQuery()).trim();
     if (query.length < 2) return;
 
+    // Release the mobile keyboard for every valid search entry (Enter/button/suggestion).
+    if (document.activeElement === input && window.matchMedia("(max-width: 720px), (pointer: coarse)").matches) input.blur();
+    const hint = document.getElementById("crToast");
+    if (hint?.classList.contains("tPanelHint")) {
+      hint.classList.add("hidden");
+      hint.innerHTML = "";
+    }
     if (window.crGuest?.enabled()) return searchGuest(query,forcedTeam);
     const queryKey = norm(query);
     const preResolvedTeam = forcedTeam || bestKnownSuggestion(query);
