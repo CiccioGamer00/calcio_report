@@ -1,7 +1,7 @@
 window.API_CONFIG = {
   baseUrl: "https://api.calcioreport.com",
   headers: {},
-  guestEnabled: false,
+  guestEnabled: true,
 
   // --- CONTATTI / CTA (imposta i tuoi)
   telegramUrl: "", // es: "https://t.me/statzone_italia"
