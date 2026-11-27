@@ -1,4 +1,4 @@
-## Checkpoint operativo — 26 novembre 2026 (NON PUBBLICATO)
+## Checkpoint operativo — 27 novembre 2026 (NON PUBBLICATO)
 
 - Branch feature/onboarding-conversion, PR #22 in bozza. main stabile, core-v2 storico. Nessun merge/deploy.
 - Team: leggere AGENTS.md, questo checkpoint e solo il task assegnato in docs/TASK_BOARD.md. Storico sotto preservato; non rileggere integralmente a ogni incarico.
@@ -14,6 +14,7 @@
 - ONB-07A BLOCKED (base 13c538a): sessione API-Football scaduta e Cloudflare al login. Piano e consumo, configurazione live, compatibilità del candidato e staging remoto aperti. Verbale in docs/onboarding-release-gate.md.
 - ONB-07A integrazione screenshot proprietario: API PRO attivo 7.500/giorno, 300/min, reset UTC, 0% utilizzato alla cattura; picco grafico circa 565/giorno (stima, non serie esatta). Proposta iniziale 500 MISS/giorno, non attivata. Prossimo: dashboard Cloudflare live/versione/binding e confronto sorgente. Nessun deploy.
 - 27/11 Cloudflare accessibile: proxy dominio API, prefisso versione a42fb59c, 215 invocazioni/0 errori nelle 24h, workers.dev off, DB e APP_REVIEW_DB distinti, test Worker esistente. Candidato versionato privo di riferimenti Apple/review: confronto sorgente live obbligatorio. Prossima azione copia sorgente in sola lettura, poi verifica staging/flag/preview. Nessun deploy.
+- ONB-07B: copia bundle live ricevuta, differenze Apple/ledger/community confermate. Generatore bf95039 + test c86f1ed. Candidato integrato con 4 patch, sintassi e confronto 12 route flag off/on, sessione TRIAL 5/6, review DB isolato, gate manutenzione, guest premium e quota PASS locale su SQLite/mock (2 relay simulati); hash e comando nel gate. Non distribuire worker/worker.js standalone. Restano staging Cloudflare, flag/config live, privacy/retention, iPhone e approvazione. Nessun deploy.
 - ONB-04/05 solo bug riproducibili; ONB-06 Work solo collaudo mirato dopo review. ONB-07 rilascio con approvazione esplicita; analytics separato ONB-08. Non modificare OVH, Apple, pagamenti o DB produzione.
 
 ### Storico (consultare soltanto se pertinente)
